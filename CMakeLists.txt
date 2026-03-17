@@ -9,5 +9,5 @@ add_executable(TF2-Played-With
 )
 
 if(NOT LINUX)
-    message(FATAL_ERROR "This software is not tested on platforms other than linux. Continue at your own risk by commenting this out.")
+    message(FATAL_ERROR "This software is not tested on platforms other than linux. Continue at your own risk by commenting this out. Take special care with argp.")
 endif()

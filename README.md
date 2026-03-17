@@ -3,9 +3,13 @@ A repository to keep track of which players I've played with in Valve's Team For
 
 ## Functionality
 The software will have the ability to do the following:
-* Add [data](#saved-data) to history file
-* Retreive data from history file by name or STEAMID3
-* Print current player histories during gameplay
+* Add [data](#required-data-and-visualization) to history file during gameplay
+* Retreive data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
+* Print histories of players encountered during gameplay
+
+## Dependencies
+The following are required for building:
+* [GNU-C's argp](https://sourceware.org/glibc/): Came installed with Arch for me, might have to do something special for other OS's
 
 ## Getting Players From TF2
 TF2 Played With will run alongside TF2 and get output from the console.
@@ -14,64 +18,66 @@ TF2 Played With will run alongside TF2 and get output from the console.
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
 * Will only output `#` as first character in new line when printing player status. I suspect it will also occur if a player with `#` as the first character in their name types in a chat I have access to, eg. match chat
 
-### Status Formatting
+#### Status Formatting
 Running the `status` command will return a list of players in the server. It is usually formatted as so:
-```
-# userid name                uniqueid            connected ping loss state
-#  <UID> "<NAME>"            [<STEAMID3>]        <VV:VV>    <V>  <V> <V>
-... // More names and stuff in the same form
-```
+
+    # userid name                uniqueid            connected ping loss state
+    #  <UID> "<NAME>"            [<STEAMID3>]        <VV:VV>    <V>  <V> <V>
+    ... // More names and stuff in the same form
+
+#### Further observations
+* Status output will sometimes not start with # userid ...
+* Status output will sometimes be interrupted by seemingly unrelated output
+* Names and STEAMID3's can be captured by the regex `"(.+)" +\[U:([0-9]:[0-9]+)\]`, where group-1 is name and group-2 is STEAMID3
 
 ### When Status Should be Run
-Status must be run at least once per game. However, running more than once will allow it to capture players who join after me. Because I personally have to run the status command, binding it to a commonly pressed key will run it much more than frequently enough to record every player, for example W, A, S, D or LMB. If it is done this way, this software will generate an incredible excess of match dates and names per STEAMID3 depending on how much I press the designated button. There are a couple ways I can think of to overcome this:
-* Set a status command to be the first/ultimate instance per-match, only record newcomers to the match afterward. Then, when a condition has been fulfilled, re-record everyone when...
-    * My connected time becomes less than last recorded.
-    * The initial connection message (Connected to 169.254.XXX.XXX:XXXX) is output
-    * After I echo something, for example bind f1 "echo PENULTIMATE_STATUS ; status"
-    * The initial join message "\<NAME\> Connected" (eg. TehX Connected)
+Status must be run at least once per game. However, running more than once will allow it to capture players who join after me. Because I personally have to run the status command, binding it to a commonly pressed key will run it much more than frequently enough to record every player, for example W, A, S, D or LMB.
 
-Chosen method:
-    The initial join message "\<NAME\> Connected" (eg. TehX Connected)
+If it is done this way, this software will generate an incredible excess of match dates and names per STEAMID3 depending on how much I press the designated button. To solve this, a single status output will be set as the first/ultimate instance per-match, and only record newcomers to the match afterward.
 
-Notes on status formatting:
-* Will sometimes not start with # userid ...
-* Will sometimes be interrupted by seemingly unrelated output
-* Names and STEAMID3's can be captured by the regex `"(.+)" +\[U:([0-9]:[0-9]+)\]`, where group-1 is name and group-2 is STEAMID3.
+The penultimate status-report will occur once after each initial join message in the form `\n<NAME> Connected\n`, eg. `\nTehX Connected\n`. The '\n' characters
 
 ## Save File
-Data will need to be saved to track players, and will be stored in a central file.
+### Required Data and Visualization
+The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure)):
 
-### Required Data
-The following data will be required (JSON format here for clarification, binary format actually used in program as described under [file structure](#structure)):
-```
-{
-    "Name": "TehX",
+    {
+        // Name of recorder
+        (u8) NAME_LEN,
+        (char *) NAME,
 
-    "Data":
-    [
-        {...},
-
-        <STEAMID3>:
+        // Data array
+        (u64) DATA_LEN,
+        DATA:
         [
-                {
-                    <DATE_IN_SECONDS>,
-                    "<NAME>",
-                    <ENCOUNTER_COUNT>
-                },
+            {...}, // More STEAMI64's and associated data
 
-                {...} // More dates and assocated data
-        ],
+            (u64) STEAMID64:
+            [
+                    {
+                        (u32) DATE_IN_SECONDS,
+                        (u8) NAME_LEN,
+                        (char *) NAME,
+                        (u8) ENCOUNTER_COUNT
+                    },
 
-        {...} // More STEAMID3's and associated data
-    ]
-}
-```
+                    {...} // More dates and assocated data
+            ],
+
+            {...}, // More STEAMID64's and associated data
+        ]
+    }
 
 ### Structure
-TODO: Create history file structure and put here
+TODO: Create binary history file structure and put here
 
-## Helpful Resources
+## Helpful Resources and Thanks
 Websites which could be useful in this repo:
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
+    * Structure of STEAMID3
+    * STEAMID is 8 bytes in size, multiple human-readable formats
+    * Storing STEAMID's is easiest with STEAMID64. The `status` command, however, returns STEAMID3's. Thankfully, SteamDB had website [JS code for conversion](/meta/steamdb_id_conversion.js) that I nabbed and refactored/ported to C
 * [SteamID I/O](https://steamid.io/)
-* [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands), in particular con_logfile \<file\>.
+    * Thanks for the [ID conversion code](/meta/steamdb_id_conversion.js)
+* [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands)
+    * con_logfile \<file\>.
