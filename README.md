@@ -74,4 +74,4 @@ TODO: Create history file structure and put here
 Websites which could be useful in this repo:
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
 * [SteamID I/O](https://steamid.io/)
-* [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands), in particular con_log \<file\>. I found the actual command to be con_logfile \<file\>.
+* [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands), in particular con_logfile \<file\>.
