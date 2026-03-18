@@ -9,10 +9,14 @@ The software will have the ability to do the following:
 
 ## Dependencies
 The following are required for building:
-* [GNU-C's argp](https://sourceware.org/glibc/): Came installed with Arch for me, might have to do something special for other OS's
+* [GNU-C's argp](https://sourceware.org/glibc/)
+    * For argument parsing
+    * Not sure of its Windows compatability
+* [Cider](https://github.com/TehhX/Cider)
+    * For saving/loading
 
 ## Getting Players From TF2
-TF2 Played With will run alongside TF2 and get output from the console.
+TF2 Played With will run alongside TF2 and get output from the console via an intermediary file.
 
 ### Console Output Notes
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
@@ -39,40 +43,75 @@ The penultimate status-report will occur once after each initial join message in
 
 ## Save File
 ### Required Data and Visualization
-The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure)):
+The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array):
 
+    tf2pwXX.sav:
     {
+        // File header, always "TF2PW"
+        (char *) HEADER
+
+        // The version of the save format
+        (u8) SAVE_VERSION
+
         // Name of recorder
-        (u8) NAME_LEN,
-        (char *) NAME,
+            (u8) NAME_LEN
+        (char *) NAME
 
-        // Data array
-        (u64) DATA_LEN,
-        DATA:
+        // How many unique player records there are in the following array
+        (u32) PLAYER_RECORD_LEN
         [
-            {...}, // More STEAMI64's and associated data
+            // STEAMID64 of the player whose records are in the following array
+            (u64) STEAMID64
 
-            (u64) STEAMID64:
+            // How many unique dates they were encountered
+            (u32) PLAYER_RECORD_DATES_LEN
             [
-                    {
-                        (u32) DATE_IN_SECONDS,
-                        (u8) NAME_LEN,
-                        (char *) NAME,
-                        (u8) ENCOUNTER_COUNT
-                    },
+                {
+                    // Date in days since UNIX epoch
+                    (u16) DATE_IN_DAYS
 
-                    {...} // More dates and assocated data
-            ],
+                    // Name during this date's encounters
+                        (u8) NAME_LEN
+                    (char *) NAME // TODO: Assumes a player's name won't be changed during dates user encounters them. Maybe an array of their names? For another version
 
-            {...}, // More STEAMID64's and associated data
+                    // Times encountered on this day
+                    (u8) ENCOUNTER_COUNT
+                }
+
+                {...}
+            ]
+
+            {...}
         ]
     }
 
 ### Structure
-TODO: Create binary history file structure and put here
+#### Header
+Always at the beginning of every save file.
+|         Name         |                            Description                            | Size (Bytes) |    Example     |
+|:--------------------:|:-----------------------------------------------------------------:|:------------:|:--------------:|
+|        Header        |                     Header of the file format                     |      5       | TF2PW (ALWAYS) |
+| Save Format Version  | The version of history file format used with this particular file |      1       |     (u8) 0     |
+|     Name Length      |              The length (bytes) of user's Steam name              |      1       |     (u8) 4     |
+|         Name         |                    The Steam name of the user                     | Name Length  |      TehX      |
+| Player Record Length |  How many unique player records there are in the following array  |      4       |  (u32) 12,000  |
+
+#### Unique Player Record
+There will be one of these for every unique player record in the player record array.
+|   Name    |                Description                 | Size (Bytes) |         Example         |
+|:---------:|:------------------------------------------:|:------------:|:-----------------------:|
+| STEAMID64 | The STEAMID64 of the current player record |      8       | (u64) 76561197960287930 |
+
+#### Unique Player Date Record
+There will be one of these for every unique player record's unique dates.
+|      Name       |                       Description                       | Size (Bytes) |   Example    |
+|:---------------:|:-------------------------------------------------------:|:------------:|:------------:|
+|      Date       |       How many days since the epoch this date is        |      2       | (u16) 20,530 |
+|   Name Length   |      The length of the player's name on this date       |      1       |   (u8) 10    |
+|      Name       |           The name of the player on this date           | Name Length  |  Rabscuttle  |
+| Encounter Count | How many times this player was encountered on this date |      1       |    (u8) 3    |
 
 ## Helpful Resources and Thanks
-Websites which could be useful in this repo:
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
     * Structure of STEAMID3
     * STEAMID is 8 bytes in size, multiple human-readable formats
@@ -81,3 +120,5 @@ Websites which could be useful in this repo:
     * Thanks for the [ID conversion code](/meta/steamdb_id_conversion.js)
 * [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands)
     * con_logfile \<file\>.
+* [TehhX/Learning-C](https://github.com/TehhX/Learning-C)
+    * Contains files I use for testing various concepts within this and other repositories
