@@ -78,6 +78,7 @@ int main(int argc, char **argv)
         {
             .name = "save-index",
             .key = Eoption_key_options_save_location,
+            // TODO: ~/.local... is not platform agnostic. Get it from cider or something
             .doc = "If not provided, use default location ~/.local/share/tf2pw00.sav. Else, put [0, 99] to choose number before \".sav\".",
             .arg = "SAVE_LOCATION",
             .group = Eoption_group_options

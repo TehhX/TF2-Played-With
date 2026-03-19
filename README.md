@@ -115,7 +115,7 @@ There will be one of these for every unique player record's unique dates.
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
     * Structure of STEAMID3
     * STEAMID is 8 bytes in size, multiple human-readable formats
-    * Storing STEAMID's is easiest with STEAMID64. The `status` command, however, returns STEAMID3's. Thankfully, SteamDB had website [JS code for conversion](/meta/steamdb_id_conversion.js) that I nabbed and refactored/ported to C
+    * Storing STEAMID's is easiest with STEAMID64. The `status` command, however, returns STEAMID3's. Thankfully, SteamDB had website [JS code for conversion](/meta/steamdb_id_conversion.js) that I nabbed and ported to C
 * [SteamID I/O](https://steamid.io/)
     * Thanks for the [ID conversion code](/meta/steamdb_id_conversion.js)
 * [Source Console Useful Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands)

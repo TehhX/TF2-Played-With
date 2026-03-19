@@ -12,6 +12,9 @@
     // ON  Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION) if (CONDITION) abort()
 
+    // ON  Printf's MSG
+    #define TF2_PLAYED_WITH_DEBUG_LOGF printf
+
 #else
 
     // OFF Gets replaced with CONTENT
@@ -19,6 +22,9 @@
 
     // OFF Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION)
+
+    // OFF Printf's MSG
+    #define TF2_PLAYED_WITH_DEBUG_LOGF ;
 
 #endif
 
