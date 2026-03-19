@@ -21,6 +21,7 @@ TF2 Played With will run alongside TF2 and get output from the console via an in
 ### Console Output Notes
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
 * Will only output `#` as first character in new line when printing player status. I suspect it will also occur if a player with `#` as the first character in their name types in a chat I have access to, eg. match chat
+* `<NAME> connected` will output when actually joining the server, while `Connected to <IP>` will output when connecting to a server.
 
 #### Status Formatting
 Running the `status` command will return a list of players in the server. It is usually formatted as so:
@@ -54,38 +55,44 @@ The following data will be required (Quasi-JSON format here for visualization, b
         (u8) SAVE_VERSION
 
         // Name of recorder
-            (u8) NAME_LEN
+        (u8) NAME_LEN
         (char *) NAME
 
         // How many unique player records there are in the following array
-        (u32) PLAYER_RECORD_LEN
+        (u32) PLAYER_RECORDS_LEN
+        (struct []) PLAYER_RECORDS:
         [
-            // STEAMID64 of the player whose records are in the following array
-            (u64) STEAMID64
+            {
+                // STEAMID64 of the player whose records are in the following array
+                (u64) STEAMID64
 
-            // How many unique dates they were encountered
-            (u32) PLAYER_RECORD_DATES_LEN
-            [
-                {
-                    // Date in days since UNIX epoch
-                    (u16) DATE_IN_DAYS
+                // How many unique dates they were encountered
+                (u32) DATE_RECORDS_LEN
+                (struct []) DATE_RECORDS:
+                [
+                    {
+                        // Date in days since UNIX epoch
+                        (u16) DATE_IN_DAYS
 
-                    // Name during this date's encounters
+                        // TODO: Assumes a player's name won't be changed during dates user encounters them. Maybe an array of their names? For another version
+                        // Name during this date's encounters
                         (u8) NAME_LEN
-                    (char *) NAME // TODO: Assumes a player's name won't be changed during dates user encounters them. Maybe an array of their names? For another version
+                        (char *) NAME
 
-                    // Times encountered on this day
-                    (u8) ENCOUNTER_COUNT
-                }
+                        // Times encountered on this day
+                        (u8) ENCOUNTER_COUNT
+                    }
 
-                {...}
-            ]
+                    {...}
+                ]
+            }
 
             {...}
         ]
     }
 
 ### Structure
+<!-- TODO: Could be a bit cleaner, mostly using the above visualization for development because of that. Maybe standardize to other structure docs for other mainstream file types -->
 #### Header
 Always at the beginning of every save file.
 |         Name         |                            Description                            | Size (Bytes) |    Example     |
@@ -98,9 +105,10 @@ Always at the beginning of every save file.
 
 #### Unique Player Record
 There will be one of these for every unique player record in the player record array.
-|   Name    |                Description                 | Size (Bytes) |         Example         |
-|:---------:|:------------------------------------------:|:------------:|:-----------------------:|
-| STEAMID64 | The STEAMID64 of the current player record |      8       | (u64) 76561197960287930 |
+|        Name         |                                  Description                                  | Size (Bytes) |         Example         |
+|:-------------------:|:-----------------------------------------------------------------------------:|:------------:|:-----------------------:|
+|      STEAMID64      |                  The STEAMID64 of the current player record                   |      8       | (u64) 76561197960287930 |
+| Date Records Length | How many unique date records there are for this player in the following array |      4       |         (u32)38         |
 
 #### Unique Player Date Record
 There will be one of these for every unique player record's unique dates.

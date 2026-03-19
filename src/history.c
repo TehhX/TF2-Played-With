@@ -13,38 +13,31 @@ static char *history_fullname;
 // Save contents in memory
 static struct
 {
+    uint_fast8_t save_format_version;
+
+    uint_fast8_t user_steam_name_length;
+    int_fast8_t *user_steam_name;
+
+    uint_fast32_t player_records_len;
     struct
     {
-        uint_fast8_t
-            save_format_version,
-            user_steam_name_length
-        ;
+        uint_fast64_t steamid64;
 
-        char *user_steam_name;
-
-        uint_fast32_t record_len;
-    }
-    header;
-
-    struct
-    {
-        uint64_t steamid64;
-
+        uint_fast32_t date_records_len;
         struct
         {
             uint_fast16_t date;
 
             uint_fast8_t name_len;
+            int_fast8_t *name;
 
-            char *name;
-
-            uint_fast8_t encounters;
+            uint_fast8_t encounter_count;
         }
-        *date_record;
+        *date_records;
     }
-    *record;
+    *player_records;
 }
-history_memory = { 0 };
+history_memory;
 
 void history_init(int file_num)
 {
@@ -105,11 +98,8 @@ void history_load()
     // TODO
 }
 
-// Writes a single variable VAR to file stream STREAM
-#define fwrite_one(VAR, STREAM) fwrite(&VAR, sizeof(VAR), 1, STREAM)
-
-// Writes an array ARR of length LEN to stream STREAM
-#define fwrite_arr(ARR, LEN, STREAM) fwrite(ARR, sizeof(*ARR), LEN, STREAM)
+// Writes a single variable VAR of size BYTES to file stream STREAM
+#define fwrite_one(VAR, BYTES, STREAM) fwrite(&VAR, BYTES, 1, STREAM)
 
 void history_save()
 {
@@ -131,9 +121,32 @@ void history_save()
         exit(EXIT_FAILURE);
     }
 
-    // Write header
+    // Byte counts of each variable can be found in /README.md#structure
     fputs("TF2PW", output_file_ptr);
-    fwrite_one(history_memory.header.save_format_version, output_file_ptr);
+
+    fwrite_one(history_memory.save_format_version, 1, output_file_ptr);
+
+    fwrite_one(history_memory.user_steam_name_length, 1, output_file_ptr);
+    fwrite(history_memory.user_steam_name, 1, history_memory.user_steam_name_length, output_file_ptr);
+
+    fwrite_one(history_memory.player_records_len, 4, output_file_ptr);
+
+    for (uint_fast32_t i = 0; i < history_memory.player_records_len; ++i)
+    {
+        fwrite_one(history_memory.player_records[i].steamid64, 8, output_file_ptr);
+
+        fwrite_one(history_memory.player_records[i].date_records_len, 4, output_file_ptr);
+
+        for (uint_fast32_t o = 0; o < history_memory.player_records[i].date_records_len; ++o)
+        {
+            fwrite_one(history_memory.player_records[i].date_records[o].date, 2, output_file_ptr);
+
+            fwrite_one(history_memory.player_records[i].date_records[o].name_len, 1, output_file_ptr);
+            fwrite(history_memory.player_records[i].date_records[o].name, 1, history_memory.player_records[i].date_records[o].name_len, output_file_ptr);
+
+            fwrite_one(history_memory.player_records[i].date_records[o].encounter_count, 1, output_file_ptr);
+        }
+    }
 
     // Close file
     if (fclose(output_file_ptr))
@@ -143,6 +156,8 @@ void history_save()
         exit(EXIT_FAILURE);
     }
 }
+
+#undef fwrite_one
 
 void history_collect_live(const char *collections_fullname)
 {
