@@ -21,7 +21,17 @@ TF2 Played With will run alongside TF2 and get output from the console via an in
 ### Console Output Notes
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
 * Will only output `#` as first character in new line when printing player status. I suspect it will also occur if a player with `#` as the first character in their name types in a chat I have access to, eg. match chat
-* `<NAME> connected` will output when actually joining the server, while `Connected to <IP>` will output when connecting to a server.
+* `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
+    * Queue for game, join server:
+        * `Connected to <IP>`
+        * `<NAME> connected`
+    * Enter map based on vote in same server:
+        * `<NAME> connected`
+    * Requeuing in match:
+        * `Connected to <IP>`
+        * `<NAME> connected`
+* Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
+* `<NAME> connected` may print erroneously if there is another player by the same name as the user
 
 #### Status Formatting
 Running the `status` command will return a list of players in the server. It is usually formatted as so:
@@ -33,16 +43,19 @@ Running the `status` command will return a list of players in the server. It is 
 #### Further observations
 * Status output will sometimes not start with # userid ...
 * Status output will sometimes be interrupted by seemingly unrelated output
-* Names and STEAMID3's can be captured by the regex `"(.+)" +\[U:([0-9]:[0-9]+)\]`, where group-1 is name and group-2 is STEAMID3
+* Names and STEAMID3's can be captured by the regex `"(.+)" +(\[U:1:[0-9]+\])`, where group-1 is name and group-2 is STEAMID3
 
 ### When Status Should be Run
 Status must be run at least once per game. However, running more than once will allow it to capture players who join after me. Because I personally have to run the status command, binding it to a commonly pressed key will run it much more than frequently enough to record every player, for example W, A, S, D or LMB.
 
 If it is done this way, this software will generate an incredible excess of match dates and names per STEAMID3 depending on how much I press the designated button. To solve this, a single status output will be set as the first/ultimate instance per-match, and only record newcomers to the match afterward.
 
-The penultimate status-report will occur once after each initial join message in the form `\n<NAME> Connected\n`, eg. `\nTehX Connected\n`. The '\n' characters
+The master status-report will occur once after each initial join message in the form `<NAME> Connected`, eg. `TehX Connected`.
 
 ## Save File
+### Save Format Versions
+Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type. Until 1.0.0, the save format is always 0, and subject to frequent and heavy modifications.
+
 ### Required Data and Visualization
 The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array):
 
@@ -54,9 +67,8 @@ The following data will be required (Quasi-JSON format here for visualization, b
         // The version of the save format
         (u8) SAVE_VERSION
 
-        // Name of recorder
-        (u8) NAME_LEN
-        (char *) NAME
+        // STEAMID64 of recorder/user
+        (u64) USER_STEAMID64
 
         // How many unique player records there are in the following array
         (u32) PLAYER_RECORDS_LEN
@@ -95,13 +107,12 @@ The following data will be required (Quasi-JSON format here for visualization, b
 <!-- TODO: Could be a bit cleaner, mostly using the above visualization for development because of that. Maybe standardize to other structure docs for other mainstream file types -->
 #### Header
 Always at the beginning of every save file.
-|         Name         |                            Description                            | Size (Bytes) |    Example     |
-|:--------------------:|:-----------------------------------------------------------------:|:------------:|:--------------:|
-|        Header        |                     Header of the file format                     |      5       | TF2PW (ALWAYS) |
-| Save Format Version  | The version of history file format used with this particular file |      1       |     (u8) 0     |
-|     Name Length      |              The length (bytes) of user's Steam name              |      1       |     (u8) 4     |
-|         Name         |                    The Steam name of the user                     | Name Length  |      TehX      |
-| Player Record Length |  How many unique player records there are in the following array  |      4       |  (u32) 12,000  |
+|         Name         |                            Description                            | Size (Bytes) |         Example         |
+|:--------------------:|:-----------------------------------------------------------------:|:------------:|:-----------------------:|
+|        Header        |                     Header of the file format                     |      5       |     TF2PW (ALWAYS)      |
+| Save Format Version  | The version of history file format used with this particular file |      1       |         (u8) 0          |
+|    User STEAMID64    |                The STEAMID64 of the recorder/user.                |      8       | (u64) 76561198284660364 |
+| Player Record Length |  How many unique player records there are in the following array  |      4       |      (u32) 12,000       |
 
 #### Unique Player Record
 There will be one of these for every unique player record in the player record array.

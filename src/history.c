@@ -15,13 +15,12 @@ static struct
 {
     uint_fast8_t save_format_version;
 
-    uint_fast8_t user_steam_name_length;
-    int_fast8_t *user_steam_name;
+    uint_fast64_t user_steamid64;
 
     uint_fast32_t player_records_len;
     struct
     {
-        uint_fast64_t steamid64;
+        uint_fast64_t record_steamid64;
 
         uint_fast32_t date_records_len;
         struct
@@ -126,14 +125,13 @@ void history_save()
 
     fwrite_one(history_memory.save_format_version, 1, output_file_ptr);
 
-    fwrite_one(history_memory.user_steam_name_length, 1, output_file_ptr);
-    fwrite(history_memory.user_steam_name, 1, history_memory.user_steam_name_length, output_file_ptr);
+    fwrite_one(history_memory.user_steamid64, 8, output_file_ptr);
 
     fwrite_one(history_memory.player_records_len, 4, output_file_ptr);
 
     for (uint_fast32_t i = 0; i < history_memory.player_records_len; ++i)
     {
-        fwrite_one(history_memory.player_records[i].steamid64, 8, output_file_ptr);
+        fwrite_one(history_memory.player_records[i].record_steamid64, 8, output_file_ptr);
 
         fwrite_one(history_memory.player_records[i].date_records_len, 4, output_file_ptr);
 
