@@ -2,10 +2,13 @@
 
 #include "history.h"
 
+#include "cider.h"
+
 #include "stdio.h"
 #include "stdlib.h"
 #include "errno.h"
 #include "argp.h"
+#include "unistd.h"
 
 enum Eoption_group
 {
@@ -33,15 +36,7 @@ static error_t save_location_parser(int key, char *arg, struct argp_state *state
 {
     if (key == Eoption_key_options_save_location && !history_initialized)
     {
-        char *end;
-        long result = strtol(arg, &end, 10);
-
-        if (end == arg || end[0] != '\0' || errno == ERANGE)
-        {
-            argp_error(state, "Bad value \"%s\" passed via -s or --save-index.\n" , arg);
-        }
-
-        history_init(result);
+        history_init(cider_canonicalize_file(arg));
     }
 
     return 0;
@@ -142,8 +137,6 @@ int main(int argc, char **argv)
 
     argp.parser = main_argp_parser;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
-
-    // TODO: After parsing, before freeing, some things may need doing here depending on the parsing capabilities of argp and circumstance
 
     history_free();
 }

@@ -15,6 +15,9 @@
     // ON  Printf's MSG
     #define TF2_PLAYED_WITH_DEBUG_LOGF printf
 
+    // ON  When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
+    #define TF2_PLAYED_WITH_DEBUG_ABEX abort()
+
 #else
 
     // OFF Gets replaced with CONTENT
@@ -25,6 +28,9 @@
 
     // OFF Printf's MSG
     #define TF2_PLAYED_WITH_DEBUG_LOGF ;
+
+    // OFF When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
+    #define TF2_PLAYED_WITH_DEBUG_ABEX exit(EXIT_FAILURE)
 
 #endif
 
