@@ -8,7 +8,6 @@
 #include "stdlib.h"
 #include "errno.h"
 #include "argp.h"
-#include "unistd.h"
 
 enum Eoption_group
 {
@@ -25,6 +24,7 @@ enum Eoption_key
 
     // Options
     Eoption_key_options_save_location = 's',
+    Eoption_key_options_set_user_steamid3 = 'i',
 
     // Retrieve
     Eoption_key_retrieve_id3  = 'm',
@@ -52,6 +52,9 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
     case Eoption_key_collect_archive:
         break;
 
+    case Eoption_key_options_set_user_steamid3:
+        break;
+
     case Eoption_key_retrieve_id3:
         break;
 
@@ -73,9 +76,16 @@ int main(int argc, char **argv)
         {
             .name = "save-index",
             .key = Eoption_key_options_save_location,
-            // TODO: ~/.local... is not platform agnostic. Get it from cider or something
-            .doc = "If not provided, use default location ~/.local/share/tf2pw00.sav. Else, put [0, 99] to choose number before \".sav\".",
+            // TODO: ~/.local... is not platform agnostic. Get user's data path from cider and add tf2pw.sav something
+            .doc = "If file provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
             .arg = "SAVE_LOCATION",
+            .group = Eoption_group_options
+        },
+        {
+            .name = "change-userid",
+            .key  = Eoption_key_options_set_user_steamid3,
+            .doc = "Changes the user STEAMID3 excerpt in the history file to provided STEAMID3",
+            .arg = "STEAMID3_EXCERPT",
             .group = Eoption_group_options
         },
         {
@@ -132,13 +142,15 @@ int main(int argc, char **argv)
     // No index was passed
     if (!history_initialized)
     {
-        history_init(0);
+        history_init(NULL);
     }
 
     argp.parser = main_argp_parser;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
     history_load();
+
+    history_save();
 
     history_free();
 }

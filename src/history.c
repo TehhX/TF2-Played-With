@@ -10,16 +10,22 @@
 int history_initialized = 0;
 static char *history_fullname;
 
+// The latest available save format version. Remember to keep this updated
+#define SAVE_FORMAT_LATEST (uint8_t) 0
+
 // Refer to /README.md#structure for variable descriptions. Same order as seen there as well
+// Variables
 static  uint8_t  save_format_version;
 static uint32_t  user_steamid3_excerpt;
 static uint32_t  player_records_len;
-static uint32_t *date_records_lens;
-static  uint8_t *name_lens;
-static uint32_t *steam_id3_excerpts;
-static uint16_t *dates;
-static   int8_t *names;
-static  uint8_t *encounter_counts;
+
+// Arrays
+static uint32_t *date_records_lens;  static size_t date_records_lens_len;
+static  uint8_t *name_lens;          static size_t name_lens_len;
+static uint32_t *steam_id3_excerpts; static size_t steam_id3_excerpts_len;
+static uint16_t *dates;              static size_t dates_len;
+static   int8_t *names;              static size_t names_len;
+static  uint8_t *encounter_counts;   static size_t encounter_counts_len;
 
 void history_init(char *requested_history_fullname)
 {
@@ -60,18 +66,25 @@ void history_free()
     history_initialized = 0;
 
     free(history_fullname);
+    free(date_records_lens);
+    free(name_lens);
+    free(steam_id3_excerpts);
+    free(dates);
+    free(names);
+    free(encounter_counts);
 }
 
 #define STEAMID3_MAX "[U:1:4294967295]"
 #define STEAMID3_START (char [5]){ "[U:1:" }
 
-// Populates memory with default history values via user input
+// Populates memory with default history values via user input. Uses latest save format specifications via SAVE_FORMAT_LATEST
 static void history_populate()
 {
-    save_format_version = 0;
+    save_format_version = SAVE_FORMAT_LATEST;
 
-    printf("Enter your STEAMID3 or SID3 excerpt: ");
+    printf("Enter your STEAMID3 in the form \"[U:1:XXX]\" or \"XXX\": ");
 
+    GET_USER_INPUT:
     char user_input_sid3e[sizeof(STEAMID3_MAX)];
     fgets(user_input_sid3e, sizeof(STEAMID3_MAX), stdin);
     for (int i = 0; i < sizeof(STEAMID3_MAX); ++i)
@@ -85,6 +98,7 @@ static void history_populate()
 
     TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Entered STEAMID3: \"%s\"\n", user_input_sid3e);
 
+    // TODO: Might not need all this
     if (!strncmp(user_input_sid3e, STEAMID3_START, sizeof(STEAMID3_START)))
     {
         memmove(user_input_sid3e, user_input_sid3e + sizeof(STEAMID3_START), sizeof(STEAMID3_MAX) - sizeof(STEAMID3_START));
@@ -99,9 +113,24 @@ static void history_populate()
         }
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Final STEAMID3 excerpt: \"%s\"\n", user_input_sid3e);
+    char *end;
+    user_steamid3_excerpt = strtol(user_input_sid3e, &end, 10);
+    if (end == user_input_sid3e || *end != '\0' || errno == ERANGE)
+    {
+        printf("Bad STEAMID3 input. Refer to the format, and again: ", user_input_sid3e);
+        goto GET_USER_INPUT;
+    }
 
-    // TODO
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Final STEAMID3 excerpt: %" PRId32 "\n", user_steamid3_excerpt);
+
+    // Length zeroing
+    player_records_len     =
+    date_records_lens_len  =
+    name_lens_len          =
+    steam_id3_excerpts_len =
+    dates_len              =
+    names_len              =
+    encounter_counts_len   = 0;
 }
 
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
@@ -113,6 +142,7 @@ static void history_populate()
 // The header of any given tf2pw file. If not, file is invalid
 #define HEADER (char [5]){ "TF2PW" }
 
+// TODO: Untested
 void history_load()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -136,6 +166,7 @@ void history_load()
             if (input_char == 'y' || input_char == 'Y' || input_char == '\n')
             {
                 history_populate();
+                history_save();
                 return;
             }
             else
@@ -161,13 +192,10 @@ void history_load()
     }
 
     fread_one(save_format_version);
-
     fread_one(user_steamid3_excerpt);
-
     fread_one(player_records_len);
 
-    // Keep len vairables for now, might need to be globalized later
-    const size_t date_records_lens_len = player_records_len;
+    date_records_lens_len = player_records_len;
     arr_allocread(date_records_lens);
 
     size_t sum_date_records_lens = 0;
@@ -176,7 +204,7 @@ void history_load()
         sum_date_records_lens += date_records_lens[i];
     }
 
-    const size_t name_lens_len = player_records_len * sum_date_records_lens;
+    name_lens_len = player_records_len * sum_date_records_lens;
     arr_allocread(name_lens);
 
     size_t sum_name_lens = 0;
@@ -185,18 +213,19 @@ void history_load()
         sum_name_lens += name_lens[i];
     }
 
-    const size_t steam_id3_excerpts_len = player_records_len;
+    steam_id3_excerpts_len = player_records_len;
     arr_allocread(steam_id3_excerpts);
 
-    const size_t dates_len = sum_date_records_lens;
+    dates_len = sum_date_records_lens;
     arr_allocread(dates);
 
-    const size_t names_len = sum_name_lens;
+    names_len = sum_name_lens;
     arr_allocread(names);
 
-    const size_t encounter_counts_len = sum_name_lens;
+    encounter_counts_len = sum_name_lens;
     arr_allocread(encounter_counts);
 
+    // TODO: Untested
     if (EOF != fgetc(input_file_ptr))
     {
         fprintf(stderr, "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n", history_fullname);
@@ -211,9 +240,13 @@ void history_load()
     }
 }
 
-// Writes a single variable VAR of size BYTES to file stream output_file_ptr
+// Writes a single variable VAR to file stream output_file_ptr
 #define fwrite_one(VAR) fwrite(&VAR, sizeof(VAR), 1, output_file_ptr)
 
+// Writes an array to output_file_ptr of length ARR##_len
+#define fwrite_arr(ARR) if (ARR) fwrite(ARR, sizeof(*ARR), ARR##_len, output_file_ptr)
+
+// TODO: Untested
 void history_save()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -233,7 +266,18 @@ void history_save()
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    // TODO
+    fwrite(HEADER, sizeof(char), sizeof(HEADER), output_file_ptr);
+
+    fwrite_one(save_format_version);
+    fwrite_one(user_steamid3_excerpt);
+    fwrite_one(player_records_len);
+
+    fwrite_arr(date_records_lens);
+    fwrite_arr(name_lens);
+    fwrite_arr(steam_id3_excerpts);
+    fwrite_arr(dates);
+    fwrite_arr(names);
+    fwrite_arr(encounter_counts);
 
     if (fclose(output_file_ptr))
     {
@@ -243,11 +287,13 @@ void history_save()
     }
 }
 
+// TODO: Split collections code into collections.[hc]
 void history_collect_live(const char *collections_fullname)
 {
-    // TODO: Write
+    // TODO
 }
 
+// TODO: Split collections code into collections.[hc]
 void history_collect_archived(const char *collections_fullname)
 {
     FILE *const input_file_ptr = fopen(collections_fullname, "r");
@@ -258,7 +304,7 @@ void history_collect_archived(const char *collections_fullname)
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    // TODO: Write
+    // TODO
 
     if (fclose(input_file_ptr))
     {

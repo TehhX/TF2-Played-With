@@ -16,7 +16,7 @@ The software will have the ability to do the following:
 * Add [data](#required-data-and-visualization) to history file during gameplay
 * Retreive data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
 * Print histories of players encountered during gameplay
-* Stop printing (but not stop collecting) during gameplay to accept input via CLI. Input may include:
+* Stop printing (but not stop collecting) during gameplay to accept user input via CLI. Input may include:
     * Getting data from history
     * Stop tf2pw
     * Save to disk
@@ -68,60 +68,51 @@ If it is done this way, this software will generate an incredible excess of matc
 The master status-report will occur once after each initial join message in the form `<NAME> Connected`, eg. `TehX Connected`. After launching the game for the first time, the user's name will need to be taken via the first invocation of `status`.
 
 ## Save File
-### Save Format Versions
+### Format Versions
 Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type. Until 1.0.0, the save format is always 0 and is subject to frequent and heavy modifications.
 
-### Required Data and Visualization
-The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). Note that below data will not be in the same order as the binary file. `{ ... }` means there is an undefined count of the above element in the array).
+### Visualization
+The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array).
 
-    tf2pwXX.sav:
     {
         // File header, always "TF2PW"
-        (char *) HEADER
+        (char *) HEADER,
 
         // The version of the save format
-        (u8) SAVE_VERSION
+        (u8) SAVE_VERSION,
 
         // STEAMID32 excerpt of user (the person with this file on their computer)
-        (u32) USER_STEAMID3_EXCERPT
+        (u32) USER_STEAMID3_EXCERPT,
 
-        // An array of lengths for each PLAYER_RECORD
-        (u32) DATE_RECORDS_LEN
-
-        // How many unique player records there are in PLAYER_RECORDS
-        (u32) PLAYER_RECORDS_LEN
         (struct player_record *) PLAYER_RECORDS:
         [
             {
                 // STEAMID3 excerpt of the player whose records are in the following array
-                (u32) USER_STEAMID3_EXCERPT
+                (u32) USER_STEAMID3_EXCERPT,
 
-                // How many date_records there are in DATE_RECORDS
-                (u32) DATE_RECORDS_LEN
                 (struct date_record *) DATE_RECORDS:
                 [
                     {
                         // Date in days since UNIX epoch
-                        (u16) DATE_IN_DAYS
+                        (u16) DATE_IN_DAYS,
 
-                        // The length of NAME
-                        (u8) NAME_LEN
-                        (char *) NAME
+                        // The encountered player's name on this day
+                        (char *) NAME,
 
                         // Times encountered on this day
                         (u8) ENCOUNTER_COUNT
-                    }
+                    },
 
                     {...}
                 ]
-            }
+            },
 
             {...}
         ]
     }
 
 ### Considerations
-* `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts foor another save format version in any case
+* `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts for another save format version in any case
 
 ### Structure
 |         Name          |                                 Description                                 |                     Size (Bytes)                      |              Example               |
@@ -132,7 +123,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 | Player Records Length |       How many unique player records there are in the following array       |                           4                           |            (u32) 12,000            |
 | Date Records Lengths  |      An array of lengths for every date record in every player record       |               4 * player records length               |      (u32 *) { 4, 9, 13, 2 }       |
 |     Name Lengths      | An array of lengths for each name in each date record in each player record | 1 * player records length * sum(date records lengths) |      (u8 *) { 13, 4, 8, 15 }       |
-|   STEAMID3 Excerpt    |            An array of STEAMID3 excerpts for each player record             |               4 * player records length               |       (u32 *) { 22202, ... }       |
+|   STEAMID3 Excerpts   |            An array of STEAMID3 excerpts for each player record             |               4 * player records length               |       (u32 *) { 22202, ... }       |
 |         Dates         |         How many days since the epoch this date record was recorded         |             2 * sum(date records lengths)             | (u16 *) { 20,530, 20,622, 20,625 } |
 |         Names         |                   An array of names for each date record                    |                 1 * sum(name lengths)                 |    (i8 *) { Rabscuttle, Robin }    |
 |   Encounter Counts    |  An array of how many times a player was encountered for each date records  |                 1 * sum(name lengths)                 |       (u8 *) { 3, 2, 8, 19 }       |
@@ -143,17 +134,17 @@ TF2PW is best built via CMake. Only the standard CMake commands are required to 
 ## Helpful Resources and Thanks
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
     * Structure of STEAMID3
-    * STEAMID is 8 bytes in size, multiple human-readable formats
-* [SteamID I/O](https://steamid.io/)
-* [SteamDB](https://steamdb.info/)
-    * Thanks for the [ID conversion code](/meta/steamdb_id_conversion.js)
+    * STEAMID64 is 8 bytes in size, multiple human-readable formats
 * [TF2 Useful Console Commands]
     * con_logfile \<file\>.
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C)
     * Contains files I use for testing various concepts within this and other repositories
 
 ## Todo
+* Figure out argp for Windows
 * Implement installing via CMake
 * Create builds for Windows and Linux
-* Figure out argp for Windows
 * Implement history files
+* Consider splitting this README into end-user/technical README's
+* The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
+* Address TODO comments in the source code
