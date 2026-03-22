@@ -138,5 +138,7 @@ int main(int argc, char **argv)
     argp.parser = main_argp_parser;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
+    history_load();
+
     history_free();
 }

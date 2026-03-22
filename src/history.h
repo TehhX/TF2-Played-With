@@ -13,7 +13,7 @@
 extern int history_initialized;
 
 /* Initialize history
-	   @param history_fullname: The file to save/load. If NULL, use default fullname */
+	   @param history_fullname: The file to save/load. If NULL, use default fullname, else must be on the heap */
 extern void history_init(char *history_fullname);
 
 // Free resources used by history

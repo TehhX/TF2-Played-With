@@ -5,13 +5,21 @@
 #include "stdint.h"
 #include "inttypes.h"
 #include "string.h"
+#include "errno.h"
 
 int history_initialized = 0;
 static char *history_fullname;
 
-static  uint_fast8_t save_format_version; // The version of the save format
-static uint_fast32_t user_steamid3_excerpt; // The user's STEAMID3 excerpt
-static uint_fast32_t player_records_len; // How many player records or unique other players there are
+// Refer to /README.md#structure for variable descriptions. Same order as seen there as well
+static  uint8_t  save_format_version;
+static uint32_t  user_steamid3_excerpt;
+static uint32_t  player_records_len;
+static uint32_t *date_records_lens;
+static  uint8_t *name_lens;
+static uint32_t *steam_id3_excerpts;
+static uint16_t *dates;
+static   int8_t *names;
+static  uint8_t *encounter_counts;
 
 void history_init(char *requested_history_fullname)
 {
@@ -54,8 +62,56 @@ void history_free()
     free(history_fullname);
 }
 
+#define STEAMID3_MAX "[U:1:4294967295]"
+#define STEAMID3_START (char [5]){ "[U:1:" }
+
+// Populates memory with default history values via user input
+static void history_populate()
+{
+    save_format_version = 0;
+
+    printf("Enter your STEAMID3 or SID3 excerpt: ");
+
+    char user_input_sid3e[sizeof(STEAMID3_MAX)];
+    fgets(user_input_sid3e, sizeof(STEAMID3_MAX), stdin);
+    for (int i = 0; i < sizeof(STEAMID3_MAX); ++i)
+    {
+        if (user_input_sid3e[i] == '\n')
+        {
+            user_input_sid3e[i] = '\0';
+            break;
+        }
+    }
+
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Entered STEAMID3: \"%s\"\n", user_input_sid3e);
+
+    if (!strncmp(user_input_sid3e, STEAMID3_START, sizeof(STEAMID3_START)))
+    {
+        memmove(user_input_sid3e, user_input_sid3e + sizeof(STEAMID3_START), sizeof(STEAMID3_MAX) - sizeof(STEAMID3_START));
+
+        for (int i = 0; i < sizeof(STEAMID3_MAX); ++i)
+        {
+            if (user_input_sid3e[i] == ']')
+            {
+                user_input_sid3e[i] = '\0';
+                break;
+            }
+        }
+    }
+
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Final STEAMID3 excerpt: \"%s\"\n", user_input_sid3e);
+
+    // TODO
+}
+
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
-#define fread_one(VAR, BYTES) fread(&VAR, BYTES, 1, input_file_ptr)
+#define fread_one(VAR) fread(&VAR, sizeof(VAR), 1, input_file_ptr)
+
+// Allocates space for, reads in array of date from input_file_ptr. Requires previously defined variable ARR##_len to specify length of array to be allocated and populated
+#define arr_allocread(ARR) ARR = malloc(sizeof(*ARR) * ARR##_len); fread(ARR, sizeof(*ARR), ARR##_len, input_file_ptr)
+
+// The header of any given tf2pw file. If not, file is invalid
+#define HEADER (char [5]){ "TF2PW" }
 
 void history_load()
 {
@@ -68,38 +124,95 @@ void history_load()
         }
     )
 
-    FILE *const input_file_ptr = fopen(history_fullname, "w");
-    if (!input_file_ptr)
+    FILE *const input_file_ptr = fopen(history_fullname, "r");
+    if (input_file_ptr == NULL)
     {
-        fprintf(stderr, "MAJOR: Failed to open \"%s\" for reading. Error", history_fullname);
-        perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        // No file, populate one
+        if (errno == ENOENT)
+        {
+            printf("No history file found at specified location. Continue to first-time setup? (y/n): ");
+
+            const int input_char = fgetc(stdin);
+            if (input_char == 'y' || input_char == 'Y' || input_char == '\n')
+            {
+                history_populate();
+                return;
+            }
+            else
+            {
+                fputs("First-time setup declined, either modify another history file or accept on next run.\n", stderr);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else
+        {
+            fprintf(stderr, "MAJOR: Failed to open \"%s\" for reading. Error", history_fullname);
+            perror(NULL);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
     }
 
-    char header_buf[sizeof("TF2PW") - 1];
-    fread(header_buf, 1, sizeof("TF2PW") - 1, input_file_ptr);
-    if (strncmp(header_buf, "TF2PW", sizeof("TF2PW") - 1)) // Don't compare the null-term, str!N!cmp required for count - 1
+    char header_buf[sizeof(HEADER)];
+    fread(header_buf, 1, sizeof(HEADER), input_file_ptr);
+    if (strncmp(header_buf, HEADER, sizeof(HEADER)))
     {
         fprintf(stderr, "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n", history_fullname);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    fread_one(  save_format_version, sizeof( uint8_t));
-    fread_one(user_steamid3_excerpt, sizeof(uint32_t));
-    fread_one(   player_records_len, sizeof(uint32_t));
+    fread_one(save_format_version);
 
-    // TODO: Continue
+    fread_one(user_steamid3_excerpt);
+
+    fread_one(player_records_len);
+
+    // Keep len vairables for now, might need to be globalized later
+    const size_t date_records_lens_len = player_records_len;
+    arr_allocread(date_records_lens);
+
+    size_t sum_date_records_lens = 0;
+    for (uint32_t i = 0; i != date_records_lens_len; ++i)
+    {
+        sum_date_records_lens += date_records_lens[i];
+    }
+
+    const size_t name_lens_len = player_records_len * sum_date_records_lens;
+    arr_allocread(name_lens);
+
+    size_t sum_name_lens = 0;
+    for (size_t i = 0; i < name_lens_len; ++i)
+    {
+        sum_name_lens += name_lens[i];
+    }
+
+    const size_t steam_id3_excerpts_len = player_records_len;
+    arr_allocread(steam_id3_excerpts);
+
+    const size_t dates_len = sum_date_records_lens;
+    arr_allocread(dates);
+
+    const size_t names_len = sum_name_lens;
+    arr_allocread(names);
+
+    const size_t encounter_counts_len = sum_name_lens;
+    arr_allocread(encounter_counts);
+
+    if (EOF != fgetc(input_file_ptr))
+    {
+        fprintf(stderr, "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n", history_fullname);
+        TF2_PLAYED_WITH_DEBUG_ABEX();
+    }
 
     if (fclose(input_file_ptr))
     {
         fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", history_fullname);
         perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
 
 // Writes a single variable VAR of size BYTES to file stream output_file_ptr
-#define fwrite_one(VAR, BYTES) fwrite(&VAR, BYTES, 1, output_file_ptr)
+#define fwrite_one(VAR) fwrite(&VAR, sizeof(VAR), 1, output_file_ptr)
 
 void history_save()
 {
@@ -117,16 +230,16 @@ void history_save()
     {
         fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error", history_fullname);
         perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    // TODO: Continue
+    // TODO
 
     if (fclose(output_file_ptr))
     {
         fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", history_fullname);
         perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
 
@@ -142,7 +255,7 @@ void history_collect_archived(const char *collections_fullname)
     {
         fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error\n", collections_fullname);
         perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     // TODO: Write
@@ -151,6 +264,6 @@ void history_collect_archived(const char *collections_fullname)
     {
         fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", collections_fullname);
         perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }

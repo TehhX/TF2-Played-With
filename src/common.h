@@ -12,11 +12,14 @@
     // ON  Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION) if (CONDITION) abort()
 
-    // ON  Printf's MSG
+    // ON  When debugging, printf's MSG. Else, no-op
     #define TF2_PLAYED_WITH_DEBUG_LOGF printf
 
     // ON  When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
-    #define TF2_PLAYED_WITH_DEBUG_ABEX abort()
+    #define TF2_PLAYED_WITH_DEBUG_ABEX abort
+
+    // ON  When debugging, abort. Else, no-op
+    #define TF2_PLAYED_WITH_DEBUG_ABORT abort
 
 #else
 
@@ -26,11 +29,14 @@
     // OFF Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION)
 
-    // OFF Printf's MSG
+    // OFF When debugging, printf's MSG. Else, no-op
     #define TF2_PLAYED_WITH_DEBUG_LOGF ;
 
     // OFF When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
-    #define TF2_PLAYED_WITH_DEBUG_ABEX exit(EXIT_FAILURE)
+    #define TF2_PLAYED_WITH_DEBUG_ABEX() exit(EXIT_FAILURE)
+
+    // OFF When debugging, abort. Else, no-op
+    #define TF2_PLAYED_WITH_DEBUG_ABORT() ;
 
 #endif
 

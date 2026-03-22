@@ -16,6 +16,11 @@ The software will have the ability to do the following:
 * Add [data](#required-data-and-visualization) to history file during gameplay
 * Retreive data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
 * Print histories of players encountered during gameplay
+* Stop printing (but not stop collecting) during gameplay to accept input via CLI. Input may include:
+    * Getting data from history
+    * Stop tf2pw
+    * Save to disk
+    * Load from disk
 
 ## Dependencies
 The following are required for building:
@@ -119,11 +124,9 @@ The following data will be required (Quasi-JSON format here for visualization, b
 * `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts foor another save format version in any case
 
 ### Structure
-##### Header
-Always at the beginning of every save file.
 |         Name          |                                 Description                                 |                     Size (Bytes)                      |              Example               |
 |:---------------------:|:---------------------------------------------------------------------------:|:-----------------------------------------------------:|:----------------------------------:|
-|        Header         |                          Header of the file format                          |                           5                           |           TF2PW (ALWAYS)           |
+|        Header         |       Header of the file format. Always "TF2PW", else file is invalid       |                           5                           |               TF2PW                |
 |  Save Format Version  |      The version of history file format used with this particular file      |                           1                           |               (u8) 0               |
 | User STEAMID3 excerpt |                 The STEAMID3 excerpt of the recorder/user.                  |                           4                           |          (u32) 324394636           |
 | Player Records Length |       How many unique player records there are in the following array       |                           4                           |            (u32) 12,000            |
@@ -131,8 +134,8 @@ Always at the beginning of every save file.
 |     Name Lengths      | An array of lengths for each name in each date record in each player record | 1 * player records length * sum(date records lengths) |      (u8 *) { 13, 4, 8, 15 }       |
 |   STEAMID3 Excerpt    |            An array of STEAMID3 excerpts for each player record             |               4 * player records length               |       (u32 *) { 22202, ... }       |
 |         Dates         |         How many days since the epoch this date record was recorded         |             2 * sum(date records lengths)             | (u16 *) { 20,530, 20,622, 20,625 } |
-|         Names         |                   An array of names for each date record                    |                 1 * sum(name lengths)                 |   (char *) { Rabscuttle, Robin }   |
-|   Encounter Counts    |  An array of how many times a player was encountered for each date records  |                           1                           |       (u8 *) { 3, 2, 8, 19 }       |
+|         Names         |                   An array of names for each date record                    |                 1 * sum(name lengths)                 |    (i8 *) { Rabscuttle, Robin }    |
+|   Encounter Counts    |  An array of how many times a player was encountered for each date records  |                 1 * sum(name lengths)                 |       (u8 *) { 3, 2, 8, 19 }       |
 
 ## Building
 TF2PW is best built via CMake. Only the standard CMake commands are required to build/run TF2PW, find CMake tutorials somewhere else. Installing via CMake is not yet implemented.
