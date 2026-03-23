@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include "history.h"
+#include "collection.h"
 
 #include "cider.h"
 
@@ -50,6 +51,9 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
         break;
 
     case Eoption_key_collect_archive:
+        char *collection_fullname = cider_canonicalize_file(arg);
+        collection_read_archived(collection_fullname);
+        free(collection_fullname);
         break;
 
     case Eoption_key_options_set_user_steamid3:

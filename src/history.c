@@ -7,25 +7,14 @@
 #include "string.h"
 #include "errno.h"
 
-int history_initialized = 0;
+// Sorted "cleaner" variables in header file, these are just the definitions
+int8_t *names; uint8_t save_format_version, *name_lens, *encounter_counts, history_initialized = 0; uint16_t *dates; uint32_t user_steamid3_excerpt, player_records_len, *steam_id3_excerpts, *date_records_lens; size_t date_records_lens_len, name_lens_len, steam_id3_excerpts_len, dates_len, names_len, encounter_counts_len;
+
+// Fullname of the history file to read from/write to
 static char *history_fullname;
 
 // The latest available save format version. Remember to keep this updated
-#define SAVE_FORMAT_LATEST (uint8_t) 0
-
-// Refer to /README.md#structure for variable descriptions. Same order as seen there as well
-// Variables
-static  uint8_t  save_format_version;
-static uint32_t  user_steamid3_excerpt;
-static uint32_t  player_records_len;
-
-// Arrays
-static uint32_t *date_records_lens;  static size_t date_records_lens_len;
-static  uint8_t *name_lens;          static size_t name_lens_len;
-static uint32_t *steam_id3_excerpts; static size_t steam_id3_excerpts_len;
-static uint16_t *dates;              static size_t dates_len;
-static   int8_t *names;              static size_t names_len;
-static  uint8_t *encounter_counts;   static size_t encounter_counts_len;
+#define SAVE_FORMAT_LATEST ((uint8_t) 0)
 
 void history_init(char *requested_history_fullname)
 {
@@ -49,7 +38,7 @@ void history_init(char *requested_history_fullname)
         history_fullname = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav");
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("History initialized with history_fullname as \"%s\".\n", history_fullname);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: History initialized with history_fullname as \"%s\".\n", history_fullname);
 }
 
 void history_free()
@@ -142,7 +131,6 @@ static void history_populate()
 // The header of any given tf2pw file. If not, file is invalid
 #define HEADER (char [5]){ "TF2PW" }
 
-// TODO: Untested
 void history_load()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -177,7 +165,7 @@ void history_load()
         }
         else
         {
-            fprintf(stderr, "MAJOR: Failed to open \"%s\" for reading. Error", history_fullname);
+            fprintf(stderr, "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -225,7 +213,6 @@ void history_load()
     encounter_counts_len = sum_name_lens;
     arr_allocread(encounter_counts);
 
-    // TODO: Untested
     if (EOF != fgetc(input_file_ptr))
     {
         fprintf(stderr, "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n", history_fullname);
@@ -234,7 +221,7 @@ void history_load()
 
     if (fclose(input_file_ptr))
     {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", history_fullname);
+        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
@@ -246,7 +233,6 @@ void history_load()
 // Writes an array to output_file_ptr of length ARR##_len
 #define fwrite_arr(ARR) if (ARR) fwrite(ARR, sizeof(*ARR), ARR##_len, output_file_ptr)
 
-// TODO: Untested
 void history_save()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -261,7 +247,7 @@ void history_save()
     FILE *const output_file_ptr = fopen(history_fullname, "w");
     if (!output_file_ptr)
     {
-        fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error", history_fullname);
+        fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error: ", history_fullname);
         perror(NULL);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
@@ -281,34 +267,7 @@ void history_save()
 
     if (fclose(output_file_ptr))
     {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", history_fullname);
-        perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
-    }
-}
-
-// TODO: Split collections code into collections.[hc]
-void history_collect_live(const char *collections_fullname)
-{
-    // TODO
-}
-
-// TODO: Split collections code into collections.[hc]
-void history_collect_archived(const char *collections_fullname)
-{
-    FILE *const input_file_ptr = fopen(collections_fullname, "r");
-    if (!input_file_ptr)
-    {
-        fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error\n", collections_fullname);
-        perror(NULL);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
-    }
-
-    // TODO
-
-    if (fclose(input_file_ptr))
-    {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error", collections_fullname);
+        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }

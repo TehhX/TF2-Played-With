@@ -5,7 +5,7 @@ A repository to keep track of which players I've played with in Valve's Team For
 TF2PW is not yet viable so no builds are available, nor would I reccomend you use them if they were. If you are a C programmer and/or want to mess around with what it currently does, check [building](#building). Just keep in mind this isn't even in alpha yet.
 
 ## Glossary
-* STEAMID3 Excerpt: If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`.
+* STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`.
 * Various path words are taken from [Cider's glossary](https://github.com/TehhX/Cider/blob/main/include/cider.h#L12)
 
 <!-- Multi-Use Links: -->
@@ -35,7 +35,11 @@ TF2 Played With will run alongside TF2 and get output from the console via an in
 
 ### Console Output Notes
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
-* Will only output `#` as first character in new line when printing player status. I suspect it will also occur if a player with `#` as the first character in their name types in a chat I have access to, eg. match chat
+* Will only output `#` as first character in new line when printing player status
+* Players whose names *start* with `#` will have it replaced with a space. Following occurances of `#` will remain intact
+* The regex `^#  ` will output *only* lines output by `status` relating player names to associated data
+* The regex `connected$` will output *only* lines notifiying of player connect events, including the user's own
+* The first instance of `<NAME> connected` will always contain the user's name
 * `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
     * Queue for game, join server:
         * `Connected to <IP>`
@@ -56,9 +60,9 @@ Running the `status` command will return a list of players in the server. It is 
     ... // More names and stuff in the same form
 
 #### Further observations
-* Status output will sometimes not start with # userid ...
+* Status output will sometimes not start with # userid ... as a batch
 * Status output will sometimes be interrupted by seemingly unrelated output
-* Names and STEAMID3's can be captured by the regex `"(.+)" +(\[U:1:[0-9]+\])`, where group-1 is name and group-2 is STEAMID3
+* Names and STEAMID3's can be captured by the regex `"(.+)" +\[U:1:([0-9]+)\]`, where group-1 is name and group-2 is STEAMID3 excerpt
 
 ### When Status Should be Run
 Status must be run at least once per game. However, running more than once will allow it to capture players who join after me. Because I personally have to run the status command, binding it to a commonly pressed key will run it much more than frequently enough to record every player, for example W, A, S, D or LMB.
@@ -113,6 +117,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 ### Considerations
 * `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts for another save format version in any case
+* To change a name in TF2, the player must quit the game and relaunch it
 
 ### Structure
 |         Name          |                                 Description                                 |                     Size (Bytes)                      |              Example               |
@@ -139,12 +144,23 @@ TF2PW is best built via CMake. Only the standard CMake commands are required to 
     * con_logfile \<file\>.
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C)
     * Contains files I use for testing various concepts within this and other repositories
+* [SourceCmd](https://github.com/rannmann/SourceCmd)
+    * Might have some useful things in it, have to comb through it
+* [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder)
+    * Might have similar use as SourceCmd, have to look at it some time
 
 ## Todo
+Technical things which should be worked out:
 * Figure out argp for Windows
 * Implement installing via CMake
 * Create builds for Windows and Linux
 * Implement history files
+* See if there's a way to output commands directly to a file, console window gets easily clogged
 * Consider splitting this README into end-user/technical README's
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
 * Address TODO comments in the source code
+
+## Future Improvement Ideas
+General ideas and brainstorming for new features:
+* Record servers connected to along with relevant server records (K/D, maps seen etc)
+* Record kills/deaths regarding user for each player
