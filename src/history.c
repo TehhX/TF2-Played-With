@@ -1,5 +1,7 @@
 #include "history.h"
 
+#include "common.h"
+
 #include "cider.h"
 
 #include "stdint.h"
@@ -9,7 +11,7 @@
 #include "stdio.h"
 
 // Sorted "cleaner" variables in header file, these are just the definitions
-int8_t *names; uint8_t save_format_version, *name_lens, *encounter_counts, history_initialized = 0; uint16_t *dates; uint32_t user_steamid3_excerpt, player_records_len, *steam_id3_excerpts, *date_records_lens; size_t date_records_lens_len, name_lens_len, steam_id3_excerpts_len, dates_len, names_len, encounter_counts_len;
+int8_t *names; uint8_t save_format_version, *name_lens, *encounter_counts, history_initialized = 0; uint16_t *dates, current_date; uint32_t user_steamid3_excerpt, player_records_len, *steam_id3_excerpts, *date_records_lens; size_t date_records_lens_len, name_lens_len, steam_id3_excerpts_len, dates_len, names_len, encounter_counts_len;
 
 // Fullname of the history file to read from/write to
 static char *history_fullname;
@@ -67,62 +69,6 @@ void history_free()
 #define STEAMID3_MAX "[U:1:4294967295]"
 #define STEAMID3_START (char [5]){ "[U:1:" }
 
-// Populates memory with default history values via user input. Uses latest save format specifications via SAVE_FORMAT_LATEST
-static void history_populate()
-{
-    save_format_version = SAVE_FORMAT_LATEST;
-
-    printf("Enter your STEAMID3 in the form \"[U:1:XXX]\" or \"XXX\": ");
-
-    GET_USER_INPUT:
-    char user_input_sid3e[sizeof(STEAMID3_MAX)];
-    fgets(user_input_sid3e, sizeof(STEAMID3_MAX), stdin);
-    for (int i = 0; i < sizeof(STEAMID3_MAX); ++i)
-    {
-        if (user_input_sid3e[i] == '\n')
-        {
-            user_input_sid3e[i] = '\0';
-            break;
-        }
-    }
-
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Entered STEAMID3: \"%s\"\n", user_input_sid3e);
-
-    // TODO: Might not need all this
-    if (!strncmp(user_input_sid3e, STEAMID3_START, sizeof(STEAMID3_START)))
-    {
-        memmove(user_input_sid3e, user_input_sid3e + sizeof(STEAMID3_START), sizeof(STEAMID3_MAX) - sizeof(STEAMID3_START));
-
-        for (int i = 0; i < sizeof(STEAMID3_MAX); ++i)
-        {
-            if (user_input_sid3e[i] == ']')
-            {
-                user_input_sid3e[i] = '\0';
-                break;
-            }
-        }
-    }
-
-    char *end;
-    user_steamid3_excerpt = strtol(user_input_sid3e, &end, 10);
-    if (end == user_input_sid3e || *end != '\0' || errno == ERANGE)
-    {
-        printf("Bad STEAMID3 input. Refer to the format, and again: ", user_input_sid3e);
-        goto GET_USER_INPUT;
-    }
-
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Final STEAMID3 excerpt: %" PRId32 "\n", user_steamid3_excerpt);
-
-    // Length zeroing
-    player_records_len     =
-    date_records_lens_len  =
-    name_lens_len          =
-    steam_id3_excerpts_len =
-    dates_len              =
-    names_len              =
-    encounter_counts_len   = 0;
-}
-
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
 #define fread_one(VAR) fread(&VAR, sizeof(VAR), 1, input_file_ptr)
 
@@ -146,22 +92,32 @@ void history_load()
     FILE *const input_file_ptr = fopen(history_fullname, "r");
     if (input_file_ptr == NULL)
     {
-        // No file, populate one
+        // No file, request to use default values
         if (errno == ENOENT)
         {
-            printf("No history file found at specified location. Continue to first-time setup? (y/n): ");
+            errno = 0;
 
-            const int input_char = fgetc(stdin);
+            fprintf(stderr, "No history file found at \"%s\". Use defaults? (Y/N): ", history_fullname);
+
+            const char input_char = fgetc(stdin);
             if (input_char == 'y' || input_char == 'Y' || input_char == '\n')
             {
-                history_populate();
-                history_save();
+                save_format_version = SAVE_FORMAT_LATEST;
+
+                player_records_len     =
+                date_records_lens_len  =
+                name_lens_len          =
+                steam_id3_excerpts_len =
+                dates_len              =
+                names_len              =
+                encounter_counts_len   = 0;
+
                 return;
             }
             else
             {
-                fputs("First-time setup declined, either modify another history file or accept on next run.\n", stderr);
-                exit(EXIT_FAILURE);
+                fputs("Either modify another history file or accept creation of a new file on next run.\n", stderr);
+                TF2_PLAYED_WITH_DEBUG_ABEX();
             }
         }
         else
@@ -272,4 +228,24 @@ void history_save()
         perror(NULL);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
+}
+
+void history_add_record(const struct player_info *const restrict pinfo)
+{
+    TF2_PLAYED_WITH_DEBUG_LOGF("(%s, %" PRIu32 ")", pinfo->name, pinfo->sid3e);
+
+    // BSEARCH_TODO
+    for (size_t player_i = 0, dates_i; player_i < steam_id3_excerpts_len; ++player_i)
+    {
+        if (steam_id3_excerpts[player_i] != pinfo->sid3e)
+        {
+            continue;
+        }
+
+        // Found requested player
+        TF2_PLAYED_WITH_DEBUG_LOGF(" is already in records.\n");
+    }
+
+    // Couldn't find requested player
+    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records.\n");
 }

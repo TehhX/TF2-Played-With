@@ -1,8 +1,14 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#ifdef TF2_PLAYED_WITH_DEBUG
+/*
+    common.h
+    --------
+    Contains definitions to be used in *all* files contained within this project
+*/
 
+// Define by setting config to DEBUG in CMake, or by defining the following value in your own compiling efforts
+#ifdef TF2_PLAYED_WITH_DEBUG
     #include "stdio.h"
     #include "stdlib.h"
 
@@ -23,9 +29,7 @@
 
     // DEB When debugging, insert DEB. When not, insert REL
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) DEB
-
 #else
-
     // OFF Gets replaced with CONTENT
     #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT)
 
@@ -43,7 +47,6 @@
 
     // REL When debugging, insert DEB. When not, insert REL
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) REL
-
 #endif
 
 #endif // COMMON_H

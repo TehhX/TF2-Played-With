@@ -1,5 +1,3 @@
-#include "common.h"
-
 #include "history.h"
 #include "collection.h"
 
@@ -25,12 +23,11 @@ enum Eoption_key
 
     // Options
     Eoption_key_options_save_location = 's',
-    Eoption_key_options_set_user_steamid3 = 'i',
 
     // Retrieve
-    Eoption_key_retrieve_id3  = 'm',
+    Eoption_key_retrieve_id3  = 'r',
     Eoption_key_retrieve_id64 = 'b',
-    Eoption_key_retrieve_name = 'r',
+    Eoption_key_retrieve_name = 'n',
 };
 
 static error_t save_location_parser(int key, char *arg, struct argp_state *state)
@@ -54,9 +51,6 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
         char *collection_fullname = cider_canonicalize_file(arg);
         collection_read_archived(collection_fullname);
         free(collection_fullname);
-        break;
-
-    case Eoption_key_options_set_user_steamid3:
         break;
 
     case Eoption_key_retrieve_id3:
@@ -83,13 +77,6 @@ int main(int argc, char **argv)
             // TODO: ~/.local... is not platform agnostic. Get user's data path from cider and add tf2pw.sav something
             .doc = "If file provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
             .arg = "SAVE_LOCATION",
-            .group = Eoption_group_options
-        },
-        {
-            .name = "change-userid",
-            .key  = Eoption_key_options_set_user_steamid3,
-            .doc = "Changes the user STEAMID3 excerpt in the history file to provided STEAMID3",
-            .arg = "STEAMID3_EXCERPT",
             .group = Eoption_group_options
         },
         {
@@ -143,16 +130,16 @@ int main(int argc, char **argv)
 
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
-    // No index was passed
+    // No history fullname was passed in previous parse
     if (!history_initialized)
     {
         history_init(NULL);
     }
 
+    history_load();
+
     argp.parser = main_argp_parser;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
-
-    history_load();
 
     history_save();
 
