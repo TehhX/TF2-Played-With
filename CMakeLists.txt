@@ -24,7 +24,7 @@ target_link_libraries(tf2pw PRIVATE cider)
 
 # Enable debugging when variant is "Debug"
 if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
-    target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_DEBUG)
+    target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_DEBUG=1)
     target_compile_options    (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
     target_link_options       (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
 endif ()

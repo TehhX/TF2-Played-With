@@ -2,7 +2,7 @@
 A repository to keep track of which players I've played with in Valve's Team Fortress 2. The name is a bit clunky, and thus subject to change.
 
 ## Download
-TF2PW is not yet viable so no builds are available, nor would I reccomend you use them if they were. If you are a C programmer and/or want to mess around with what it currently does, check [building](#building). Just keep in mind this isn't even in alpha yet.
+TF2PW is not yet viable so no builds are available, nor would I recommend you use them if they were. If you are a C programmer and/or want to mess around with what it currently does, check [building](#building). Just keep in mind this isn't even in alpha yet.
 
 ## Glossary
 * STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`.
@@ -10,11 +10,13 @@ TF2PW is not yet viable so no builds are available, nor would I reccomend you us
 
 <!-- Multi-Use Links: -->
 [TF2 Useful Console Commands]: https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands
+[SourceCmd]: https://github.com/rannmann/SourceCmd
+[ConsoleForwarder]: https://github.com/SNWCreations/ConsoleForwarder
 
 ## Functionality
 The software will have the ability to do the following:
 * Add [data](#required-data-and-visualization) to history file during gameplay
-* Retreive data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
+* Retrieve data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
 * Print histories of players encountered during gameplay
 * Stop printing (but not stop collecting) during gameplay to accept user input via CLI. Input may include:
     * Getting data from history
@@ -36,9 +38,10 @@ TF2 Played With will run alongside TF2 and get output from the console via an in
 ### Console Output Notes
 Analyzing console output from entire sessions has produced valuable information. Some information may later be found false or generally unreliable, so only trust the below list generally:
 * Will only output `#` as first character in new line when printing player status
-* Players whose names *start* with `#` will have it replaced with a space. Following occurances of `#` will remain intact
+* Players whose names *start* with `#` will have it replaced with a space. Following occurrences of `#` will remain intact
+* Player names can have `"`s anywhere in their name without any escape characters in the output of `status` to denote them as special
 * The regex `^#  ` will output *only* lines output by `status` relating player names to associated data
-* The regex `connected$` will output *only* lines notifiying of player connect events, including the user's own
+* The regex `connected$` will output *only* lines notifying of player connect events, including the user's own
 * The first instance of `<NAME> connected` will always contain the user's name
 * `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
     * Queue for game, join server:
@@ -144,13 +147,17 @@ TF2PW is best built via CMake. Only the standard CMake commands are required to 
     * con_logfile \<file\>.
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C)
     * Contains files I use for testing various concepts within this and other repositories
-* [SourceCmd](https://github.com/rannmann/SourceCmd)
+* [SourceCmd]
     * Might have some useful things in it, have to comb through it
-* [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder)
+* [ConsoleForwarder]
     * Might have similar use as SourceCmd, have to look at it some time
+* [Team Fortress 2](https://store.steampowered.com/app/440)
+    * The source of all console output for analysis and testing
+    * A great game that this entire repo is made for
 
 ## Todo
 Technical things which should be worked out:
+* Probably won't need user SID3E in history file whatsoever, recheck after program actually works
 * Figure out argp for Windows
 * Implement installing via CMake
 * Create builds for Windows and Linux
@@ -159,8 +166,10 @@ Technical things which should be worked out:
 * Consider splitting this README into end-user/technical README's
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
 * Address TODO comments in the source code
+    * BSEARCH_TODO: Implement binary search algorithm and value sorting where this TODO is present
 
 ## Future Improvement Ideas
 General ideas and brainstorming for new features:
 * Record servers connected to along with relevant server records (K/D, maps seen etc)
 * Record kills/deaths regarding user for each player
+* Look into [SourceCmd], [ConsoleForwarder], and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)

@@ -6,6 +6,7 @@
 #include "inttypes.h"
 #include "string.h"
 #include "errno.h"
+#include "stdio.h"
 
 // Sorted "cleaner" variables in header file, these are just the definitions
 int8_t *names; uint8_t save_format_version, *name_lens, *encounter_counts, history_initialized = 0; uint16_t *dates; uint32_t user_steamid3_excerpt, player_records_len, *steam_id3_excerpts, *date_records_lens; size_t date_records_lens_len, name_lens_len, steam_id3_excerpts_len, dates_len, names_len, encounter_counts_len;
