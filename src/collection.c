@@ -11,7 +11,7 @@
 void collection_read_live(const char *collection_fullname)
 {
     // TODO: Implement
-    // TODO: Set date via history_set_date(...) before adding records via history_add_record(...)
+    // TODO: Set date via history_set_date(...) before adding records via history_add_record(...) every time, program may be run across multiple days
 }
 
 void collection_read_archived(const char *collection_fullname)
@@ -26,7 +26,7 @@ void collection_read_archived(const char *collection_fullname)
 
     TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Reading archive log file \"%s\".\n", collection_fullname);
 
-    // TODO: Set history current_date to last modified time of collection_fullname. Just using date of run for now
+    // TODO: Set history current_date to creation date of collection_fullname. Just using date of run for now
     history_set_date(HISTORY_SET_DATE_TODAY);
 
     steam_name_stack user_name = { '\0' };
@@ -39,7 +39,7 @@ void collection_read_archived(const char *collection_fullname)
     struct player_info player_info_arr[MAX_PLAYERS];
 
     // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
-    #define LINE_BUFB 512
+    #define LINE_BUFB 256
 
     // REMINDER: End of line will be '\n', not '\0'
     TF2_PLAYED_WITH_DEBUG_INSERT(size_t line_index = 1; int match_index = (int) line_index;)
@@ -65,22 +65,41 @@ void collection_read_archived(const char *collection_fullname)
                 goto STATUS_FINISH;
             }
 
-            // Set line_i to index of start of SID3E
-            int last_close_bracket_i;
+            // Get index of last closing bracket
+            int last_close_bracket_i = 0, last_bot_str_i = 0;
             while (line_buf[++line_i] != '\n')
             {
                 if (line_buf[line_i] == ']')
                 {
                     last_close_bracket_i = line_i;
                 }
+                else if (line_buf[line_i] == 'B' && line_buf[line_i + 1] == 'O' && line_buf[line_i + 2] == 'T')
+                {
+                    last_bot_str_i = line_i;
+                }
             }
+
+            // This is a bot, skip
+            if (last_bot_str_i >= last_close_bracket_i)
+            {
+                TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%zu) Bot found, skipping.\n", line_index);)
+                goto STATUS_FINISH;
+            }
+
+            // Set line_i to index of start of SID3E
             for (line_i = last_close_bracket_i; line_buf[--line_i - 1] != ':'; );
 
             char *end;
             const uint32_t current_sid3e = strtol(line_buf + line_i, &end, 10);
             if (*end != ']')
             {
-                fputs("FATAL: Bad current_sid3e read from status output.\n", stderr);
+                TF2_PLAYED_WITH_DEBUG_CHOOSE
+                (
+                    fprintf(stderr, "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n", line_index);
+                    ,
+                    fputs("FATAL: Bad current_sid3e read from status output.\n", stderr);
+                )
+
                 TF2_PLAYED_WITH_DEBUG_ABEX();
             }
 

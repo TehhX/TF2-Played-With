@@ -7,7 +7,6 @@ A repository to keep track of which players I've played with in Valve's Team For
 TF2PW is not yet viable so no builds are available, nor would I recommend you use them if they were.
 
 <!-- Multi-Use Links: -->
-[TF2 Useful Console Commands]: https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands
 [SourceCmd]: https://github.com/rannmann/SourceCmd
 [ConsoleForwarder]: https://github.com/SNWCreations/ConsoleForwarder
 
@@ -27,7 +26,7 @@ The software will have the ability to do the following:
 ## Helpful Resources and Thanks
 
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
-* [TF2 Useful Console Commands]
+* [TF2 Useful Console Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands)
   * `con_logfile <file>`
   * `status`
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C): Various implementations from here

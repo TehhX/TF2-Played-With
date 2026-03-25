@@ -21,6 +21,17 @@ uint16_t current_date;
 // The latest available save format version. Remember to keep this updated
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
+// Should saving/loading be logged. Requires TF2_PLAYED_WITH_DEBUG to be defined
+#define LOG_SAVE_LOAD 0
+
+#if defined(TF2_PLAYED_WITH_DEBUG) && LOG_SAVE_LOAD
+    #define TF2_PLAYED_WITH_DEBUG_SL_LOGF printf
+#else
+    #define TF2_PLAYED_WITH_DEBUG_SL_LOGF
+#endif
+
+#undef LOG_SAVE_LOAD
+
 static uint8_t save_version;
 
 // TODO: Consider arena allocation
@@ -165,36 +176,36 @@ void history_load()
     }
 
     fread_one(save_version);
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read save_version: %" PRIu8 ".\n", save_version);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read save_version: %" PRIu8 ".\n", save_version);
 
     fread_one(player_records_len);
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records_len: %" PRIu32 ".\n", player_records_len);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records_len: %" PRIu32 ".\n", player_records_len);
 
     player_records = malloc(player_records_len * sizeof(*player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
         fread_one(player_records[player_records_i].sid3e);
-        TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
 
         fread_one(player_records[player_records_i].date_records_len);
-        TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
 
         player_records[player_records_i].date_records = malloc(sizeof(*player_records[player_records_i].date_records) * player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
         {
             fread_one(player_records[player_records_i].date_records[date_records_i].date);
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
 
             fread_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
 
             fread_one(player_records[player_records_i].date_records[date_records_i].name_len);
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
 
             player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(uint8_t) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
             fread_arr(player_records[player_records_i].date_records[date_records_i].name);
             player_records[player_records_i].date_records[date_records_i].name[player_records[player_records_i].date_records[date_records_i].name_len] = '\0';
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
         }
     }
 
@@ -239,32 +250,32 @@ void history_save()
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER), output_file_ptr);
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing save version: %" PRIu8 ".\n", save_version);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing save version: %" PRIu8 ".\n", save_version);
     fwrite_one(save_version);
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records_len: %" PRIu32 ".\n", player_records_len);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records_len: %" PRIu32 ".\n", player_records_len);
     fwrite_one(player_records_len);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
-        TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
         fwrite_one(player_records[player_records_i].sid3e);
 
-        TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
         fwrite_one(player_records[player_records_i].date_records_len);
 
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
         {
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].date);
 
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
 
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].name_len);
 
-            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
             fwrite_arr(player_records[player_records_i].date_records[date_records_i].name);
         }
     }

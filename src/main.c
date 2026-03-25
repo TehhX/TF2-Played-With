@@ -68,6 +68,12 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
 
 int main(int argc, char **argv)
 {
+    if (argc < 2)
+    {
+        fprintf(stderr, "Need argument(s). Try \"%s --help\" for help.\n", argv[0]);
+        return 1;
+    }
+
     // TODO: Look into argp_child for potential simplification
     struct argp_option argp_options[] =
     {

@@ -23,7 +23,7 @@ The following are required for building:
 
 ## Getting Players From TF2
 
-TF2 Played With will run alongside TF2 and get output from the console via an intermediary file. In game, the command `con_logfile log.txt` will be used to log *all* console output. See [TF2 Useful Console Commands] for more info on this command.
+TF2 Played With will run alongside TF2 and get output from the console via an intermediary file. In game, the command `con_logfile log.txt` will be used to log *all* console output. See [TF2 Useful Console Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands) for more info on this command.
 
 ### Console Output Notes
 
@@ -35,6 +35,11 @@ Analyzing console output from entire sessions has produced valuable information.
 * The regex `^# {2,}` will output *only* lines output by `status` relating player names to associated data
 * The regex `connected$` will output *only* lines notifying of player connect events, including the user's own
 * The first instance of `<NAME> connected` will always contain the user's name
+* If last occurrence of string BOT is later than last occurrence of character `]`, player is a bot
+* Players with duplicate names will have their names changed by the following algorithm (assuming no abuse of whitespace characters vis-a-vis the bot crisis, where seemingly duplicate names are actually):
+  * 1: `<NAME>`
+  * 2: (1) `<NAME>`
+  * n {n > 1}: (`<n - 1>`) `<NAME>`
 * `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
   * Queue for game, join server:
     * `Connected to <IP>`
@@ -49,19 +54,16 @@ Analyzing console output from entire sessions has produced valuable information.
 
 #### Status Formatting
 
-Running the `status` command will return a list of players in the server. It is usually formatted as so:
+Running the `status` command will return a list of players in the server. It is usually formatted as so (Lines starting with // are inserted by myself to denote things):
 
 ```txt
 # userid name                uniqueid            connected ping loss state
+// A real player
 #  <UID> "<NAME>"            [<STEAMID3>]        <VV:VV>    <V>  <V> <V>
-... // More names and stuff in the same form
+// A bot
+#  <UID> "<NAME>"            BOT                                    active
+// More output in the same form
 ```
-
-#### Further observations
-
-* Status output will sometimes not start with # userid ... as a batch
-* Status output will sometimes be interrupted by seemingly unrelated output
-* Names and STEAMID3's can be captured by the regex `"(.+)" +\[U:1:([0-9]+)\]`, where group-1 is name and group-2 is STEAMID3 excerpt
 
 ### When Status Should be Run
 
@@ -166,4 +168,6 @@ Technical things which should be worked out:
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
 * Address TODO comments in the source code
   * BSEARCH_TODO: Implement binary search algorithm and value sorting where this TODO is present
-* The name is a bit clunky
+* The name is a bit clunky, maybe just the acronym
+* Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more
+* Consider switching steam name handling in collection.c from static arrays to allocated heap memory
