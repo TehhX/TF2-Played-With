@@ -22,7 +22,7 @@ uint16_t current_date;
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
 // Should saving/loading be logged. Requires TF2_PLAYED_WITH_DEBUG to be defined
-#define LOG_SAVE_LOAD 0
+#define LOG_SAVE_LOAD 1
 
 #if defined(TF2_PLAYED_WITH_DEBUG) && LOG_SAVE_LOAD
     #define TF2_PLAYED_WITH_DEBUG_SL_LOGF printf
@@ -292,7 +292,7 @@ void history_set_date(const uint16_t new_date)
 {
     if (new_date == HISTORY_SET_DATE_TODAY)
     {
-        current_date = time(NULL) / (24 * 60 * 60);
+        current_date = UES_TO_DAYS(time(NULL));
     }
     else
     {

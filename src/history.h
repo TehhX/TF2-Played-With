@@ -31,7 +31,7 @@ extern void history_load();
 extern void history_save();
 
 // A sentinel value for use with history_set_date(...)
-#define HISTORY_SET_DATE_TODAY ((uint16_t) 0)
+#define HISTORY_SET_DATE_TODAY ((uint16_t) 1)
 
 /*
 	Sets the date variable to a new date

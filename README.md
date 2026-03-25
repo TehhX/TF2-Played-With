@@ -27,8 +27,9 @@ The software will have the ability to do the following:
 
 * [SteamID Wiki Page](https://developer.valvesoftware.com/wiki/SteamID)
 * [TF2 Useful Console Commands](https://developer.valvesoftware.com/wiki/Developer_console#Useful_commands)
-  * `con_logfile <file>`
-  * `status`
+  * `con_logfile <file>`: Data output
+  * `status`: Data retrieval
+  * `echo <string>`: Taking notes mid-game
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C): Various implementations from here
 * [SourceCmd]: Might have some useful things in it, have to comb through it
 * [ConsoleForwarder]: Might have similar use as SourceCmd, have to look at it some time
@@ -40,7 +41,15 @@ The software will have the ability to do the following:
 
 General ideas and brainstorming for new features:
 
-* Record servers connected to along with relevant server records (K/D, maps seen etc)
-* The ability to record notes about players or servers
-* Record kills/deaths regarding user for each player
-* Look into [SourceCmd], [ConsoleForwarder], and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
+* Other games (Same or different repo?)
+* Requesting specific info on player instead of vomiting it all out
+* Requesting info by date
+
+Proposed save format changes:
+
+|                                  Idea Description                                   | Expected Save Format Version Range |
+|:-----------------------------------------------------------------------------------:|:----------------------------------:|
+|                       Compress same names across date records                       |               [0,2]                |
+|                The ability to record notes about players or servers                 |                 0                  |
+|                 Record kills/deaths regarding user for each player                  |               [1,2]                |
+| Record servers connected to along with relevant server records (K/D, maps seen etc) |             [1,never]              |

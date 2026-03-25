@@ -55,4 +55,7 @@
 // A function acting as a glorified macro
 #define HYPER_MACRO static inline __attribute__((always_inline))
 
+// Convert UE-seconds to a date in days
+#define UES_TO_DAYS(UES) (UES / (24 * 60 * 60))
+
 #endif // COMMON_H

@@ -4,13 +4,15 @@
 #include "history.h"
 #include "player_info.h"
 
+#include "cider.h"
+
 #include "stdio.h"
 #include "string.h"
 #include "inttypes.h"
 
 void collection_read_live(const char *collection_fullname)
 {
-    // TODO: Implement
+    // IMPL_TODO
     // TODO: Set date via history_set_date(...) before adding records via history_add_record(...) every time, program may be run across multiple days
 }
 
@@ -27,10 +29,11 @@ void collection_read_archived(const char *collection_fullname)
     TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Reading archive log file \"%s\".\n", collection_fullname);
 
     // TODO: Set history current_date to creation date of collection_fullname. Just using date of run for now
-    history_set_date(HISTORY_SET_DATE_TODAY);
+    history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
 
     steam_name_stack user_name = { '\0' };
 
+    // MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for player_info_arr
     // How many players can be in a match (including user)
     #define MAX_PLAYERS 128
 
@@ -97,14 +100,14 @@ void collection_read_archived(const char *collection_fullname)
                 (
                     fprintf(stderr, "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n", line_index);
                     ,
-                    fputs("FATAL: Bad current_sid3e read from status output.\n", stderr);
+                    fputs("MAJOR: Bad current_sid3e read from status output.\n", stderr);
                 )
 
                 TF2_PLAYED_WITH_DEBUG_ABEX();
             }
 
-            // If current SID3E is not found in arr
-            #define CURRENT_NOT_FOUND ((int) -1)
+            // Sentinel value if current SID3E is not found in arr
+            #define CURRENT_NOT_FOUND ((int) MAX_PLAYERS)
 
             // BSEARCH_TODO
             int current_arr_index = CURRENT_NOT_FOUND;

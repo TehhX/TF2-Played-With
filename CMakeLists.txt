@@ -11,6 +11,7 @@ set(CMAKE_C_STANDARD_REQUIRED true)
 set(SRC
     collection
     history
+    interactive
     main
 )
 

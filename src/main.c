@@ -45,6 +45,10 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
     switch (key)
     {
     case Eoption_key_collect_live:
+        /*
+            * Start thread executing collection_read_live(...)
+            * Accept user input as described in /README.md#functionality
+        */
         break;
 
     case Eoption_key_collect_archive:
@@ -54,12 +58,31 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
         break;
 
     case Eoption_key_retrieve_id3:
+        /*
+            * Convert to SID3E if applicable
+            * Loop through records
+            * Once record of specified SID3E reached, return info on it
+                * Name
+                * TODO...
+        */
         break;
 
     case Eoption_key_retrieve_id64:
+        /*
+            * That conversion code is needed after all...
+            * Unless I remove this...
+            * ...
+            * Convert to SID3E
+            * Use retrieve_id3
+        */
         break;
 
     case Eoption_key_retrieve_name:
+        /*
+            * Loop through all date records
+            * For each player record with date record with specified name, take SID3E and go to next record
+            * After checking every date record, retrieve SID3 records from list of SID3E's, do with it whatever retrieve_id3 does
+        */
         break;
     }
 

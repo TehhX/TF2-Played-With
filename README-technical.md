@@ -86,18 +86,18 @@ The following data will be required (Quasi-JSON format here for visualization, b
 ```json
 {
     // File header, always "TF2PW"
-    (char *) HEADER,
+    (string) HEADER,
 
     // The version of the save format
     (u8) SAVE_VERSION,
 
-    (struct player_record *) PLAYER_RECORDS:
+    PLAYER_RECORDS:
     [
         {
             // STEAMID3 excerpt of the player whose records are in the following array
             (u32) STEAMID3_EXCERPT,
 
-            (struct date_record *) DATE_RECORDS:
+            DATE_RECORDS:
             [
                 {
                     // Date in days since UNIX epoch
@@ -107,7 +107,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
                     (u8) ENCOUNTER_COUNT
 
                     // The encountered player's name on this date
-                    (i8 *) NAME
+                    (string) NAME
                 },
 
                 {...}
@@ -145,29 +145,40 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 #### Date Record
 
-|      Name       |                       Description                       |  Size (Bytes)   |               Example                |
-|:---------------:|:-------------------------------------------------------:|:---------------:|:------------------------------------:|
-|      Date       |      How many days since UNIX epoch this date was       |        2        | TODO: Fill believable eg. value here |
-| Encounter Count | How many times this player was encountered on this date |        1        |                (u8) 4                |
-|   Name Length   |            The length of the following name             |        1        |               (u8) 13                |
-|      Name       |           The name of the player on this date           | 1 * Name_Length |            (i8 *) "Timmy"            |
+|      Name       |                       Description                       |  Size (Bytes)   |    Example     |
+|:---------------:|:-------------------------------------------------------:|:---------------:|:--------------:|
+|      Date       |      How many days since UNIX epoch this date was       |        2        |     20537      |
+| Encounter Count | How many times this player was encountered on this date |        1        |     (u8) 4     |
+|   Name Length   |            The length of the following name             |        1        |    (u8) 13     |
+|      Name       |           The name of the player on this date           | 1 * Name_Length | (i8 *) "Timmy" |
 
 ## Todo
 
-Technical things which should be worked out:
+Technical things to be worked out:
 
 * Probably won't need user SID3E in history file whatsoever, recheck after program actually works
 * Figure out argp for Windows
 * Implement installing via CMake
 * Create builds for Windows and Linux
-* Implement history files
 * collection_read_line(...) will likely have to be multithreaded
-* Copycat names for subsequent date records can be compressed, maybe name length of 0 denotes use same name. Can point to same array too, but freeing may become an issue if that gets done
+* Copycat names for subsequent date records can be compressed, maybe name length of 0 denotes use same name. Can point to same array too, but freeing may become an issue if that gets done. Keep pointer address, don't free if it's the same? Keep ptr->ptr names (char **name or void *) point to origin name, when ptr is NULL don't free? Most important thing is to compress it during save/load
 * See if there's a way to output commands directly to a file, console window gets easily clogged
-* Consider splitting this README into end-user/technical README's
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
-* Address TODO comments in the source code
-  * BSEARCH_TODO: Implement binary search algorithm and value sorting where this TODO is present
-* The name is a bit clunky, maybe just the acronym
-* Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more
+* Address TODO comments in the source code (duh)
+* The name is a bit clunky, maybe just use the acronym
+* In interactive mode, some functions which abort or exit should be converted to return an error:
+  * collection_read_archived(...) being fed an incorrect file accidentally will crash the program
+  * history_load() getting a file which doesn't start with the proper header (TF2PW)
+* Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more. In any case, there is testing to be done
 * Consider switching steam name handling in collection.c from static arrays to allocated heap memory
+* Compress history file during save/load using something like gzip
+* Look into [SourceCmd], [ConsoleForwarder], and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
+
+## Inline TODOs
+
+A list of TODO prefixes found in the source code and their meanings:
+
+* BSEARCH_TODO: Suggests the use of binary search instead of whatever current implementation is
+* MAJOR_TODO: Major/program-breaking issue under the right circumstances/changes
+* IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
+* IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
