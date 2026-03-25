@@ -51,9 +51,11 @@ Analyzing console output from entire sessions has produced valuable information.
 
 Running the `status` command will return a list of players in the server. It is usually formatted as so:
 
-    # userid name                uniqueid            connected ping loss state
-    #  <UID> "<NAME>"            [<STEAMID3>]        <VV:VV>    <V>  <V> <V>
-    ... // More names and stuff in the same form
+```txt
+# userid name                uniqueid            connected ping loss state
+#  <UID> "<NAME>"            [<STEAMID3>]        <VV:VV>    <V>  <V> <V>
+... // More names and stuff in the same form
+```
 
 #### Further observations
 
@@ -79,39 +81,41 @@ Each save file will contain a version number of the formatting type and should b
 
 The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array).
 
-    {
-        // File header, always "TF2PW"
-        (char *) HEADER,
+```json
+{
+    // File header, always "TF2PW"
+    (char *) HEADER,
 
-        // The version of the save format
-        (u8) SAVE_VERSION,
+    // The version of the save format
+    (u8) SAVE_VERSION,
 
-        (struct player_record *) PLAYER_RECORDS:
-        [
-            {
-                // STEAMID3 excerpt of the player whose records are in the following array
-                (u32) USER_STEAMID3_EXCERPT,
+    (struct player_record *) PLAYER_RECORDS:
+    [
+        {
+            // STEAMID3 excerpt of the player whose records are in the following array
+            (u32) STEAMID3_EXCERPT,
 
-                (struct date_record *) DATE_RECORDS:
-                [
-                    {
-                        // Date in days since UNIX epoch
-                        (u16) DATE_IN_DAYS,
+            (struct date_record *) DATE_RECORDS:
+            [
+                {
+                    // Date in days since UNIX epoch
+                    (u16) DATE,
 
-                        // The encountered player's name on this day
-                        (char *) NAME,
+                    // Times encountered on this day
+                    (u8) ENCOUNTER_COUNT
 
-                        // Times encountered on this day
-                        (u8) ENCOUNTER_COUNT
-                    },
+                    // The encountered player's name on this date
+                    (i8 *) NAME
+                },
 
-                    {...}
-                ]
-            },
+                {...}
+            ]
+        },
 
-            {...}
-        ]
-    }
+        {...}
+    ]
+}
+```
 
 ### Considerations
 
@@ -120,17 +124,31 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 ### Structure
 
-|         Name          |                                 Description                                 |                     Size (Bytes)                      |              Example               |
-|:---------------------:|:---------------------------------------------------------------------------:|:-----------------------------------------------------:|:----------------------------------:|
-|        Header         |       Header of the file format. Always "TF2PW", else file is invalid       |                           5                           |               TF2PW                |
-|  Save Format Version  |      The version of history file format used with this particular file      |                           1                           |               (u8) 0               |
-| Player Records Length |       How many unique player records there are in the following array       |                           4                           |            (u32) 12,000            |
-| Date Records Lengths  |      An array of lengths for every date record in every player record       |               4 * player records length               |      (u32 *) { 4, 9, 13, 2 }       |
-|     Name Lengths      | An array of lengths for each name in each date record in each player record | 1 * player records length * sum(date records lengths) |      (u8 *) { 13, 4, 8, 15 }       |
-|   STEAMID3 Excerpts   |            An array of STEAMID3 excerpts for each player record             |               4 * player records length               |       (u32 *) { 22202, ... }       |
-|         Dates         |         How many days since the epoch this date record was recorded         |             2 * sum(date records lengths)             | (u16 *) { 20,530, 20,622, 20,625 } |
-|         Names         |                   An array of names for each date record                    |                 1 * sum(name lengths)                 |    (i8 *) { Rabscuttle, Robin }    |
-|   Encounter Counts    |  An array of how many times a player was encountered for each date records  |                 1 * sum(name lengths)                 |       (u8 *) { 3, 2, 8, 19 }       |
+#### Header
+
+|         Name          |                                         Description                                         |            Size (Bytes)            |   Example    |
+|:---------------------:|:-------------------------------------------------------------------------------------------:|:----------------------------------:|:------------:|
+|        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |                 5                  |    TF2PW     |
+|  Save Format Version  |              The version of history file format used with this particular file              |                 1                  |    (u8) 0    |
+| Player Records Length |               How many unique player records there are in the following array               |                 4                  | (u32) 12,000 |
+|    Player Records     | An array of player records. See [Player Record](#player-record) for its particular contents | 12 + (1 * Date_Record.Name_Length) |     N/A      |
+
+#### Player Record
+
+|        Name         |                                      Description                                      |           Size (Bytes)            |   Example   |
+|:-------------------:|:-------------------------------------------------------------------------------------:|:---------------------------------:|:-----------:|
+|  STEAMID3 Excerpt   |                                  This player's SID3E                                  |                 4                 | (u32) 22202 |
+| Date Records Length |                         How many date records this player has                         |                 4                 |  (u32) 13   |
+|    Date Records     | An array of date records. See [Date Record](#date-record) for its particular contents | 4 + (1 * Date_Record.Name_Length) |     N/A     |
+
+#### Date Record
+
+|      Name       |                       Description                       |  Size (Bytes)   |               Example                |
+|:---------------:|:-------------------------------------------------------:|:---------------:|:------------------------------------:|
+|      Date       |      How many days since UNIX epoch this date was       |        2        | TODO: Fill believable eg. value here |
+| Encounter Count | How many times this player was encountered on this date |        1        |                (u8) 4                |
+|   Name Length   |            The length of the following name             |        1        |               (u8) 13                |
+|      Name       |           The name of the player on this date           | 1 * Name_Length |            (i8 *) "Timmy"            |
 
 ## Todo
 
@@ -141,6 +159,8 @@ Technical things which should be worked out:
 * Implement installing via CMake
 * Create builds for Windows and Linux
 * Implement history files
+* collection_read_line(...) will likely have to be multithreaded
+* Copycat names for subsequent date records can be compressed, maybe name length of 0 denotes use same name. Can point to same array too, but freeing may become an issue if that gets done
 * See if there's a way to output commands directly to a file, console window gets easily clogged
 * Consider splitting this README into end-user/technical README's
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting

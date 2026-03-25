@@ -12,22 +12,8 @@
 #include "stdint.h"
 #include "stdlib.h"
 
-// Variables
-extern   uint8_t save_format_version;
-extern  uint32_t user_steamid3_excerpt;
-extern  uint32_t player_records_len;
-extern  uint16_t current_date;
-
-// Arrays
-extern  uint32_t *date_records_lens;  extern size_t date_records_lens_len;
-extern   uint8_t *name_lens;          extern size_t name_lens_len;
-extern  uint32_t *steam_id3_excerpts; extern size_t steam_id3_excerpts_len;
-extern  uint16_t *dates;              extern size_t dates_len;
-extern    int8_t *names;              extern size_t names_len;
-extern   uint8_t *encounter_counts;   extern size_t encounter_counts_len;
-
-// 1 if history_init(...) has been called, else 0 (including if history_free() was called after history_init(...))
-extern uint8_t history_initialized;
+extern  uint8_t history_initialized;
+extern uint16_t current_date;
 
 /*
 	Initialize history
@@ -43,6 +29,14 @@ extern void history_load();
 
 // Saves memory into history file ~/.local/share/tf2pwXX.sav
 extern void history_save();
+
+// A sentinel value for use with history_set_date(...)
+#define HISTORY_SET_DATE_TODAY 0
+/*
+	Sets the date variable to a new date
+		@param new_date: A pointer to the new date to set. If equal to HISTORY_SET_DATE_TODAY, set date to today
+*/
+extern void history_set_date(uint16_t new_date);
 
 /*
 	Adds a player to the records

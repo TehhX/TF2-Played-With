@@ -10,7 +10,8 @@
 
 void collection_read_live(const char *collection_fullname)
 {
-    // TODO
+    // TODO: Implement
+    // TODO: Set date via history_set_date(...) before adding records via history_add_record(...)
 }
 
 void collection_read_archived(const char *collection_fullname)
@@ -23,12 +24,18 @@ void collection_read_archived(const char *collection_fullname)
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Reading archive log file \"%s\".\n", collection_fullname);
+
+    // TODO: Set history current_date to last modified time of collection_fullname. Just using date of run for now
+    history_set_date(HISTORY_SET_DATE_TODAY);
+
     steam_name_stack user_name = { '\0' };
 
     // How many players can be in a match (including user)
     #define MAX_PLAYERS 128
 
     // Hold statuses of all players
+    int player_info_arr_len;
     struct player_info player_info_arr[MAX_PLAYERS];
 
     // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
@@ -43,7 +50,7 @@ void collection_read_archived(const char *collection_fullname)
 
         // Check for status output
         // TODO: Doesn't check that line is long enough. Probably not an issue, but keep testing for it and remove this comment when it's sure to cause no problems
-        int user_name_len, player_info_arr_len;
+        int user_name_len;
         if (!memcmp(line_buf, STATUS_PREFIX, sizeof(STATUS_PREFIX)))
         {
             int line_i = sizeof(STATUS_PREFIX), player_i = 0;
@@ -73,7 +80,7 @@ void collection_read_archived(const char *collection_fullname)
             const uint32_t current_sid3e = strtol(line_buf + line_i, &end, 10);
             if (*end != ']')
             {
-                fputs("FATAL: Bad player_sid3e read from status output.\n", stderr);
+                fputs("FATAL: Bad current_sid3e read from status output.\n", stderr);
                 TF2_PLAYED_WITH_DEBUG_ABEX();
             }
 
@@ -105,6 +112,7 @@ void collection_read_archived(const char *collection_fullname)
                 player_info_arr[current_arr_index].name[player_name_len] = '\0';
                 player_info_arr[current_arr_index].sid3e                 = current_sid3e;
 
+                // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
                 // TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n", line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
             }
         }

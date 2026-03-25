@@ -49,4 +49,10 @@
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) REL
 #endif
 
+// A tab is just 4 spaces to a guy like me
+#define LITERAL_TAB "    "
+
+// A function acting as a glorified macro
+#define HYPER_MACRO static inline __attribute__((always_inline))
+
 #endif // COMMON_H

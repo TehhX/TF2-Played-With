@@ -9,15 +9,42 @@
 #include "string.h"
 #include "errno.h"
 #include "stdio.h"
+#include "time.h"
 
-// Sorted "cleaner" variables in header file, these are just the definitions
-int8_t *names; uint8_t save_format_version, *name_lens, *encounter_counts, history_initialized = 0; uint16_t *dates, current_date; uint32_t user_steamid3_excerpt, player_records_len, *steam_id3_excerpts, *date_records_lens; size_t date_records_lens_len, name_lens_len, steam_id3_excerpts_len, dates_len, names_len, encounter_counts_len;
+// Inter-unit variable defs
+ uint8_t history_initialized = 0;
+uint16_t current_date;
+
+// The header of any given tf2pw file. If not first 5 bytes of TF2PW file, it is invalid
+#define HEADER (char [5]){ "TF2PW" }
+
+// The latest available save format version. Remember to keep this updated
+#define SAVE_VERSION_LATEST ((uint8_t) 0)
+
+static uint8_t save_version;
+
+// TODO: Consider arena allocation
+static uint32_t player_records_len;
+static struct
+{
+    uint32_t sid3e;
+
+    uint32_t date_records_len;
+    struct
+    {
+        uint16_t date;
+
+        uint8_t name_len;
+        int8_t *name;
+
+        uint8_t encounter_count;
+    }
+    *date_records;
+}
+*player_records;
 
 // Fullname of the history file to read from/write to
 static char *history_fullname;
-
-// The latest available save format version. Remember to keep this updated
-#define SAVE_FORMAT_LATEST ((uint8_t) 0)
 
 void history_init(char *requested_history_fullname)
 {
@@ -44,6 +71,22 @@ void history_init(char *requested_history_fullname)
     TF2_PLAYED_WITH_DEBUG_LOGF("LOG: History initialized with history_fullname as \"%s\".\n", history_fullname);
 }
 
+HYPER_MACRO void history_free_memory()
+{
+    for (uint32_t player_i = 0; player_i < player_records_len; ++player_i)
+    {
+        for (uint32_t date_i = 0; date_i < player_records[player_i].date_records_len; ++date_i)
+        {
+            free(player_records[player_i].date_records[date_i].name);
+        }
+
+        free(player_records[player_i].date_records);
+    }
+
+    free(player_records);
+    player_records_len = 0;
+}
+
 void history_free()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -55,15 +98,9 @@ void history_free()
         }
     )
 
-    history_initialized = 0;
+    history_free_memory();
 
-    free(history_fullname);
-    free(date_records_lens);
-    free(name_lens);
-    free(steam_id3_excerpts);
-    free(dates);
-    free(names);
-    free(encounter_counts);
+    history_initialized = 0;
 }
 
 #define STEAMID3_MAX "[U:1:4294967295]"
@@ -72,11 +109,8 @@ void history_free()
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
 #define fread_one(VAR) fread(&VAR, sizeof(VAR), 1, input_file_ptr)
 
-// Allocates space for, reads in array of date from input_file_ptr. Requires previously defined variable ARR##_len to specify length of array to be allocated and populated
-#define arr_allocread(ARR) ARR = malloc(sizeof(*ARR) * ARR##_len); fread(ARR, sizeof(*ARR), ARR##_len, input_file_ptr)
-
-// The header of any given tf2pw file. If not, file is invalid
-#define HEADER (char [5]){ "TF2PW" }
+// Reads an array from input_file_ptr of length ARR##_len
+#define fread_arr(ARR) fread(ARR, sizeof(*(ARR)), ARR##_len, input_file_ptr)
 
 void history_load()
 {
@@ -102,15 +136,9 @@ void history_load()
             const char input_char = fgetc(stdin);
             if (input_char == 'y' || input_char == 'Y' || input_char == '\n')
             {
-                save_format_version = SAVE_FORMAT_LATEST;
+                save_version = SAVE_VERSION_LATEST;
 
-                player_records_len     =
-                date_records_lens_len  =
-                name_lens_len          =
-                steam_id3_excerpts_len =
-                dates_len              =
-                names_len              =
-                encounter_counts_len   = 0;
+                history_free_memory();
 
                 return;
             }
@@ -136,39 +164,39 @@ void history_load()
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    fread_one(save_format_version);
-    fread_one(user_steamid3_excerpt);
+    fread_one(save_version);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read save_version: %" PRIu8 ".\n", save_version);
+
     fread_one(player_records_len);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records_len: %" PRIu32 ".\n", player_records_len);
 
-    date_records_lens_len = player_records_len;
-    arr_allocread(date_records_lens);
-
-    size_t sum_date_records_lens = 0;
-    for (uint32_t i = 0; i != date_records_lens_len; ++i)
+    player_records = malloc(player_records_len * sizeof(*player_records));
+    for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
-        sum_date_records_lens += date_records_lens[i];
+        fread_one(player_records[player_records_i].sid3e);
+        TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+
+        fread_one(player_records[player_records_i].date_records_len);
+        TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+
+        player_records[player_records_i].date_records = malloc(sizeof(*player_records[player_records_i].date_records) * player_records[player_records_i].date_records_len);
+        for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
+        {
+            fread_one(player_records[player_records_i].date_records[date_records_i].date);
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+
+            fread_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+
+            fread_one(player_records[player_records_i].date_records[date_records_i].name_len);
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+
+            player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(uint8_t) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
+            fread_arr(player_records[player_records_i].date_records[date_records_i].name);
+            player_records[player_records_i].date_records[date_records_i].name[player_records[player_records_i].date_records[date_records_i].name_len] = '\0';
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+        }
     }
-
-    name_lens_len = player_records_len * sum_date_records_lens;
-    arr_allocread(name_lens);
-
-    size_t sum_name_lens = 0;
-    for (size_t i = 0; i < name_lens_len; ++i)
-    {
-        sum_name_lens += name_lens[i];
-    }
-
-    steam_id3_excerpts_len = player_records_len;
-    arr_allocread(steam_id3_excerpts);
-
-    dates_len = sum_date_records_lens;
-    arr_allocread(dates);
-
-    names_len = sum_name_lens;
-    arr_allocread(names);
-
-    encounter_counts_len = sum_name_lens;
-    arr_allocread(encounter_counts);
 
     if (EOF != fgetc(input_file_ptr))
     {
@@ -211,16 +239,35 @@ void history_save()
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER), output_file_ptr);
 
-    fwrite_one(save_format_version);
-    fwrite_one(user_steamid3_excerpt);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing save version: %" PRIu8 ".\n", save_version);
+    fwrite_one(save_version);
+
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records_len: %" PRIu32 ".\n", player_records_len);
     fwrite_one(player_records_len);
 
-    fwrite_arr(date_records_lens);
-    fwrite_arr(name_lens);
-    fwrite_arr(steam_id3_excerpts);
-    fwrite_arr(dates);
-    fwrite_arr(names);
-    fwrite_arr(encounter_counts);
+    for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+        fwrite_one(player_records[player_records_i].sid3e);
+
+        TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+        fwrite_one(player_records[player_records_i].date_records_len);
+
+        for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
+        {
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+            fwrite_one(player_records[player_records_i].date_records[date_records_i].date);
+
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+            fwrite_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
+
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+            fwrite_one(player_records[player_records_i].date_records[date_records_i].name_len);
+
+            TF2_PLAYED_WITH_DEBUG_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+            fwrite_arr(player_records[player_records_i].date_records[date_records_i].name);
+        }
+    }
 
     if (fclose(output_file_ptr))
     {
@@ -230,22 +277,76 @@ void history_save()
     }
 }
 
+void history_set_date(const uint16_t new_date)
+{
+    if (new_date == HISTORY_SET_DATE_TODAY)
+    {
+        current_date = time(NULL) / (24 * 60 * 60);
+    }
+    else
+    {
+        current_date = new_date;
+    }
+
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set current_date to %" PRIu16 ".\n", current_date);
+}
+
+HYPER_MACRO void history_add_date_record(uint32_t player_records_i, const steam_name_stack name)
+{
+    player_records[player_records_i].date_records = reallocarray(player_records[player_records_i].date_records, ++player_records[player_records_i].date_records_len, sizeof(*player_records[player_records_i].date_records));
+
+    player_records[player_records_i].date_records[player_records[player_records_i].date_records_len - 1].date = current_date;
+    player_records[player_records_i].date_records[player_records[player_records_i].date_records_len - 1].encounter_count = 1; // TODO: Could start at 0 as encountered once, gives a new effective max of 256 as a date record can't have 0 encounters
+    const uint_fast8_t current_name_len = player_records[player_records_i].date_records[player_records[player_records_i].date_records_len - 1].name_len = strlen(name);
+
+    player_records[player_records_i].date_records[player_records[player_records_i].date_records_len - 1].name = malloc(sizeof(int8_t) * current_name_len + 1);
+    memcpy(player_records[player_records_i].date_records[player_records[player_records_i].date_records_len - 1].name, name, current_name_len + 1);
+}
+
 void history_add_record(const struct player_info *const restrict pinfo)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF("(%s, %" PRIu32 ")", pinfo->name, pinfo->sid3e);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
 
     // BSEARCH_TODO
-    for (size_t player_i = 0, dates_i; player_i < steam_id3_excerpts_len; ++player_i)
+    for (uint32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
-        if (steam_id3_excerpts[player_i] != pinfo->sid3e)
+        if (player_records[player_records_i].sid3e != pinfo->sid3e)
         {
             continue;
         }
 
         // Found requested player
-        TF2_PLAYED_WITH_DEBUG_LOGF(" is already in records.\n");
+        TF2_PLAYED_WITH_DEBUG_LOGF(" is in records");
+        for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
+        {
+            if (player_records[player_records_i].date_records[date_records_i].date != current_date)
+            {
+                continue;
+            }
+
+            TF2_PLAYED_WITH_DEBUG_LOGF(" on current_date %" PRIu16 ". Incrementing encounter count.\n", current_date);
+
+            ++player_records[player_records_i].date_records[date_records_i].encounter_count;
+
+            return;
+        }
+
+        // No record found for current_date
+        TF2_PLAYED_WITH_DEBUG_LOGF(", but not on current_date %" PRIu16 ". Adding new date record.\n", current_date);
+        history_add_date_record(player_records_i, pinfo->name);
+
+        return;
     }
 
     // Couldn't find requested player
-    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records.\n");
+    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records whatsoever. Adding new player and date records.\n");
+
+    player_records = reallocarray(player_records, ++player_records_len, sizeof(*player_records));
+    player_records[player_records_len - 1].sid3e = pinfo->sid3e;
+    player_records[player_records_len - 1].date_records_len = 0;
+    player_records[player_records_len - 1].date_records = NULL;
+
+    history_add_date_record(player_records_len - 1, pinfo->name);
+
+    return;
 }
