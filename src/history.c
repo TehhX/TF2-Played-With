@@ -63,7 +63,7 @@ void history_init(char *requested_history_fullname)
     (
         if (history_initialized)
         {
-            fprintf(stderr, "FATAL: Attempted history double-init.\n");
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history double-init.\n" ANSI_RESET);
             abort();
         }
     )
@@ -79,7 +79,7 @@ void history_init(char *requested_history_fullname)
         history_fullname = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav");
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: History initialized with history_fullname as \"%s\".\n", history_fullname);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: History initialized with history_fullname as \"%s\".\n" ANSI_RESET, history_fullname);
 }
 
 HYPER_MACRO void history_free_memory()
@@ -104,7 +104,7 @@ void history_free()
     (
         if (!history_initialized)
         {
-            fprintf(stderr, "FATAL: Attempted history double-free.\n");
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history double-free.\n" ANSI_RESET);
             abort();
         }
     )
@@ -129,7 +129,7 @@ void history_load()
     (
         if (!history_initialized)
         {
-            fprintf(stderr, "FATAL: Attempted history uninitialized load.\n");
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized load.\n" ANSI_RESET);
             abort();
         }
     )
@@ -161,8 +161,9 @@ void history_load()
         }
         else
         {
-            fprintf(stderr, "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
     }
@@ -171,54 +172,56 @@ void history_load()
     fread(header_buf, 1, sizeof(HEADER), input_file_ptr);
     if (strncmp(header_buf, HEADER, sizeof(HEADER)))
     {
-        fprintf(stderr, "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n", history_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n" ANSI_RESET, history_fullname);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     fread_one(save_version);
-    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read save_version: %" PRIu8 ".\n", save_version);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read save_version: %" PRIu8 ".\n" ANSI_RESET, save_version);
 
     fread_one(player_records_len);
-    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records_len: %" PRIu32 ".\n", player_records_len);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records_len: %" PRIu32 ".\n" ANSI_RESET, player_records_len);
 
+    // TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
         fread_one(player_records[player_records_i].sid3e);
-        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n" ANSI_RESET, player_records_i, player_records[player_records_i].sid3e);
 
         fread_one(player_records[player_records_i].date_records_len);
-        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n" ANSI_RESET, player_records_i, player_records[player_records_i].date_records_len);
 
         player_records[player_records_i].date_records = malloc(sizeof(*player_records[player_records_i].date_records) * player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
         {
             fread_one(player_records[player_records_i].date_records[date_records_i].date);
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
 
             fread_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
 
             fread_one(player_records[player_records_i].date_records[date_records_i].name_len);
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
 
             player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(uint8_t) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
             fread_arr(player_records[player_records_i].date_records[date_records_i].name);
             player_records[player_records_i].date_records[date_records_i].name[player_records[player_records_i].date_records[date_records_i].name_len] = '\0';
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG LOAD: Read player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
         }
     }
 
     if (EOF != fgetc(input_file_ptr))
     {
-        fprintf(stderr, "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n", history_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n" ANSI_RESET, history_fullname);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     if (fclose(input_file_ptr))
     {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
@@ -235,7 +238,7 @@ void history_save()
     (
         if (!history_initialized)
         {
-            fprintf(stderr, "FATAL: Attempted history uninitialized save.\n");
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized save.\n" ANSI_RESET);
             abort();
         }
     )
@@ -243,47 +246,49 @@ void history_save()
     FILE *const output_file_ptr = fopen(history_fullname, "w");
     if (!output_file_ptr)
     {
-        fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error: ", history_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for writing. Error: ", history_fullname);
         perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER), output_file_ptr);
 
-    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing save version: %" PRIu8 ".\n", save_version);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing save version: %" PRIu8 ".\n" ANSI_RESET, save_version);
     fwrite_one(save_version);
 
-    TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records_len: %" PRIu32 ".\n", player_records_len);
+    TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records_len: %" PRIu32 ".\n" ANSI_RESET, player_records_len);
     fwrite_one(player_records_len);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
-        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].sid3e);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].sid3e: %" PRIu32 ".\n" ANSI_RESET, player_records_i, player_records[player_records_i].sid3e);
         fwrite_one(player_records[player_records_i].sid3e);
 
-        TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n", player_records_i, player_records[player_records_i].date_records_len);
+        TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records_len: %" PRIu32 ".\n" ANSI_RESET, player_records_i, player_records[player_records_i].date_records_len);
         fwrite_one(player_records[player_records_i].date_records_len);
 
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
         {
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].date: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].date);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].date);
 
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].encounter_count: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].encounter_count);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].encounter_count);
 
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name_len: %" PRId16 ".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name_len);
             fwrite_one(player_records[player_records_i].date_records[date_records_i].name_len);
 
-            TF2_PLAYED_WITH_DEBUG_SL_LOGF("LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n", player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
+            TF2_PLAYED_WITH_DEBUG_SL_LOGF(ANSI_LOG "LOG SAVE: Writing player_records[%" PRIdFAST32 "].date_records[%" PRIdFAST32 "].name: \"%s\".\n" ANSI_RESET, player_records_i, date_records_i, player_records[player_records_i].date_records[date_records_i].name);
             fwrite_arr(player_records[player_records_i].date_records[date_records_i].name);
         }
     }
 
     if (fclose(output_file_ptr))
     {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
@@ -299,7 +304,7 @@ void history_set_date(const uint16_t new_date)
         current_date = new_date;
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set current_date to %" PRIu16 ".\n", current_date);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set current_date to %" PRIu16 ".\n" ANSI_RESET, current_date);
 }
 
 HYPER_MACRO void history_add_date_record(uint32_t player_records_i, const steam_name_stack name)
@@ -316,7 +321,7 @@ HYPER_MACRO void history_add_date_record(uint32_t player_records_i, const steam_
 
 void history_add_record(const struct player_info *const restrict pinfo)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
 
     // BSEARCH_TODO
     for (uint32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
@@ -335,7 +340,7 @@ void history_add_record(const struct player_info *const restrict pinfo)
                 continue;
             }
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(" on current_date %" PRIu16 ". Incrementing encounter count.\n", current_date);
+            TF2_PLAYED_WITH_DEBUG_LOGF(" on current_date %" PRIu16 ". Incrementing encounter count.\n" ANSI_RESET, current_date);
 
             ++player_records[player_records_i].date_records[date_records_i].encounter_count;
 
@@ -343,14 +348,14 @@ void history_add_record(const struct player_info *const restrict pinfo)
         }
 
         // No record found for current_date
-        TF2_PLAYED_WITH_DEBUG_LOGF(", but not on current_date %" PRIu16 ". Adding new date record.\n", current_date);
+        TF2_PLAYED_WITH_DEBUG_LOGF(", but not on current_date %" PRIu16 ". Adding new date record.\n" ANSI_RESET, current_date);
         history_add_date_record(player_records_i, pinfo->name);
 
         return;
     }
 
     // Couldn't find requested player
-    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records whatsoever. Adding new player and date records.\n");
+    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records. Adding new player and date records.\n" ANSI_RESET);
 
     player_records = reallocarray(player_records, ++player_records_len, sizeof(*player_records));
     player_records[player_records_len - 1].sid3e = pinfo->sid3e;
@@ -360,4 +365,11 @@ void history_add_record(const struct player_info *const restrict pinfo)
     history_add_date_record(player_records_len - 1, pinfo->name);
 
     return;
+}
+
+void history_print_record(const uint32_t requested_sid3e, FILE *const output_stream)
+{
+    // BSEARCH_TODO
+
+    // IMPL_TODO
 }

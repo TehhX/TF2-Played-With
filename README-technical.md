@@ -172,13 +172,18 @@ Technical things to be worked out:
 * Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more. In any case, there is testing to be done
 * Consider switching steam name handling in collection.c from static arrays to allocated heap memory
 * Compress history file during save/load using something like gzip
-* Look into [SourceCmd], [ConsoleForwarder], and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
+* Look into [SourceCmd](https://github.com/rannmann/SourceCmd), [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder), and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
+* May have issues parsing certain characters in player names <!-- See /meta/player_name_unknown_IGN.txt. If you're not TehhX, you won't have this file -->
 
 ## Inline TODOs
 
 A list of TODO prefixes found in the source code and their meanings:
 
-* BSEARCH_TODO: Suggests the use of binary search instead of whatever current implementation is
 * MAJOR_TODO: Major/program-breaking issue under the right circumstances/changes
 * IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
 * IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
+
+Temporary common issues:
+
+* BSEARCH_TODO: Suggests the use of binary search instead of whatever current implementation is
+* FGETC_TODO: Stream may have extra characters which cause errant behaviors when fgetc(...) is used to clear said stream

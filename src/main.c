@@ -1,5 +1,6 @@
 #include "history.h"
 #include "collection.h"
+#include "interactive.h"
 
 #include "cider.h"
 
@@ -23,6 +24,7 @@ enum Eoption_key
 
     // Options
     Eoption_key_options_save_location = 's',
+    Eoption_key_options_interactive = 'i',
 
     // Retrieve
     Eoption_key_retrieve_id3  = 'r',
@@ -30,17 +32,32 @@ enum Eoption_key
     Eoption_key_retrieve_name = 'n',
 };
 
-static error_t save_location_parser(int key, char *arg, struct argp_state *state)
+#define NO_ERR ((error_t) 0)
+
+static error_t parser_save_location(int key, char *arg, struct argp_state *state)
 {
     if (key == Eoption_key_options_save_location && !history_initialized)
     {
         history_init(cider_canonicalize_file(arg));
     }
 
-    return 0;
+    return NO_ERR;
 }
 
-static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
+static error_t parser_interactive(int key, char *arg, struct argp_state *state)
+{
+    if (key == Eoption_key_options_interactive)
+    {
+        interactive_enter();
+        history_free();
+
+        exit(EXIT_SUCCESS);
+    }
+
+    return NO_ERR;
+}
+
+static error_t parser_main(int key, char *arg, struct argp_state *state)
 {
     switch (key)
     {
@@ -69,9 +86,6 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case Eoption_key_retrieve_id64:
         /*
-            * That conversion code is needed after all...
-            * Unless I remove this...
-            * ...
             * Convert to SID3E
             * Use retrieve_id3
         */
@@ -86,7 +100,7 @@ static error_t main_argp_parser(int key, char *arg, struct argp_state *state)
         break;
     }
 
-    return 0;
+    return NO_ERR;
 }
 
 int main(int argc, char **argv)
@@ -109,6 +123,13 @@ int main(int argc, char **argv)
             .group = Eoption_group_options
         },
         {
+            .name = "interactive",
+            .key = Eoption_key_options_interactive,
+            .doc = "Enter interactive mode. Supersedes all other arguments.",
+            .flags = OPTION_ARG_OPTIONAL,
+            .group = Eoption_group_options
+        },
+        {
             .name = "collect-data-live",
             .key = Eoption_key_collect_live,
             .doc = "Collects data from TF2 during gameplay.",
@@ -119,7 +140,7 @@ int main(int argc, char **argv)
             .name = "collect-data-old",
             .key = Eoption_key_collect_archive,
             .doc = "Collects data from a previous log file post-gameplay.",
-            .arg = "FILE",
+            .arg = "ARCHIVE_FILE",
             .group = Eoption_group_collect
         },
         {
@@ -153,10 +174,10 @@ int main(int argc, char **argv)
     struct argp argp =
     {
         .options = argp_options,
-        .parser = save_location_parser,
         .doc = "A small program to collect and display data on the players you play with in TF2."
     };
 
+    argp.parser = parser_save_location;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
     // No history fullname was passed in previous parse
@@ -165,9 +186,12 @@ int main(int argc, char **argv)
         history_init(NULL);
     }
 
+    argp.parser = parser_interactive;
+    argp_parse(&argp, argc, argv, 0, NULL, NULL); // If interactive passed, will exit program here
+
     history_load();
 
-    argp.parser = main_argp_parser;
+    argp.parser = parser_main;
     argp_parse(&argp, argc, argv, 0, NULL, NULL);
 
     history_save();

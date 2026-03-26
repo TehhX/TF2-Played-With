@@ -56,6 +56,34 @@
 #define HYPER_MACRO static inline __attribute__((always_inline))
 
 // Convert UE-seconds to a date in days
-#define UES_TO_DAYS(UES) (UES / (24 * 60 * 60))
+#define UES_TO_DAYS(UES) ((UES) / (24 * 60 * 60))
+
+// ANSI Color Escape Codes (Disable by passing below def)
+#ifndef NO_ANSI_COLORING
+    #define ANSI_RED     "\x1b[31m"
+    #define ANSI_GREEN   "\x1b[32m"
+    #define ANSI_YELLOW  "\x1b[33m"
+    #define ANSI_BLUE    "\x1b[34m"
+    #define ANSI_MAGENTA "\x1b[35m"
+    #define ANSI_CYAN    "\x1b[36m"
+    #define ANSI_RESET   "\x1b[0m"
+
+    // ON  Sets the color of output STR to ANSI color COLOR
+    #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
+#else
+    #define ANSI_RED
+    #define ANSI_GREEN
+    #define ANSI_YELLOW
+    #define ANSI_BLUE
+    #define ANSI_MAGENTA
+    #define ANSI_CYAN
+    #define ANSI_RESET
+
+    // OFF Sets the color of output STR to ANSI color COLOR
+    #define SET_COLOR(STR, COLOR)
+#endif // NO_ANSI_COLORING
+
+// ANSI Aliases
+#define ANSI_LOG ANSI_CYAN
 
 #endif // COMMON_H

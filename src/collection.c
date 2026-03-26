@@ -21,12 +21,13 @@ void collection_read_archived(const char *collection_fullname)
     FILE *const input_file_ptr = fopen(collection_fullname, "r");
     if (!input_file_ptr)
     {
-        fprintf(stderr, "MAJOR: Failed to open \"%s\" for writing. Error: ", collection_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for writing. Error: ", collection_fullname);
         perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Reading archive log file \"%s\".\n", collection_fullname);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Reading archive log file \"%s\".\n" ANSI_RESET, collection_fullname);
 
     // TODO: Set history current_date to creation date of collection_fullname. Just using date of run for now
     history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
@@ -35,12 +36,13 @@ void collection_read_archived(const char *collection_fullname)
 
     // MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for player_info_arr
     // How many players can be in a match (including user)
-    #define MAX_PLAYERS 128
+    #define MAX_PLAYERS 256
 
     // Hold statuses of all players
     int player_info_arr_len;
     struct player_info player_info_arr[MAX_PLAYERS];
 
+    // MAJOR_TODO: Read line dynamically into heap instead of using stack char arr
     // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
     #define LINE_BUFB 256
 
@@ -85,7 +87,7 @@ void collection_read_archived(const char *collection_fullname)
             // This is a bot, skip
             if (last_bot_str_i >= last_close_bracket_i)
             {
-                TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%zu) Bot found, skipping.\n", line_index);)
+                TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) Bot found, skipping.\n" ANSI_RESET, line_index);)
                 goto STATUS_FINISH;
             }
 
@@ -98,9 +100,9 @@ void collection_read_archived(const char *collection_fullname)
             {
                 TF2_PLAYED_WITH_DEBUG_CHOOSE
                 (
-                    fprintf(stderr, "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n", line_index);
+                    fprintf(stderr, ANSI_RED "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n" ANSI_RESET, line_index);
                     ,
-                    fputs("MAJOR: Bad current_sid3e read from status output.\n", stderr);
+                    fputs(ANSI_RED "MAJOR: Bad current_sid3e read from status output.\n" ANSI_RESET, stderr);
                 )
 
                 TF2_PLAYED_WITH_DEBUG_ABEX();
@@ -135,7 +137,7 @@ void collection_read_archived(const char *collection_fullname)
                 player_info_arr[current_arr_index].sid3e                 = current_sid3e;
 
                 // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
-                // TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n", line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
+                // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
             }
         }
         STATUS_FINISH:
@@ -165,14 +167,14 @@ void collection_read_archived(const char *collection_fullname)
 
                         player_info_arr_len = 0;
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%llu) First occurrence of username connected: \"%s\"\n", line_index, user_name);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, line_index, user_name);)
                     }
                     // Is another occurrence of username
                     else if (!memcmp(line_buf, user_name, name_end))
                     {
                         TF2_PLAYED_WITH_DEBUG_INSERT(++match_index;)
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf("LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n", line_index, name_end, line_buf);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, line_index, name_end, line_buf);)
 
                         for (int i = 0; i < player_info_arr_len; ++i)
                         {
@@ -189,12 +191,13 @@ void collection_read_archived(const char *collection_fullname)
         CONNECTED_FINISH:
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Username at end: \"%s\"\n", user_name);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Username at end: \"%s\"\n" ANSI_RESET, user_name);
 
     if (fclose(input_file_ptr))
     {
-        fprintf(stderr, "MAJOR: Failed to close \"%s\". Error: ", collection_fullname);
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", collection_fullname);
         perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }

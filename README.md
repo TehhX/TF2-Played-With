@@ -6,10 +6,6 @@ A repository to keep track of which players I've played with in Valve's Team For
 
 TF2PW is not yet viable so no builds are available, nor would I recommend you use them if they were.
 
-<!-- Multi-Use Links: -->
-[SourceCmd]: https://github.com/rannmann/SourceCmd
-[ConsoleForwarder]: https://github.com/SNWCreations/ConsoleForwarder
-
 ## Functionality
 
 The software will have the ability to do the following:
@@ -31,11 +27,12 @@ The software will have the ability to do the following:
   * `status`: Data retrieval
   * `echo <string>`: Taking notes mid-game
 * [TehhX/Learning-C](https://github.com/TehhX/Learning-C): Various implementations from here
-* [SourceCmd]: Might have some useful things in it, have to comb through it
-* [ConsoleForwarder]: Might have similar use as SourceCmd, have to look at it some time
+* [SourceCmd](https://github.com/rannmann/SourceCmd): Might have some useful things in it, have to comb through it
+* [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder): Might have similar use as SourceCmd, have to look at it some time
 * [Team Fortress 2](https://store.steampowered.com/app/440)
   * The source of all console output for analysis and testing
   * A great game that this entire repo is made for
+* [Steam-ID-Converter](https://github.com/ElektroStudios/Steam-ID-Converter/): For STEAMID conversion implementation
 
 ## Future Improvement Ideas
 

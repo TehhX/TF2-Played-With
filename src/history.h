@@ -11,6 +11,7 @@
 
 #include "stdint.h"
 #include "stdlib.h"
+#include "stdio.h"
 
 extern  uint8_t history_initialized;
 extern uint16_t current_date;
@@ -45,5 +46,12 @@ extern void history_set_date(uint16_t new_date);
 		@param player_name: The current name of the player to add
 */
 extern void history_add_record(const struct player_info *p_info);
+
+/*
+	Prints a record's data to given stream
+		@param requested_sid3e: The STEAMID3 excerpt to retrieve
+		@param output_stream: The stream to print details to
+*/
+extern void history_print_record(uint32_t requested_sid3e, FILE *output_stream);
 
 #endif // HISTORY_H
