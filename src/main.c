@@ -10,24 +10,13 @@
 #include "errno.h"
 #include "argp.h"
 
-enum Eoption_group
-{
-    Eoption_group_collect,
-    Eoption_group_options,
-    Eoption_group_retrieve,
-};
-
 enum Eoption_key
 {
-    // Collect
-    Eoption_key_collect_live = 'l',
     Eoption_key_collect_archive = 'a',
-
-    // Options
-    Eoption_key_options_save_location = 's',
-    Eoption_key_options_interactive = 'i',
-    Eoption_key_options_id_type = 't',
-    Eoption_key_options_retrieve = 'r',
+    Eoption_key_save_location   = 's',
+    Eoption_key_interactive     = 'i',
+    Eoption_key_id_type         = 't',
+    Eoption_key_retrieve        = 'r',
 };
 
 #define NO_ERR ((error_t) 0)
@@ -37,7 +26,7 @@ static enum Esteamid_type passed_type = Esteamid_type_unknown;
 
 static error_t parser_type(int key, char *arg, struct argp_state *state)
 {
-    if (key == Eoption_key_options_id_type)
+    if (key == Eoption_key_id_type)
     {
         switch (*arg)
         {
@@ -58,7 +47,7 @@ static error_t parser_type(int key, char *arg, struct argp_state *state)
 
 static error_t parser_save_location(int key, char *arg, struct argp_state *state)
 {
-    if (key == Eoption_key_options_save_location && !history_initialized)
+    if (key == Eoption_key_save_location && !history_initialized)
     {
         history_init(cider_canonicalize_file(arg));
     }
@@ -68,8 +57,10 @@ static error_t parser_save_location(int key, char *arg, struct argp_state *state
 
 static error_t parser_interactive(int key, char *arg, struct argp_state *state)
 {
-    if (key == Eoption_key_options_interactive)
+    if (key == Eoption_key_interactive)
     {
+        history_load();
+
         interactive_enter();
 
         history_free();
@@ -83,14 +74,6 @@ static error_t parser_main(int key, char *arg, struct argp_state *state)
 {
     switch (key)
     {
-        break; case Eoption_key_collect_live:
-        {
-            /*
-                IMPL_TODO
-                    * Start thread executing collection_read_live(...)
-                    * Accept user input as described in /README.md#functionality
-            */
-        }
         break; case Eoption_key_collect_archive:
         {
             char *const collection_fullname = cider_canonicalize_file(arg);
@@ -99,7 +82,7 @@ static error_t parser_main(int key, char *arg, struct argp_state *state)
 
             free(collection_fullname);
         }
-        break; case Eoption_key_options_retrieve:
+        break; case Eoption_key_retrieve:
         {
             // Should be a standard ID, just print associated record
             if (!(passed_type & Esteamid_type_name))
@@ -143,47 +126,35 @@ int main(int argc, char **argv)
     struct argp_option argp_options[] =
     {
         {
-            .name = "save-index",
-            .key = Eoption_key_options_save_location,
-            // TODO: ~/.local... is not platform agnostic. Get user's data path from cider and add tf2pw.sav something
-            .doc = "If file provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
-            .arg = "SAVE_LOCATION",
-            .group = Eoption_group_options
+            .name = "interactive",
+            .key = Eoption_key_interactive,
+            .doc = "Enter interactive mode. Supersedes all other arguments. Where collect-live lives, the heart of TF2PW.",
+            .flags = OPTION_ARG_OPTIONAL
         },
         {
-            .name = "interactive",
-            .key = Eoption_key_options_interactive,
-            .doc = "Enter interactive mode. Supersedes all other arguments.",
-            .flags = OPTION_ARG_OPTIONAL,
-            .group = Eoption_group_options
+            .name = "save-index",
+            .key = Eoption_key_save_location,
+            // TODO: ~/.local... is not platform agnostic. Get user's data path from cider and add tf2pw.sav something
+            .doc = "If file provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
+            .arg = "SAVE_LOCATION"
         },
         {
             .name = "type",
-            .key = Eoption_key_options_id_type,
+            .key = Eoption_key_id_type,
             .doc = "Explicitly specify type of STEAMID to use with -r (retrieve). Can be one of: 3 (STEAMID3), E (STEAMID3 Excerpt), 6 (STEAMID64), or N (Name). Case insensitive.",
-            .arg = "[3|E|6|N]",
-            .group = Eoption_group_options
-        },
-        {
-            .name = "collect-data-live",
-            .key = Eoption_key_collect_live,
-            .doc = "Collects data from TF2 during gameplay.",
-            .flags = OPTION_ARG_OPTIONAL,
-            .group = Eoption_group_collect
+            .arg = "[3|E|6|N]"
         },
         {
             .name = "collect-data-old",
             .key = Eoption_key_collect_archive,
             .doc = "Collects data from a previous log file post-gameplay.",
-            .arg = "ARCHIVE_FILE",
-            .group = Eoption_group_collect
+            .arg = "ARCHIVE_FILE"
         },
         {
             .name = "retrieve-records",
-            .key = Eoption_key_options_retrieve,
+            .key = Eoption_key_retrieve,
             .doc = "Retrieve data of account with provided Steam identifier (STEAMID3, STEAMID3 excerpt, Name). Optionally specify type with -t (type)",
-            .arg = "STEAMID",
-            .group = Eoption_group_retrieve
+            .arg = "STEAMID"
         },
         // Terminating option
         {

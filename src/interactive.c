@@ -13,7 +13,7 @@
 
 #define interactive_action(OUTPUT, ACTION)\
 {\
-    printf(ANSI_YELLOW OUTPUT "? (Y/N) " ANSI_RESET);\
+    printf(ANSI_YELLOW OUTPUT " (Y/N) " ANSI_RESET);\
     const int input = fgetc(stdin);\
     if (ccasecmp(input, 'y') || input == '\n')\
     {\
@@ -33,8 +33,8 @@
 // Size of stdin buffer in bytes
 #define STDIN_BUFB 128
 
-// Test input against CMP and the first letter of CMP
-#define INPUT_IS(CMP) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || ccasecmp(input_buf[0], CMP[0]))
+// Test input against CMP and CMP[COFF]. If COFF is -1, no short version
+#define INPUT_IS(CMP, COFF) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(input_buf[0], CMP[COFF])))
 
 void interactive_enter()
 {
@@ -43,7 +43,7 @@ void interactive_enter()
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
     for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
     {
-        if (INPUT_IS("retrieve"))
+        if (INPUT_IS("retrieve", 0))
         {
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
@@ -72,35 +72,51 @@ void interactive_enter()
                 history_print_record(sid3e);
             }
         }
-        else if (INPUT_IS("save"))
+        else if (INPUT_IS("collect-live", 10))
         {
-            interactive_action("Save", history_save());
+            // IMPL_TODO
         }
-        else if (INPUT_IS("load"))
+        else if (INPUT_IS("stop-live", 1))
         {
-            interactive_action("Load", history_load());
+            // IMPL_TODO
         }
-        else if (INPUT_IS("help"))
+        else if (INPUT_IS("save", 0))
+        {
+            interactive_action("Overwrite file and save?", history_save());
+        }
+        else if (INPUT_IS("load", 0))
+        {
+            interactive_action("Overwrite current data and load?", history_load());
+        }
+        else if (INPUT_IS("help", 0))
         {
             printf
             (
-                LITERAL_TAB ANSI_BLUE "TF2PW Interactive Mode Help | Try any below phrase, or first letter of any phrase (case insensitive)\n"
-                LITERAL_TAB LITERAL_TAB "- retrieve [SPEC]: Retrieve and print record using specifier STEAMID3, STEAMID64, or NAME\n"
-                LITERAL_TAB LITERAL_TAB "-            save: Save records to history file\n"
-                LITERAL_TAB LITERAL_TAB "-            load: Load records from history file. IMPORTANT: Remember to load before manipulating/reading history\n"
-                LITERAL_TAB LITERAL_TAB "-            help: Display this help message\n"
-                LITERAL_TAB LITERAL_TAB "-            quit: Quit interactive mode. Will ask if you want to save first, then confirm\n"
-                LITERAL_TAB LITERAL_TAB "-           clear: Clear the terminal (Terminal dependent)\n"
+                ANSI_BLUE
+                    LITERAL_TAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
+                    LITERAL_TAB LITERAL_TAB "- (r)etrieve [SPEC]: Retrieve and print record using specifier STEAMID3, STEAMID64, or NAME\n"
+                    LITERAL_TAB LITERAL_TAB "-    collect-li(v)e: Collects live data \n"
+                    LITERAL_TAB LITERAL_TAB "-       s(t)op-live: Stops collecting live data\n"
+                    LITERAL_TAB LITERAL_TAB "-            (s)ave: Save records to history file\n"
+                    LITERAL_TAB LITERAL_TAB "-            (l)oad: Load records from history file. IMPORTANT: Remember to load before manipulating/reading history\n"
+                    LITERAL_TAB LITERAL_TAB "-            (h)elp: Display this help message\n"
+                    LITERAL_TAB LITERAL_TAB "-            (e)xit: Exit interactive mode. Will ask if you want to save first, then confirm\n"
+                    LITERAL_TAB LITERAL_TAB "-        force-exit: Forcefully exit. Will not confirm, or ask to save first. May break save file, only slightly preferable to Ctrl+C-ing TF2PW\n"
+                    LITERAL_TAB LITERAL_TAB "-           (c)lear: Clear the terminal (Terminal dependent)\n"
                 ANSI_RESET
             );
         }
-        else if (INPUT_IS("quit"))
+        else if (INPUT_IS("exit", 0))
         {
-            interactive_action("Save", history_save());
+            interactive_action("Overwrite file and save?", history_save());
 
-            interactive_action("Quit", return);
+            interactive_action("Really exit?", return);
         }
-        else if (INPUT_IS("clear"))
+        else if (INPUT_IS("force-exit", -1))
+        {
+            return;
+        }
+        else if (INPUT_IS("clear", 0))
         {
             system("clear");
         }

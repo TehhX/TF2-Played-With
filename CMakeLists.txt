@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(tf2pw LANGUAGES C VERSION 0.2.0)
+project(tf2pw LANGUAGES C VERSION 0.0.0 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 
 if(NOT LINUX)
     message(FATAL_ERROR "This software is not tested on platforms other than linux. Continue at your own risk by commenting this out. Take special care with argp.")

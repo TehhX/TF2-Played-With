@@ -1,6 +1,6 @@
 # TF2 Played With
 
-A repository to keep track of which players I've played with in Valve's Team Fortress 2. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md).
+A program to keep track of who you've played with in Valve's Team Fortress 2. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md).
 
 ## Download
 
@@ -51,7 +51,8 @@ General ideas and brainstorming for new features:
 * Requesting info by date
 * Filters for retrieval eg. after/before date
 * Retrieval wildcards/regex, especially for retrieving names
-* Warns user when history hasn't been loaded when trying to manipulate/read records in interactive mode (babying user?)
+* Interactive mode auto-complete and up/down arrows for recent commands
+* Option to record chat messages
 
 Proposed save format changes:
 
