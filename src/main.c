@@ -1,6 +1,7 @@
 #include "history.h"
 #include "collection.h"
 #include "interactive.h"
+#include "steamid_manip.h"
 
 #include "cider.h"
 
@@ -25,14 +26,35 @@ enum Eoption_key
     // Options
     Eoption_key_options_save_location = 's',
     Eoption_key_options_interactive = 'i',
-
-    // Retrieve
-    Eoption_key_retrieve_id3  = 'r',
-    Eoption_key_retrieve_id64 = 'b',
-    Eoption_key_retrieve_name = 'n',
+    Eoption_key_options_id_type = 't',
+    Eoption_key_options_retrieve = 'r',
 };
 
 #define NO_ERR ((error_t) 0)
+
+// The type passed via --type. Will stay unknown if none passed
+static enum Esteamid_type passed_type = Esteamid_type_unknown;
+
+static error_t parser_type(int key, char *arg, struct argp_state *state)
+{
+    if (key == Eoption_key_options_id_type)
+    {
+        switch (*arg)
+        {
+            break; case '3': passed_type = Esteamid_type_sid3;
+
+            break; case 'E':
+                   case 'e': passed_type = Esteamid_type_sid3e;
+
+            break; case 'N':
+                   case 'n': passed_type = Esteamid_type_name;
+
+            break; case '6': passed_type = Esteamid_type_sid64;
+        }
+    }
+
+    return NO_ERR;
+}
 
 static error_t parser_save_location(int key, char *arg, struct argp_state *state)
 {
@@ -49,8 +71,8 @@ static error_t parser_interactive(int key, char *arg, struct argp_state *state)
     if (key == Eoption_key_options_interactive)
     {
         interactive_enter();
-        history_free();
 
+        history_free();
         exit(EXIT_SUCCESS);
     }
 
@@ -61,47 +83,53 @@ static error_t parser_main(int key, char *arg, struct argp_state *state)
 {
     switch (key)
     {
-    case Eoption_key_collect_live:
-        /*
-            * Start thread executing collection_read_live(...)
-            * Accept user input as described in /README.md#functionality
-        */
-        break;
+        break; case Eoption_key_collect_live:
+        {
+            /*
+                IMPL_TODO
+                    * Start thread executing collection_read_live(...)
+                    * Accept user input as described in /README.md#functionality
+            */
+        }
+        break; case Eoption_key_collect_archive:
+        {
+            char *const collection_fullname = cider_canonicalize_file(arg);
 
-    case Eoption_key_collect_archive:
-        char *collection_fullname = cider_canonicalize_file(arg);
-        collection_read_archived(collection_fullname);
-        free(collection_fullname);
-        break;
+            collection_read_archived(collection_fullname);
 
-    case Eoption_key_retrieve_id3:
-        /*
-            * Convert to SID3E if applicable
-            * Loop through records
-            * Once record of specified SID3E reached, return info on it
-                * Name
-                * TODO...
-        */
-        break;
+            free(collection_fullname);
+        }
+        break; case Eoption_key_options_retrieve:
+        {
+            // Should be a standard ID, just print associated record
+            if (!(passed_type & Esteamid_type_name))
+            {
+                const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 
-    case Eoption_key_retrieve_id64:
-        /*
-            * Convert to SID3E
-            * Use retrieve_id3
-        */
-        break;
+                if (sid3e == SIDM_ERR_RNGE)
+                {
+                    argp_error(state, "MAJOR: Passed ID \"%s\" too large.\n", arg);
+                }
+                else if (sid3e <= SIDM_ERR_NONE_MAX)
+                {
+                    history_print_record(sid3e);
 
-    case Eoption_key_retrieve_name:
-        /*
-            * Loop through all date records
-            * For each player record with date record with specified name, take SID3E and go to next record
-            * After checking every date record, retrieve SID3 records from list of SID3E's, do with it whatever retrieve_id3 does
-        */
-        break;
+                    return NO_ERR;
+                }
+
+                // Is a name, escape if statement and parse
+            }
+
+            // Is confirmed or suspected to be a name, print all player records containing even a single occurrence of it
+            history_print_records(arg);
+        }
     }
 
     return NO_ERR;
 }
+
+// Standard argp parse call via callback PARSER
+#define std_argp_parse(PARSER) argp.parser = PARSER; argp_parse(&argp, argc, argv, 0, NULL, NULL)
 
 int main(int argc, char **argv)
 {
@@ -130,6 +158,13 @@ int main(int argc, char **argv)
             .group = Eoption_group_options
         },
         {
+            .name = "type",
+            .key = Eoption_key_options_id_type,
+            .doc = "Explicitly specify type of STEAMID to use with -r (retrieve). Can be one of: 3 (STEAMID3), E (STEAMID3 Excerpt), 6 (STEAMID64), or N (Name). Case insensitive.",
+            .arg = "[3|E|6|N]",
+            .group = Eoption_group_options
+        },
+        {
             .name = "collect-data-live",
             .key = Eoption_key_collect_live,
             .doc = "Collects data from TF2 during gameplay.",
@@ -144,24 +179,10 @@ int main(int argc, char **argv)
             .group = Eoption_group_collect
         },
         {
-            .name = "retrieve-data-id3",
-            .key = Eoption_key_retrieve_id3,
-            .doc = "Retrieve data of account with provided STEAMID3.",
-            .arg = "STEAMID3",
-            .group = Eoption_group_retrieve
-        },
-        {
-            .name = "retrieve-data-id64",
-            .key = Eoption_key_retrieve_id64,
-            .doc = "Retrieve data of account with provided STEAMID64.",
-            .arg = "STEAMID64",
-            .group = Eoption_group_retrieve
-        },
-        {
-            .name = "retrieve-data-name",
-            .key = Eoption_key_retrieve_name,
-            .doc = "Retrieve data of account with provided Steam name.",
-            .arg = "STEAM_NAME",
+            .name = "retrieve-records",
+            .key = Eoption_key_options_retrieve,
+            .doc = "Retrieve data of account with provided Steam identifier (STEAMID3, STEAMID3 excerpt, Name). Optionally specify type with -t (type)",
+            .arg = "STEAMID",
             .group = Eoption_group_retrieve
         },
         // Terminating option
@@ -177,8 +198,7 @@ int main(int argc, char **argv)
         .doc = "A small program to collect and display data on the players you play with in TF2."
     };
 
-    argp.parser = parser_save_location;
-    argp_parse(&argp, argc, argv, 0, NULL, NULL);
+    std_argp_parse(parser_save_location);
 
     // No history fullname was passed in previous parse
     if (!history_initialized)
@@ -186,13 +206,16 @@ int main(int argc, char **argv)
         history_init(NULL);
     }
 
-    argp.parser = parser_interactive;
-    argp_parse(&argp, argc, argv, 0, NULL, NULL); // If interactive passed, will exit program here
+    // Reminder: If interactive passed, program will exit here
+    std_argp_parse(parser_interactive);
 
     history_load();
 
-    argp.parser = parser_main;
-    argp_parse(&argp, argc, argv, 0, NULL, NULL);
+    // Get explicit STEAMID type to retrieve
+    std_argp_parse(parser_type);
+
+    // Parse all remaining options
+    std_argp_parse(parser_main);
 
     history_save();
 

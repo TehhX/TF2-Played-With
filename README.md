@@ -40,13 +40,24 @@ General ideas and brainstorming for new features:
 
 * Other games (Same or different repo?)
 * Requesting specific info on player instead of vomiting it all out
+  * Date histories (current vomit)
+  * First encounter date
+  * Data for specific date
+  * Last encountered
+  * All names
+  * Times name was changed
+  * Most common name
+  * Profile link
 * Requesting info by date
+* Filters for retrieval eg. after/before date
+* Retrieval wildcards/regex, especially for retrieving names
+* Warns user when history hasn't been loaded when trying to manipulate/read records in interactive mode (babying user?)
 
 Proposed save format changes:
 
 |                                  Idea Description                                   | Expected Save Format Version Range |
 |:-----------------------------------------------------------------------------------:|:----------------------------------:|
-|                       Compress same names across date records                       |               [0,2]                |
+|                  Sorting for use of binary searches (BSEARCH_TODO)                  |                 0                  |
 |                The ability to record notes about players or servers                 |                 0                  |
 |                 Record kills/deaths regarding user for each player                  |               [1,2]                |
 | Record servers connected to along with relevant server records (K/D, maps seen etc) |             [1,never]              |

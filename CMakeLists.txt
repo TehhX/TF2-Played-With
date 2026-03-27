@@ -13,6 +13,7 @@ set(SRC
     history
     interactive
     main
+    steamid_manip
 )
 
 # Each item "{}" in SRC becomes "src/{}.c".
@@ -28,4 +29,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_DEBUG=1)
     target_compile_options    (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
     target_link_options       (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
+endif ()
+
+# Use -DTF2_PLAYED_WITH_NO_ANSI_COLORING when configuring to disable ANSI color escapes
+if (DEFINED TF2_PLAYED_WITH_NO_ANSI_COLORING)
+    target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_NO_ANSI_COLORING=1)
 endif ()

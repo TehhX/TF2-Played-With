@@ -29,6 +29,9 @@
 
     // DEB When debugging, insert DEB. When not, insert REL
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) DEB
+
+    // OFF A function acting as a glorified macro
+    #define HYPER_MACRO
 #else
     // OFF Gets replaced with CONTENT
     #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT)
@@ -47,19 +50,19 @@
 
     // REL When debugging, insert DEB. When not, insert REL
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) REL
+
+    // ON  A function acting as a glorified macro
+    #define HYPER_MACRO static inline __attribute__((always_inline))
 #endif
 
 // A tab is just 4 spaces to a guy like me
 #define LITERAL_TAB "    "
 
-// A function acting as a glorified macro
-#define HYPER_MACRO static inline __attribute__((always_inline))
-
-// Convert UE-seconds to a date in days
-#define UES_TO_DAYS(UES) ((UES) / (24 * 60 * 60))
+// Seconds in a day
+#define SECONDS_PER_DAY (24 * 60 * 60)
 
 // ANSI Color Escape Codes (Disable by passing below def)
-#ifndef NO_ANSI_COLORING
+#ifndef TF2_PLAYED_WITH_NO_ANSI_COLORING
     #define ANSI_RED     "\x1b[31m"
     #define ANSI_GREEN   "\x1b[32m"
     #define ANSI_YELLOW  "\x1b[33m"
@@ -81,7 +84,7 @@
 
     // OFF Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR)
-#endif // NO_ANSI_COLORING
+#endif // TF2_PLAYED_WITH_NO_ANSI_COLORING
 
 // ANSI Aliases
 #define ANSI_LOG ANSI_CYAN

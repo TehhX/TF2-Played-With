@@ -123,6 +123,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 * `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts for another save format version in any case
 * To change a name in TF2, the player must quit the game and relaunch it
+* It is currently assumed that STEAMID3 excerpts will always be in the range [1, UINT32_MAX - 2] (for steamid_manip.h::SIDM_ERR_NONE_MAX reasons). It has held true for now, but it is still only an assumption made for space savings
 
 ### Structure
 
@@ -186,4 +187,3 @@ A list of TODO prefixes found in the source code and their meanings:
 Temporary common issues:
 
 * BSEARCH_TODO: Suggests the use of binary search instead of whatever current implementation is
-* FGETC_TODO: Stream may have extra characters which cause errant behaviors when fgetc(...) is used to clear said stream

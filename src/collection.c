@@ -3,6 +3,7 @@
 #include "common.h"
 #include "history.h"
 #include "player_info.h"
+#include "steamid_manip.h"
 
 #include "cider.h"
 
@@ -47,14 +48,13 @@ void collection_read_archived(const char *collection_fullname)
     #define LINE_BUFB 256
 
     // REMINDER: End of line will be '\n', not '\0'
-    TF2_PLAYED_WITH_DEBUG_INSERT(size_t line_index = 1; int match_index = (int) line_index;)
-    for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, input_file_ptr); TF2_PLAYED_WITH_DEBUG_INSERT(++line_index))
+    TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1; int match_index = (int) file_line_index;)
+    for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, input_file_ptr); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
     {
         // All status lines containing a name-sid3e have 2 spaces after the octothorpe, title only has 1
         #define STATUS_PREFIX (char [3]){ "#  " }
 
         // Check for status output
-        // TODO: Doesn't check that line is long enough. Probably not an issue, but keep testing for it and remove this comment when it's sure to cause no problems
         int user_name_len;
         if (!memcmp(line_buf, STATUS_PREFIX, sizeof(STATUS_PREFIX)))
         {
@@ -70,7 +70,7 @@ void collection_read_archived(const char *collection_fullname)
                 goto STATUS_FINISH;
             }
 
-            // Get index of last closing bracket
+            // Get index of last closing bracket and last occurrence of "BOT"
             int last_close_bracket_i = 0, last_bot_str_i = 0;
             while (line_buf[++line_i] != '\n')
             {
@@ -78,29 +78,28 @@ void collection_read_archived(const char *collection_fullname)
                 {
                     last_close_bracket_i = line_i;
                 }
-                else if (line_buf[line_i] == 'B' && line_buf[line_i + 1] == 'O' && line_buf[line_i + 2] == 'T')
+                else if (!strncmp(line_buf + line_i, "BOT", 3))
                 {
                     last_bot_str_i = line_i;
                 }
             }
 
-            // This is a bot, skip
+            // This is a bot, skip. More information at /README-technical.md#L38
             if (last_bot_str_i >= last_close_bracket_i)
             {
-                TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) Bot found, skipping.\n" ANSI_RESET, line_index);)
+                TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) Bot found, skipping.\n" ANSI_RESET, file_line_index);)
                 goto STATUS_FINISH;
             }
 
             // Set line_i to index of start of SID3E
             for (line_i = last_close_bracket_i; line_buf[--line_i - 1] != ':'; );
 
-            char *end;
-            const uint32_t current_sid3e = strtol(line_buf + line_i, &end, 10);
-            if (*end != ']')
+            const uint32_t current_sid3e = sidm_parse_sid3e(line_buf + line_i, Esteamid_type_sid3);
+            if (current_sid3e >= SIDM_ERR_NONE_MAX)
             {
                 TF2_PLAYED_WITH_DEBUG_CHOOSE
                 (
-                    fprintf(stderr, ANSI_RED "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n" ANSI_RESET, line_index);
+                    fprintf(stderr, ANSI_RED "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n" ANSI_RESET, file_line_index);
                     ,
                     fputs(ANSI_RED "MAJOR: Bad current_sid3e read from status output.\n" ANSI_RESET, stderr);
                 )
@@ -137,8 +136,10 @@ void collection_read_archived(const char *collection_fullname)
                 player_info_arr[current_arr_index].sid3e                 = current_sid3e;
 
                 // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
-                // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
+                // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, file_line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
             }
+
+            #undef CURRENT_NOT_FOUND
         }
         STATUS_FINISH:
 
@@ -167,14 +168,14 @@ void collection_read_archived(const char *collection_fullname)
 
                         player_info_arr_len = 0;
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, line_index, user_name);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, file_line_index, user_name);)
                     }
                     // Is another occurrence of username
                     else if (!memcmp(line_buf, user_name, name_end))
                     {
                         TF2_PLAYED_WITH_DEBUG_INSERT(++match_index;)
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, line_index, name_end, line_buf);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, file_line_index, name_end, line_buf);)
 
                         for (int i = 0; i < player_info_arr_len; ++i)
                         {
