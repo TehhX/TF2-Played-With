@@ -15,7 +15,7 @@ HYPER_MACRO uint32_t parse_exp_sid3(const char *const restrict string_input)
     const uint32_t current_sid3e = strtol(string_input, &end, 10);
 
     // Bad input misc
-    if (*end != '\0')
+    if (*end != ']')
     {
         return SIDM_ERR_MISC;
     }
