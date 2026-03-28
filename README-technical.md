@@ -16,6 +16,8 @@ The following are required for building:
 * [Cider](https://github.com/TehhX/Cider)
   * For saving/loading
 
+Headers and libraries can be put in /include/ and /lib/ respectively if your include/lib paths don't have any specific dependency.
+
 ## Glossary
 
 * STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`.
@@ -158,7 +160,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 Technical things to be worked out:
 
 * Probably won't need user SID3E in history file whatsoever, recheck after program actually works
-* Figure out argp for Windows
+* Replace argp.h with Windows-friendly alternative
 * Implement installing via CMake
 * Create builds for Windows and Linux
 * collection_read_line(...) will likely have to be multithreaded

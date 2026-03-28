@@ -22,6 +22,10 @@ list(TRANSFORM SRC  APPEND ".c")
 
 add_executable(tf2pw ${SRC})
 
+# In case includes aren't in accessible spots, user may put them here
+target_include_directories(tf2pw PRIVATE "include/")
+   target_link_directories(tf2pw PRIVATE "lib/")
+
 target_link_libraries(tf2pw PRIVATE cider)
 
 # Enable debugging when variant is "Debug"

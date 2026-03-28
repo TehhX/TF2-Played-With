@@ -7,6 +7,13 @@
     Contains definitions to be used in *all* files contained within this project
 */
 
+// OS specific definitions
+#ifdef __linux__
+    #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
+#elif defined(_WIN32) || defined(_WIN64)
+    #define TF2PW_ATTR_ALWINL
+#endif
+
 // Define by setting config to DEBUG in CMake, or by defining the following value in your own compiling efforts
 #ifdef TF2_PLAYED_WITH_DEBUG
     #include "stdio.h"
@@ -52,7 +59,7 @@
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) REL
 
     // ON  A function acting as a glorified macro
-    #define HYPER_MACRO static inline __attribute__((always_inline))
+    #define HYPER_MACRO static inline TF2PW_ATTR_ALWINL
 #endif
 
 // A tab is just 4 spaces to a guy like me
