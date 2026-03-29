@@ -3,12 +3,16 @@
 #include "common.h"
 #include "history.h"
 #include "steamid_manip.h"
+#include "collection.h"
+
+#include "cider.h"
 
 #include "stdio.h"
 #include "string.h"
 #include "ctype.h"
+#include "pthread.h"
 
-// Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is capitalization bit
+// Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is case bit/flag
 #define ccasecmp(C1, C2) (((C1) | 0b00100000) == (C2))
 
 #define interactive_action(OUTPUT, ACTION)\
@@ -36,6 +40,14 @@
 // Test input against CMP and CMP[COFF]. If COFF is -1, no short version
 #define INPUT_IS(CMP, COFF) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(input_buf[0], CMP[COFF])))
 
+static pthread_t thread_collection;
+
+static struct collection_read_live_routine_params live_params =
+{
+    .continue_running = false,
+    .collection_fullname = NULL
+};
+
 void interactive_enter()
 {
     printf("Interactive mode (try help):\n" USER_POKE);
@@ -53,6 +65,11 @@ void interactive_enter()
                 {
                     specifier_start = cursor + 1;
                 }
+            }
+            if (!specifier_start)
+            {
+                fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
+                continue;
             }
             *cursor = '\0';
 
@@ -74,16 +91,50 @@ void interactive_enter()
         }
         else if (INPUT_IS("collect-live", 10))
         {
-            // IMPL_TODO
+            if (live_params.continue_running)
+            {
+                printf(ANSI_RED "Already live-collecting, can't start.\n" ANSI_RESET);
+                continue;
+            }
+
+            printf("Starting live-collecting...\n");
+
+            live_params.continue_running = true;
+            if (pthread_create(&thread_collection, NULL, collection_read_live_routine, &live_params))
+            {
+                fprintf(stderr, ANSI_RED "MAJOR: Failed to create thread_collection.\n" ANSI_RESET);
+            }
+            else
+            {
+                printf(ANSI_GREEN "Live collection started successfully.\n" ANSI_RESET);
+            }
         }
         else if (INPUT_IS("stop-live", 1))
         {
-            // IMPL_TODO
+            if (!live_params.continue_running)
+            {
+                printf(ANSI_RED "Not currently live-collecting, can't stop.\n" ANSI_RESET);
+                continue;
+            }
+
+            printf("Stopping live-collection...\n");
+
+            live_params.continue_running = false;
+            if (pthread_join(thread_collection, NULL))
+            {
+                fprintf(stderr, ANSI_RED "MAJOR: Failed to join thread_collection.\n" ANSI_RESET);
+            }
+            else
+            {
+                printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
+            }
         }
+        // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 0))
         {
             interactive_action("Overwrite file and save?", history_save());
         }
+        // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("load", 0))
         {
             interactive_action("Overwrite current data and load?", history_load());
@@ -94,15 +145,24 @@ void interactive_enter()
             (
                 ANSI_BLUE
                     LITERAL_TAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
-                    LITERAL_TAB LITERAL_TAB "- (r)etrieve [SPEC]: Retrieve and print record using specifier STEAMID3, STEAMID64, or NAME\n"
-                    LITERAL_TAB LITERAL_TAB "-    collect-li(v)e: Collects live data \n"
-                    LITERAL_TAB LITERAL_TAB "-       s(t)op-live: Stops collecting live data\n"
-                    LITERAL_TAB LITERAL_TAB "-            (s)ave: Save records to history file\n"
-                    LITERAL_TAB LITERAL_TAB "-            (l)oad: Load records from history file. IMPORTANT: Remember to load before manipulating/reading history\n"
-                    LITERAL_TAB LITERAL_TAB "-            (h)elp: Display this help message\n"
-                    LITERAL_TAB LITERAL_TAB "-            (e)xit: Exit interactive mode. Will ask if you want to save first, then confirm\n"
-                    LITERAL_TAB LITERAL_TAB "-        force-exit: Forcefully exit. Will not confirm, or ask to save first. May break save file, only slightly preferable to Ctrl+C-ing TF2PW\n"
-                    LITERAL_TAB LITERAL_TAB "-           (c)lear: Clear the terminal (Terminal dependent)\n"
+                    LITERAL_TAB LITERAL_TAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Retrieve and print associated record.\n"
+                    LITERAL_TAB LITERAL_TAB "collect-li(v)e [FULLNAME]\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Collects live data.\n"
+                    LITERAL_TAB LITERAL_TAB "s(t)op-live\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Stops collecting live data.\n"
+                    LITERAL_TAB LITERAL_TAB "(s)ave [?FULLNAME]\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Save records to history file. If no FULLNAME provided, use default.\n"
+                    LITERAL_TAB LITERAL_TAB "(l)oad [?FULLNAME]\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Load records from history file. If no FULLNAME provided, use default. IMPORTANT: Remember to load before manipulating/reading history.\n"
+                    LITERAL_TAB LITERAL_TAB "(h)elp\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Display this help message.\n"
+                    LITERAL_TAB LITERAL_TAB "(e)xit\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n"
+                    LITERAL_TAB LITERAL_TAB "force-exit\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Forcefully exit. Will not confirm, or ask to save first. May break save file, only slightly preferable to Ctrl+C-ing TF2PW.\n"
+                    LITERAL_TAB LITERAL_TAB "(c)lear\n"
+                    LITERAL_TAB LITERAL_TAB LITERAL_TAB "Clear the terminal (Terminal dependent).\n"
                 ANSI_RESET
             );
         }
@@ -120,7 +180,6 @@ void interactive_enter()
         {
             system("clear");
         }
-        // Unknown input (just enter is allowed)
         else if (input_buf[0] != '\n')
         {
             printf(ANSI_RED "Bad input, try again.\n" ANSI_RESET, input_buf);

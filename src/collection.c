@@ -10,46 +10,51 @@
 #include "stdio.h"
 #include "string.h"
 #include "inttypes.h"
+#include "stdatomic.h"
+#include "stdbool.h"
 
-void collection_read_live(const char *collection_fullname)
+#ifdef __linux__
+    #include "unistd.h"
+
+    #define tf2pw_sleep sleep
+#elif defined(_WIN32) || defined(_WIN64)
+    #include "windows.h"
+
+    // MAJOR_TODO: Test this
+    #define tf2pw_sleep(SECONDS) Sleep((SECONDS) * 1000)
+#else
+    #error "Unknown OS"
+#endif
+
+// MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for player_info_arr
+// How many players can be in a match (including user)
+#define MAX_PLAYERS 256
+
+// MAJOR_TODO: Read line dynamically into heap instead of using stack char arr
+// Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
+#define LINE_BUFB 256
+
+// Whether archive or live
+#define COLLECTION_LIVE    ((bool) false)
+#define COLLECTION_ARCHIVE ((bool) true)
+
+static void parse_log(FILE *file_stream, const bool caller, const char *const collection_fullname)
 {
-    // IMPL_TODO
-    // TODO: Set date via history_set_date(...) before adding records via history_add_record(...) every time, program may be run across multiple days
-}
-
-void collection_read_archived(const char *collection_fullname)
-{
-    FILE *const input_file_ptr = fopen(collection_fullname, "r");
-    if (!input_file_ptr)
-    {
-        fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for writing. Error: ", collection_fullname);
-        perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
-    }
-
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Reading archive log file \"%s\".\n" ANSI_RESET, collection_fullname);
-
-    // TODO: Set history current_date to creation date of collection_fullname. Just using date of run for now
-    history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
-
-    steam_name_stack user_name = { '\0' };
-
-    // MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for player_info_arr
-    // How many players can be in a match (including user)
-    #define MAX_PLAYERS 256
-
     // Hold statuses of all players
     int player_info_arr_len;
     struct player_info player_info_arr[MAX_PLAYERS];
 
-    // MAJOR_TODO: Read line dynamically into heap instead of using stack char arr
-    // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
-    #define LINE_BUFB 256
+    if (caller == COLLECTION_ARCHIVE)
+    {
+        history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
+        printf("Creation date is: %" PRIu32 "\n", cider_creation_date_file(collection_fullname));
+    }
 
-    // REMINDER: End of line will be '\n', not '\0'
+    steam_name_stack user_name = { '\0' };
+
     TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1; int match_index = (int) file_line_index;)
-    for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, input_file_ptr); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
+
+    for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
     {
         // All status lines containing a name-sid3e have 2 spaces after the octothorpe, title only has 1
         #define STATUS_PREFIX (char [3]){ "#  " }
@@ -137,6 +142,11 @@ void collection_read_archived(const char *collection_fullname)
 
                 // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
                 // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, file_line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
+
+                if (caller == COLLECTION_LIVE)
+                {
+                    history_add_record(player_info_arr + player_info_arr_len - 1);
+                }
             }
 
             #undef CURRENT_NOT_FOUND
@@ -177,9 +187,17 @@ void collection_read_archived(const char *collection_fullname)
 
                         TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, file_line_index, name_end, line_buf);)
 
-                        for (int i = 0; i < player_info_arr_len; ++i)
+                        if (caller == COLLECTION_LIVE)
                         {
-                            history_add_record(player_info_arr + i);
+                            history_set_date(HISTORY_SET_DATE_TODAY);
+                        }
+
+                        if (caller == COLLECTION_ARCHIVE)
+                        {
+                            for (int i = 0; i < player_info_arr_len; ++i)
+                            {
+                                history_add_record(player_info_arr + i);
+                            }
                         }
 
                         player_info_arr_len = 0;
@@ -190,9 +208,61 @@ void collection_read_archived(const char *collection_fullname)
             }
         }
         CONNECTED_FINISH:
+
+        ; // Post-goto label statement to please the compiler
     }
 
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Username at end: \"%s\"\n" ANSI_RESET, user_name);
+}
+
+// REMINDER_TODO: Set date via history_set_date(...) before adding records via history_add_record(...) every time, program may be run across multiple days
+void *collection_read_live_routine(void *_params)
+{
+    struct collection_read_live_routine_params *params = _params;
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n", params->collection_fullname);
+
+    FILE *const input_file_ptr = fopen(params->collection_fullname, "r");
+    if (!input_file_ptr)
+    {
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to open live-file \"%s\" for reading. Error: ", params->collection_fullname);
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        params->continue_running = false;
+        TF2_PLAYED_WITH_DEBUG_ABEX();
+    }
+
+    while (params->continue_running)
+    {
+        parse_log(input_file_ptr, COLLECTION_LIVE, params->collection_fullname);
+        tf2pw_sleep(1);
+    }
+
+    if (fclose(input_file_ptr))
+    {
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", params->collection_fullname);
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        TF2_PLAYED_WITH_DEBUG_ABEX();
+    }
+
+    return NULL;
+}
+
+void collection_read_archived(const char *collection_fullname)
+{
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening archived-log \"%s\".\n", collection_fullname);
+
+    FILE *const input_file_ptr = fopen(collection_fullname, "r");
+    if (!input_file_ptr)
+    {
+        fprintf(stderr, ANSI_RED "MAJOR: Failed to open archive-file \"%s\" for reading. Error: ", collection_fullname);
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        TF2_PLAYED_WITH_DEBUG_ABEX();
+    }
+
+    parse_log(input_file_ptr, COLLECTION_ARCHIVE, collection_fullname);
 
     if (fclose(input_file_ptr))
     {

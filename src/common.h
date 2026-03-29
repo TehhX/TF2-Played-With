@@ -7,11 +7,13 @@
     Contains definitions to be used in *all* files contained within this project
 */
 
-// OS specific definitions
-#ifdef __linux__
+// Compiler specific definitions
+#ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
-#elif defined(_WIN32) || defined(_WIN64)
+#elif defined(MSVC)
     #define TF2PW_ATTR_ALWINL
+#else
+    #error "Unknown compiler."
 #endif
 
 // Define by setting config to DEBUG in CMake, or by defining the following value in your own compiling efforts

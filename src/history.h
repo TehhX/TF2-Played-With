@@ -33,7 +33,7 @@ extern void history_save();
 #define HISTORY_SET_DATE_TODAY ((uint16_t) 1)
 
 // Convert UE-seconds to a date in days
-#define UES_TO_DAYS(UES) ((UES) / SECONDS_PER_DAY)
+#define UES_TO_DAYS(UES) ((UES) / SECONDS_PER_DAY + 1)
 
 // Convert date in days to UE-seconds
 #define DAYS_TO_UES(DAYS) ((DAYS) * SECONDS_PER_DAY)

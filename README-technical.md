@@ -162,8 +162,10 @@ Technical things to be worked out:
 * Probably won't need user SID3E in history file whatsoever, recheck after program actually works
 * Replace argp.h with Windows-friendly alternative
 * Implement installing via CMake
+* Change history_add_record(...) to accept an array of records and length to accept instead of just one
 * Create builds for Windows and Linux
 * collection_read_line(...) will likely have to be multithreaded
+* Interactive mode should ask user to close live collection if shutdown detected (check logs for this behavior)
 * Copycat names for subsequent date records can be compressed, maybe name length of 0 denotes use same name. Can point to same array too, but freeing may become an issue if that gets done. Keep pointer address, don't free if it's the same? Keep ptr->ptr names (char **name or void *) point to origin name, when ptr is NULL don't free? Most important thing is to compress it during save/load
 * See if there's a way to output commands directly to a file, console window gets easily clogged
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
@@ -174,6 +176,8 @@ Technical things to be worked out:
   * history_load() getting a file which doesn't start with the proper header (TF2PW)
 * Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more. In any case, there is testing to be done
 * Consider switching steam name handling in collection.c from static arrays to allocated heap memory
+* Don't allow Ctrl+C SIGINT in interactive mode to prevent accidental issues
+* Autosaving
 * Compress history file during save/load using something like gzip
 * Look into [SourceCmd](https://github.com/rannmann/SourceCmd), [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder), and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
 * May have issues parsing certain characters in player names <!-- See /meta/player_name_unknown_IGN.txt. If you're not TehhX, you won't have this file -->

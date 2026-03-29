@@ -352,7 +352,6 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
     }
 
     ALLOCATE_NAME:
-
     const uint_fast8_t current_name_len = current_date_record.name_len = strlen(name);
     current_date_record.name = malloc(sizeof(int8_t) * current_name_len + 1);
     memcpy(current_date_record.name, name, current_name_len + 1);
@@ -457,4 +456,5 @@ void history_print_record(const uint32_t requested_sid3e)
 void history_print_records(const char *name)
 {
     // IMPL_TODO
+    fprintf(stderr, "Haven't implemented history_print_records(...) yet, don't get ahead of yourself. Ignoring.\n");
 }

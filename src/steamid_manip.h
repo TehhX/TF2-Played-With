@@ -36,7 +36,7 @@ enum Esteamid_type
 /*
     Parses a STEAMID3 excerpt from string input, useful for user input. Returns SIDM_ERR if a failure occurred
         @param string_input: A string representation of any possible form of STEAMID. Should be NULL terminated, except for STEAMID3 which only requires an `]` at the end
-        @param expected_type: STEAMID type contained in `string_input`, or `Esteamid_type_unknown` for unknown. Don't pass name `Esteamid_type_name`, could need to return multiple
+        @param expected_type: STEAMID type contained in `string_input`, or `Esteamid_type_unknown` for unknown. Don't pass name `Esteamid_type_name`
 */
 extern uint32_t sidm_parse_sid3e(const char *string_input, enum Esteamid_type possible_types);
 
