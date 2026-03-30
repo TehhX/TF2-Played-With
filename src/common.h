@@ -64,25 +64,14 @@
     #define HYPER_MACRO static inline TF2PW_ATTR_ALWINL
 #endif
 
-// A tab is just 4 spaces to a guy like me
-#define LITERAL_TAB "    "
+// Literal tab. A tab is just 4 spaces to a guy like me
+#define LTAB "    "
 
 // Seconds in a day
 #define SECONDS_PER_DAY (24 * 60 * 60)
 
 // ANSI Color Escape Codes (Disable by passing below def)
-#ifndef TF2_PLAYED_WITH_NO_ANSI_COLORING
-    #define ANSI_RED     "\x1b[31m"
-    #define ANSI_GREEN   "\x1b[32m"
-    #define ANSI_YELLOW  "\x1b[33m"
-    #define ANSI_BLUE    "\x1b[34m"
-    #define ANSI_MAGENTA "\x1b[35m"
-    #define ANSI_CYAN    "\x1b[36m"
-    #define ANSI_RESET   "\x1b[0m"
-
-    // ON  Sets the color of output STR to ANSI color COLOR
-    #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
-#else
+#ifdef TF2_PLAYED_WITH_NO_ANSI_COLORING
     #define ANSI_RED
     #define ANSI_GREEN
     #define ANSI_YELLOW
@@ -93,9 +82,23 @@
 
     // OFF Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR)
+#else
+    #define ANSI_RED     "\x1b[31m"
+    #define ANSI_GREEN   "\x1b[32m"
+    #define ANSI_YELLOW  "\x1b[33m"
+    #define ANSI_BLUE    "\x1b[34m"
+    #define ANSI_MAGENTA "\x1b[35m"
+    #define ANSI_CYAN    "\x1b[36m"
+    #define ANSI_RESET   "\x1b[0m"
+
+    // ON  Sets the color of output STR to ANSI color COLOR
+    #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
 #endif // TF2_PLAYED_WITH_NO_ANSI_COLORING
 
 // ANSI Aliases
 #define ANSI_LOG ANSI_CYAN
+
+// Max size of any/all stdin buffer(s) in bytes
+#define STDIN_BUFB 128
 
 #endif // COMMON_H

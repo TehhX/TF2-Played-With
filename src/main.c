@@ -32,11 +32,9 @@ static error_t parser_type(int key, char *arg, struct argp_state *state)
         {
             break; case '3': passed_type = Esteamid_type_sid3;
 
-            break; case 'E':
-                   case 'e': passed_type = Esteamid_type_sid3e;
+            break; case 'E': case 'e': passed_type = Esteamid_type_sid3e;
 
-            break; case 'N':
-                   case 'n': passed_type = Esteamid_type_name;
+            break; case 'N': case 'n': passed_type = Esteamid_type_name;
 
             break; case '6': passed_type = Esteamid_type_sid64;
         }

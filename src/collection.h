@@ -9,11 +9,13 @@
 
 #include "stdatomic.h"
 #include "stdbool.h"
+#include "stdio.h"
 
 struct collection_read_live_routine_params
 {
 	atomic_bool continue_running;    // True if continue, else false
 	const char *collection_fullname; // Fullname
+	FILE *input_file;                // Input file
 };
 
 /*

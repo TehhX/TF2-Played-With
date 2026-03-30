@@ -47,7 +47,6 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
     if (caller == COLLECTION_ARCHIVE)
     {
         history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
-        printf("Creation date is: %" PRIu32 "\n", cider_creation_date_file(collection_fullname));
     }
 
     steam_name_stack user_name = { '\0' };
@@ -57,13 +56,14 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
     for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
     {
         // All status lines containing a name-sid3e have 2 spaces after the octothorpe, title only has 1
-        #define STATUS_PREFIX (char [3]){ "#  " }
+        #define STATUS_PREFIX "#  "
+        #define STATUS_PREFIX_SIZE (sizeof(STATUS_PREFIX) - 1)
 
         // Check for status output
         int user_name_len;
-        if (!memcmp(line_buf, STATUS_PREFIX, sizeof(STATUS_PREFIX)))
+        if (!memcmp(line_buf, STATUS_PREFIX, STATUS_PREFIX_SIZE))
         {
-            int line_i = sizeof(STATUS_PREFIX), player_i = 0;
+            int line_i = STATUS_PREFIX_SIZE;
 
             // Get player name start index
             while (line_buf[line_i++] != '"');
@@ -99,7 +99,7 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
             // Set line_i to index of start of SID3E
             for (line_i = last_close_bracket_i; line_buf[--line_i - 1] != ':'; );
 
-            const uint32_t current_sid3e = sidm_parse_sid3e(line_buf + line_i, Esteamid_type_sid3);
+            const uint32_t current_sid3e = sidm_parse_sid3e(line_buf + line_i - sizeof("[U:1:") + 1, Esteamid_type_sid3);
             if (current_sid3e >= SIDM_ERR_NONE_MAX)
             {
                 TF2_PLAYED_WITH_DEBUG_CHOOSE
@@ -151,23 +151,25 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
 
             #undef CURRENT_NOT_FOUND
         }
-        STATUS_FINISH:
+        STATUS_FINISH:;
 
         // Check for connected message in the form `<NAME> connected`
-        #define CONNECTED_SUFFIX (char [9]){ "connected" }
+        #define CONNECTED_SUFFIX "connected"
+        #define CONNECTED_SUFFIX_SIZE ((int) sizeof(CONNECTED_SUFFIX) - 1)
+
         for (int i = 0; i < LINE_BUFB; ++i)
         {
             if (line_buf[i] == '\n')
             {
                 // Line is not long enough to house connected statement, checking may cause a program crash and is pointless anyway
-                if (i <= sizeof(CONNECTED_SUFFIX))
+                if (i <= (int) CONNECTED_SUFFIX_SIZE)
                 {
                     goto CONNECTED_FINISH;
                 }
 
-                if (!memcmp(line_buf + i - sizeof(CONNECTED_SUFFIX), CONNECTED_SUFFIX, sizeof(CONNECTED_SUFFIX)))
+                if (!memcmp(line_buf + i - CONNECTED_SUFFIX_SIZE, CONNECTED_SUFFIX, CONNECTED_SUFFIX_SIZE))
                 {
-                    const int name_end = i - sizeof(CONNECTED_SUFFIX) - 1;
+                    const int name_end = i - CONNECTED_SUFFIX_SIZE - 1;
 
                     // Is first occurrence of username
                     if (user_name[0] == '\0')
@@ -178,21 +180,20 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
 
                         player_info_arr_len = 0;
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, file_line_index, user_name);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, file_line_index, user_name);)
                     }
                     // Is another occurrence of username
                     else if (!memcmp(line_buf, user_name, name_end))
                     {
                         TF2_PLAYED_WITH_DEBUG_INSERT(++match_index;)
 
-                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, file_line_index, name_end, line_buf);)
+                        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) Another occurrence of username connected: \"%.*s\"\n" ANSI_RESET, file_line_index, name_end, line_buf);)
 
                         if (caller == COLLECTION_LIVE)
                         {
                             history_set_date(HISTORY_SET_DATE_TODAY);
                         }
-
-                        if (caller == COLLECTION_ARCHIVE)
+                        else
                         {
                             for (int i = 0; i < player_info_arr_len; ++i)
                             {
@@ -207,43 +208,23 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
                 goto CONNECTED_FINISH;
             }
         }
-        CONNECTED_FINISH:
-
-        ; // Post-goto label statement to please the compiler
+        CONNECTED_FINISH:;
     }
 
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Username at end: \"%s\"\n" ANSI_RESET, user_name);
+    if (caller == COLLECTION_ARCHIVE)
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Username at end: \"%s\"\n" ANSI_RESET, user_name);
+    }
 }
 
-// REMINDER_TODO: Set date via history_set_date(...) before adding records via history_add_record(...) every time, program may be run across multiple days
 void *collection_read_live_routine(void *_params)
 {
     struct collection_read_live_routine_params *params = _params;
 
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n", params->collection_fullname);
-
-    FILE *const input_file_ptr = fopen(params->collection_fullname, "r");
-    if (!input_file_ptr)
-    {
-        fprintf(stderr, ANSI_RED "MAJOR: Failed to open live-file \"%s\" for reading. Error: ", params->collection_fullname);
-        perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
-        params->continue_running = false;
-        TF2_PLAYED_WITH_DEBUG_ABEX();
-    }
-
     while (params->continue_running)
     {
-        parse_log(input_file_ptr, COLLECTION_LIVE, params->collection_fullname);
+        parse_log(params->input_file, COLLECTION_LIVE, params->collection_fullname);
         tf2pw_sleep(1);
-    }
-
-    if (fclose(input_file_ptr))
-    {
-        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", params->collection_fullname);
-        perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     return NULL;

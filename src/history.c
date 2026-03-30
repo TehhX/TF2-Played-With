@@ -15,13 +15,17 @@
 uint8_t history_initialized = 0;
 
 // The header of any given tf2pw file. If not first 5 bytes of TF2PW file, it is invalid
-#define HEADER (char [5]){ "TF2PW" }
+#define HEADER "TF2PW"
+#define HEADER_SIZE (sizeof(HEADER) - 1)
 
 // The latest available save format version. Remember to keep this updated
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
-static uint16_t current_date;
-static  uint8_t save_version;
+static uint16_t  current_date;
+static  uint8_t  save_version;
+
+static  uint8_t  live_log_path_len;
+static     char *live_log_path;
 
 // TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
@@ -34,10 +38,10 @@ static struct
     {
         uint16_t date;
 
-        uint8_t name_len;
-        int8_t *name;
+        uint8_t  name_len;
+           char *name;
 
-        // NOTE: Add 1 to get value
+        // NOTE: Add 1 to get actual value, it's 0 indexed
         uint8_t encounter_count;
     }
     *date_records;
@@ -95,7 +99,7 @@ HYPER_MACRO void history_free_memory()
     }
 
     free(player_records);
-    player_records_len = 0;
+    free(live_log_path);
 }
 
 void history_free()
@@ -139,21 +143,50 @@ void history_load()
         {
             errno = 0;
 
-            fprintf(stderr, "No history file found at \"%s\". Use defaults? (Y/N): ", history_fullname);
+            // IMMED_TODO: Ask for log path
+            USER_GET_START:;
+            fprintf(stderr, "No history file found at \"%s\". Start setup? (Y/N): ", history_fullname);
 
-            const char input_char = fgetc(stdin);
-            if (input_char == 'y' || input_char == 'Y' || input_char == '\n')
+            const int input_char = fgetc(stdin);
+            switch (input_char)
             {
-                save_version = SAVE_VERSION_LATEST;
+                break; case '\n':
+                {
+                    goto USER_GET_START;
+                }
+                break; case 'y': case 'Y':
+                {
+                    save_version = SAVE_VERSION_LATEST;
 
-                history_free_memory();
+                    if (input_char != '\n')
+                    {
+                        // MAJOR_TODO: Same issue as in interactive.c
+                        fgetc(stdin);
+                    }
 
-                return;
-            }
-            else
-            {
-                fputs("Either modify another history file or accept creation of a new file on next run.\n", stderr);
-                TF2_PLAYED_WITH_DEBUG_ABEX();
+                    USER_GET_TLP:;
+                    printf("Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
+                    char stdin_buffer[STDIN_BUFB];
+                    if (fgets(stdin_buffer, STDIN_BUFB, stdin)[0] == '\n')
+                    {
+                        goto USER_GET_TLP;
+                    }
+
+                    live_log_path_len = 0;
+                    for (; stdin_buffer[live_log_path_len] != '\n'; ++live_log_path_len);
+
+                    live_log_path = memcpy(malloc(live_log_path_len + 1), stdin_buffer, live_log_path_len);
+                    live_log_path[live_log_path_len] = '\0';
+
+                    history_free_memory();
+
+                    return;
+                }
+                break; default:
+                {
+                    fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
+                    exit(EXIT_FAILURE);
+                }
             }
         }
         else
@@ -165,9 +198,9 @@ void history_load()
         }
     }
 
-    char header_buf[sizeof(HEADER)];
-    fread(header_buf, 1, sizeof(HEADER), input_file_ptr);
-    if (strncmp(header_buf, HEADER, sizeof(HEADER)))
+    char header_buf[HEADER_SIZE];
+    fread(header_buf, 1, HEADER_SIZE, input_file_ptr);
+    if (strncmp(header_buf, HEADER, HEADER_SIZE))
     {
         fprintf(stderr, ANSI_RED "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n" ANSI_RESET, history_fullname);
         TF2_PLAYED_WITH_DEBUG_ABEX();
@@ -175,15 +208,19 @@ void history_load()
 
     fread_one(save_version);
     fread_one(player_records_len);
+    fread_one(live_log_path_len);
 
-    // TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
+    live_log_path = malloc(live_log_path_len);
+    fread_arr(live_log_path);
+
+    // MAJOR_TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
         fread_one(player_records[player_records_i].sid3e);
         fread_one(player_records[player_records_i].date_records_len);
 
-        int8_t *last_real_name;
+        char *last_real_name;
 
         player_records[player_records_i].date_records = malloc(sizeof(*player_records[player_records_i].date_records) * player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
@@ -195,7 +232,7 @@ void history_load()
             // Only read real names, else set ptr to original
             if (player_records[player_records_i].date_records[date_records_i].name_len)
             {
-                player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(int8_t) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
+                player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(char) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
                 fread_arr(player_records[player_records_i].date_records[date_records_i].name);
                 player_records[player_records_i].date_records[date_records_i].name[player_records[player_records_i].date_records[date_records_i].name_len] = '\0';
 
@@ -249,10 +286,12 @@ void history_save()
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    fwrite(HEADER, sizeof(char), sizeof(HEADER), output_file_ptr);
+    fwrite(HEADER, sizeof(char), HEADER_SIZE, output_file_ptr);
 
     fwrite_one(save_version);
     fwrite_one(player_records_len);
+    fwrite_one(live_log_path_len);
+    fwrite_arr(live_log_path);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
@@ -302,8 +341,23 @@ void history_set_date(const uint16_t new_date)
         current_date = new_date;
     }
 
-    // TODO: Log human-readable date as well
+    // TODO: Log human-readable date instead of days
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set current_date to %" PRIu16 ".\n" ANSI_RESET, current_date);
+}
+
+void history_set_log_file_path(char *log_file_path)
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_log_file_path.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    live_log_path_len = strlen(log_file_path);
+    live_log_path = log_file_path;
 }
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)
@@ -351,9 +405,9 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
         }
     }
 
-    ALLOCATE_NAME:
+    ALLOCATE_NAME:;
     const uint_fast8_t current_name_len = current_date_record.name_len = strlen(name);
-    current_date_record.name = malloc(sizeof(int8_t) * current_name_len + 1);
+    current_date_record.name = malloc(sizeof(char) * current_name_len + 1);
     memcpy(current_date_record.name, name, current_name_len + 1);
 
     #undef current_date_record
@@ -441,9 +495,9 @@ void history_print_record(const uint32_t requested_sid3e)
             {
                 const struct tm *const record_date = localtime(&(time_t){ DAYS_TO_UES(player_records[player_i].date_records[date_i].date) });
 
-                printf(LITERAL_TAB "%04d-%02d-%02d:\n", record_date->tm_year + 1900, record_date->tm_mon + 1, record_date->tm_mday);
-                printf(LITERAL_TAB LITERAL_TAB "Times encountered: %" PRIu8 "\n", player_records[player_i].date_records[date_i].encounter_count + 1);
-                printf(LITERAL_TAB LITERAL_TAB "Name: \"%s\"\n", player_records[player_i].date_records[date_i].name);
+                printf(LTAB "%04d-%02d-%02d:\n", record_date->tm_year + 1900, record_date->tm_mon + 1, record_date->tm_mday);
+                printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_i].date_records[date_i].encounter_count + 1);
+                printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_i].date_records[date_i].name);
             }
 
             return;

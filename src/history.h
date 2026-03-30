@@ -45,6 +45,12 @@ extern void history_save();
 extern void history_set_date(uint16_t new_date);
 
 /*
+	Sets the path to the logfile output from TF2
+		@param log_file_path The fullname of the TF2 live console output, eg. /Steam/steamapps/common/Team Fortress 2/tf/log.txt. Must be malloc'd
+*/
+extern void history_set_log_file_path(char *log_file_path);
+
+/*
 	Adds a player to the records
 		@param p_info: Should point to a struct player_info containing data on the player to add/update a record for
 */

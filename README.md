@@ -38,6 +38,7 @@ The software will have the ability to do the following:
 
 General ideas and brainstorming for new features:
 
+* Set history file live-log path via command line argument
 * Other games (Same or different repo?)
 * Requesting specific info on player instead of vomiting it all out
   * Date histories (current vomit)
