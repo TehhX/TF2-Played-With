@@ -1,6 +1,7 @@
 #include "history.h"
 
 #include "common.h"
+#include "time_manip.h"
 
 #include "cider.h"
 
@@ -24,8 +25,8 @@ uint8_t history_initialized = 0;
 static uint16_t  current_date;
 static  uint8_t  save_version;
 
-static  uint8_t  live_log_path_len;
-static     char *live_log_path;
+static  uint8_t  history_live_log_path_len;
+           char *history_live_log_path;
 
 // TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
@@ -99,7 +100,7 @@ HYPER_MACRO void history_free_memory()
     }
 
     free(player_records);
-    free(live_log_path);
+    free(history_live_log_path);
 }
 
 void history_free()
@@ -143,7 +144,6 @@ void history_load()
         {
             errno = 0;
 
-            // IMMED_TODO: Ask for log path
             USER_GET_START:;
             fprintf(stderr, "No history file found at \"%s\". Start setup? (Y/N): ", history_fullname);
 
@@ -165,18 +165,18 @@ void history_load()
                     }
 
                     USER_GET_TLP:;
-                    printf("Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
+                    fprintf(stderr, "Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
                     char stdin_buffer[STDIN_BUFB];
                     if (fgets(stdin_buffer, STDIN_BUFB, stdin)[0] == '\n')
                     {
                         goto USER_GET_TLP;
                     }
 
-                    live_log_path_len = 0;
-                    for (; stdin_buffer[live_log_path_len] != '\n'; ++live_log_path_len);
+                    history_live_log_path_len = 0;
+                    for (; stdin_buffer[history_live_log_path_len] != '\n'; ++history_live_log_path_len);
 
-                    live_log_path = memcpy(malloc(live_log_path_len + 1), stdin_buffer, live_log_path_len);
-                    live_log_path[live_log_path_len] = '\0';
+                    history_live_log_path = memcpy(malloc(history_live_log_path_len + 1), stdin_buffer, history_live_log_path_len);
+                    history_live_log_path[history_live_log_path_len] = '\0';
 
                     history_free_memory();
 
@@ -208,10 +208,11 @@ void history_load()
 
     fread_one(save_version);
     fread_one(player_records_len);
-    fread_one(live_log_path_len);
+    fread_one(history_live_log_path_len);
 
-    live_log_path = malloc(live_log_path_len);
-    fread_arr(live_log_path);
+    history_live_log_path = malloc(history_live_log_path_len + 1);
+    fread_arr(history_live_log_path);
+    history_live_log_path[history_live_log_path_len] = '\0';
 
     // MAJOR_TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
@@ -290,8 +291,8 @@ void history_save()
 
     fwrite_one(save_version);
     fwrite_one(player_records_len);
-    fwrite_one(live_log_path_len);
-    fwrite_arr(live_log_path);
+    fwrite_one(history_live_log_path_len);
+    fwrite_arr(history_live_log_path);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
@@ -321,6 +322,8 @@ void history_save()
     }
 }
 
+
+// MAJOR_TODO: Dates sometimes errantly set as 0 (epoch) during live-testing
 void history_set_date(const uint16_t new_date)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -334,7 +337,7 @@ void history_set_date(const uint16_t new_date)
 
     if (new_date == HISTORY_SET_DATE_TODAY)
     {
-        current_date = UES_TO_DAYS(time(NULL));
+        current_date = time_manip_ues2ued(time(NULL));
     }
     else
     {
@@ -356,8 +359,22 @@ void history_set_log_file_path(char *log_file_path)
         }
     )
 
-    live_log_path_len = strlen(log_file_path);
-    live_log_path = log_file_path;
+    history_live_log_path_len = strlen(log_file_path);
+    history_live_log_path = log_file_path;
+}
+
+const char *history_get_log_file_path()
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_log_file_path.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    return history_live_log_path;
 }
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)
@@ -493,9 +510,10 @@ void history_print_record(const uint32_t requested_sid3e)
 
             for (uint_fast32_t date_i = 0; date_i < player_records[player_i].date_records_len; ++date_i)
             {
-                const struct tm *const record_date = localtime(&(time_t){ DAYS_TO_UES(player_records[player_i].date_records[date_i].date) });
+                printf(LTAB);
+                time_manip_print_ued(player_records[player_i].date_records[date_i].date);
+                printf(":\n");
 
-                printf(LTAB "%04d-%02d-%02d:\n", record_date->tm_year + 1900, record_date->tm_mon + 1, record_date->tm_mday);
                 printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_i].date_records[date_i].encounter_count + 1);
                 printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_i].date_records[date_i].name);
             }
@@ -507,7 +525,7 @@ void history_print_record(const uint32_t requested_sid3e)
     printf("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
 }
 
-void history_print_records(const char *name)
+void history_print_records(const char *const name)
 {
     // IMPL_TODO
     fprintf(stderr, "Haven't implemented history_print_records(...) yet, don't get ahead of yourself. Ignoring.\n");

@@ -1,6 +1,7 @@
 #include "steamid_manip.h"
 
 #include "common.h"
+#include "time_manip.h"
 
 #include "stdlib.h"
 #include "ctype.h"
@@ -93,7 +94,7 @@ uint32_t sidm_parse_sid3e(const char *const restrict string_input, const enum Es
         // STEAMID3
         if (string_input[0] == '[')
         {
-            return parse_exp_sid3(string_input + sizeof("[U:1:") - 1);
+            return parse_exp_sid3(string_input);
         }
         else
         {
@@ -135,4 +136,7 @@ uint32_t sidm_parse_sid3e(const char *const restrict string_input, const enum Es
             case Esteamid_type_sid64: return parse_exp_sid64(string_input);
         }
     }
+
+    // Shouldn't get here
+    abort();
 }

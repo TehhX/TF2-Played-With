@@ -39,25 +39,22 @@
 
 static pthread_t thread_collection;
 
-static struct collection_read_live_routine_params live_params =
-{
-    .continue_running = false,
-    .collection_fullname = NULL,
-    .input_file = NULL
-};
-
 void interactive_enter()
 {
     printf("Interactive mode (try help):\n" USER_POKE);
 
-    live_params.continue_running = false;
-    live_params.collection_fullname = NULL;
+    struct collection_read_live_routine_params live_params =
+    {
+        .continue_running = false,
+        .collection_fullname = history_live_log_path
+    };
 
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
     for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
     {
         if (INPUT_IS("retrieve", 0))
         {
+            // TODO: Repeated behavior with collect-archive
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
             for (cursor = input_buf; *cursor != '\n'; ++cursor)
@@ -114,6 +111,7 @@ void interactive_enter()
             }
 
             live_params.continue_running = true;
+            live_params.input_file = input_file_ptr;
             if (pthread_create(&thread_collection, NULL, collection_read_live_routine, &live_params))
             {
                 fprintf(stderr, ANSI_RED "MAJOR: Failed to create thread_collection.\n" ANSI_RESET);
@@ -152,6 +150,26 @@ void interactive_enter()
                 continue;
             }
         }
+        else if (INPUT_IS("collect-archived", 8))
+        {
+            // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
+            char *cursor, *specifier_start = NULL;
+            for (cursor = input_buf; *cursor != '\n'; ++cursor)
+            {
+                if (!specifier_start && *cursor == ' ')
+                {
+                    specifier_start = cursor + 1;
+                }
+            }
+            if (!specifier_start)
+            {
+                fprintf(stderr, ANSI_RED "Forgot argument [FULLNAME]. Try 'help'.\n" ANSI_RESET);
+                continue;
+            }
+            *cursor = '\0';
+
+            collection_read_archived(specifier_start);
+        }
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 0))
         {
@@ -170,10 +188,12 @@ void interactive_enter()
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Retrieve and print associated record.\n"
-                    LTAB LTAB "collect-li(v)e [FULLNAME]\n"
-                    LTAB LTAB LTAB "Collects live data.\n"
+                    LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
+                    LTAB LTAB LTAB "Collects live data from FULLNAME. If FULLNAME not provided, collect from saved path.\n"
                     LTAB LTAB "s(t)op-live\n"
                     LTAB LTAB LTAB "Stops collecting live data.\n"
+                    LTAB LTAB "collect-(a)rchived [FULLNAME]\n"
+                    LTAB LTAB LTAB "Collects data from an already completed log file located at FULLNAME.\n"
                     LTAB LTAB "(s)ave [?FULLNAME]\n"
                     LTAB LTAB LTAB "Save records to history file. If no FULLNAME provided, use default.\n"
                     LTAB LTAB "(l)oad [?FULLNAME]\n"
@@ -191,7 +211,7 @@ void interactive_enter()
         }
         else if (INPUT_IS("exit", 0) || INPUT_IS("quit", 0))
         {
-            interactive_action("Overwrite file and save?", history_save());
+            interactive_action("Save before quitting?", history_save());
 
             interactive_action("Really exit?", return);
         }

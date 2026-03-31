@@ -74,11 +74,7 @@ static error_t parser_main(int key, char *arg, struct argp_state *state)
     {
         break; case Eoption_key_collect_archive:
         {
-            char *const collection_fullname = cider_canonicalize_file(arg);
-
-            collection_read_archived(collection_fullname);
-
-            free(collection_fullname);
+            collection_read_archived(arg);
         }
         break; case Eoption_key_retrieve:
         {

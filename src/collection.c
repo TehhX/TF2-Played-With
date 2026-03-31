@@ -4,6 +4,7 @@
 #include "history.h"
 #include "player_info.h"
 #include "steamid_manip.h"
+#include "time_manip.h"
 
 #include "cider.h"
 
@@ -26,7 +27,7 @@
     #error "Unknown OS"
 #endif
 
-// MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for player_info_arr
+// MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for pinfo_arr->arr
 // How many players can be in a match (including user)
 #define MAX_PLAYERS 256
 
@@ -38,20 +39,20 @@
 #define COLLECTION_LIVE    ((bool) false)
 #define COLLECTION_ARCHIVE ((bool) true)
 
-static void parse_log(FILE *file_stream, const bool caller, const char *const collection_fullname)
+struct player_info_arr
 {
-    // Hold statuses of all players
-    int player_info_arr_len;
-    struct player_info player_info_arr[MAX_PLAYERS];
+    struct player_info arr[MAX_PLAYERS];
+    int len;
+};
 
+static void parse_log(FILE *file_stream, const bool caller, const char *const collection_fullname, steam_name_stack user_name, struct player_info_arr *pinfo_arr)
+{
     if (caller == COLLECTION_ARCHIVE)
     {
-        history_set_date(UES_TO_DAYS(cider_creation_date_file(collection_fullname)));
+        history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
     }
 
-    steam_name_stack user_name = { '\0' };
-
-    TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1; int match_index = (int) file_line_index;)
+    TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1; int match_index = 1;)
 
     for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
     {
@@ -117,9 +118,9 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
 
             // BSEARCH_TODO
             int current_arr_index = CURRENT_NOT_FOUND;
-            for (int i = 0; i < player_info_arr_len; ++i)
+            for (int i = 0; i < pinfo_arr->len; ++i)
             {
-                if (player_info_arr[i].sid3e == current_sid3e)
+                if (pinfo_arr->arr[i].sid3e == current_sid3e)
                 {
                     current_arr_index = i;
                     break;
@@ -129,23 +130,23 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
             // Player not in status array, add them
             if (current_arr_index == CURRENT_NOT_FOUND)
             {
-                current_arr_index = player_info_arr_len++;
+                current_arr_index = pinfo_arr->len++;
 
                 // Get player name end index
                 while (line_buf[--line_i] != '"');
                 const int player_name_len = line_i - player_name_begin;
 
-                // Set name and SID3E in player_info_arr
-                memcpy(player_info_arr[current_arr_index].name, line_buf + player_name_begin, player_name_len);
-                player_info_arr[current_arr_index].name[player_name_len] = '\0';
-                player_info_arr[current_arr_index].sid3e                 = current_sid3e;
+                // Set name and SID3E in pinfo_arr->arr
+                memcpy(pinfo_arr->arr[current_arr_index].name, line_buf + player_name_begin, player_name_len);
+                pinfo_arr->arr[current_arr_index].name[player_name_len] = '\0';
+                pinfo_arr->arr[current_arr_index].sid3e                 = current_sid3e;
 
                 // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
-                // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, file_line_index, current_arr_index + 1, match_index, player_info_arr[current_arr_index].name, player_info_arr[current_arr_index].sid3e);)
+                // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, file_line_index, current_arr_index + 1, match_index, pinfo_arr->arr[current_arr_index].name, pinfo_arr->arr[current_arr_index].sid3e);)
 
                 if (caller == COLLECTION_LIVE)
                 {
-                    history_add_record(player_info_arr + player_info_arr_len - 1);
+                    history_add_record(pinfo_arr->arr + pinfo_arr->len - 1);
                 }
             }
 
@@ -178,7 +179,7 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
                         user_name[name_end] = '\0';
                         user_name_len = name_end;
 
-                        player_info_arr_len = 0;
+                        pinfo_arr->len = 0;
 
                         TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) First occurrence of username connected: \"%s\"\n" ANSI_RESET, file_line_index, user_name);)
                     }
@@ -195,13 +196,13 @@ static void parse_log(FILE *file_stream, const bool caller, const char *const co
                         }
                         else
                         {
-                            for (int i = 0; i < player_info_arr_len; ++i)
+                            for (int i = 0; i < pinfo_arr->len; ++i)
                             {
-                                history_add_record(player_info_arr + i);
+                                history_add_record(pinfo_arr->arr + i);
                             }
                         }
 
-                        player_info_arr_len = 0;
+                        pinfo_arr->len = 0;
                     }
                 }
 
@@ -221,9 +222,13 @@ void *collection_read_live_routine(void *_params)
 {
     struct collection_read_live_routine_params *params = _params;
 
+    steam_name_stack user_name = { '\0' };
+    struct player_info_arr live_pinfo_arr = { .len = 0 };
+
     while (params->continue_running)
     {
-        parse_log(params->input_file, COLLECTION_LIVE, params->collection_fullname);
+        parse_log(params->input_file, COLLECTION_LIVE, params->collection_fullname, user_name, &live_pinfo_arr);
+        clearerr(params->input_file);
         tf2pw_sleep(1);
     }
 
@@ -243,7 +248,7 @@ void collection_read_archived(const char *collection_fullname)
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    parse_log(input_file_ptr, COLLECTION_ARCHIVE, collection_fullname);
+    parse_log(input_file_ptr, COLLECTION_ARCHIVE, collection_fullname, (steam_name_stack){ '\0' }, &(struct player_info_arr){ .len = 0 });
 
     if (fclose(input_file_ptr))
     {

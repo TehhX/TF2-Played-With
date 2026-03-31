@@ -14,6 +14,8 @@
 
 extern uint8_t history_initialized;
 
+extern char *history_live_log_path;
+
 /*
 	Initialize history
 	   @param history_fullname: The file to save/load. If NULL, use default fullname, else must be on the heap
@@ -32,23 +34,11 @@ extern void history_save();
 // A sentinel value for use with history_set_date(...)
 #define HISTORY_SET_DATE_TODAY ((uint16_t) 1)
 
-// Convert UE-seconds to a date in days
-#define UES_TO_DAYS(UES) ((UES) / SECONDS_PER_DAY + 1)
-
-// Convert date in days to UE-seconds
-#define DAYS_TO_UES(DAYS) ((DAYS) * SECONDS_PER_DAY)
-
 /*
 	Sets the date variable to a new date
 		@param new_date: A pointer to the new date to set. If equal to HISTORY_SET_DATE_TODAY, set date to today
 */
 extern void history_set_date(uint16_t new_date);
-
-/*
-	Sets the path to the logfile output from TF2
-		@param log_file_path The fullname of the TF2 live console output, eg. /Steam/steamapps/common/Team Fortress 2/tf/log.txt. Must be malloc'd
-*/
-extern void history_set_log_file_path(char *log_file_path);
 
 /*
 	Adds a player to the records

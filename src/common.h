@@ -11,6 +11,7 @@
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
 #elif defined(MSVC)
+    // TODO: Check out __force_inline
     #define TF2PW_ATTR_ALWINL
 #else
     #error "Unknown compiler."
@@ -27,6 +28,7 @@
     // ON  Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION) if (CONDITION) abort()
 
+    // TODO: Make a wrapper that always prints LOG and uses ANSI_LOG, a lot of dupe code
     // ON  When debugging, printf's MSG. Else, no-op
     #define TF2_PLAYED_WITH_DEBUG_LOGF printf
 

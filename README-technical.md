@@ -164,28 +164,24 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 Technical things to be worked out:
 
-* Probably won't need user SID3E in history file whatsoever, recheck after program actually works
 * Replace argp.h with Windows-friendly alternative
 * Implement installing via CMake
 * Change history_add_record(...) to accept an array of records and length to accept instead of just one
 * Create builds for Windows and Linux
-* collection_read_line(...) will likely have to be multithreaded
 * Interactive mode should ask user to close live collection if shutdown detected (check logs for this behavior)
-* Copycat names for subsequent date records can be compressed, maybe name length of 0 denotes use same name. Can point to same array too, but freeing may become an issue if that gets done. Keep pointer address, don't free if it's the same? Keep ptr->ptr names (char **name or void *) point to origin name, when ptr is NULL don't free? Most important thing is to compress it during save/load
-* See if there's a way to output commands directly to a file, console window gets easily clogged
+* See if there's a way to output commands directly to a file, console window gets easily clogged. Maybe output via interactive mode
 * The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
-* Address TODO comments in the source code (duh)
 * The name is a bit clunky, maybe just use the acronym
 * In interactive mode, some functions which abort or exit should be converted to return an error:
-  * collection_read_archived(...) being fed an incorrect file accidentally will crash the program
+  * collection_read_archived(...) being fed an incorrect file accidentally will abort the process
   * history_load() getting a file which doesn't start with the proper header (TF2PW)
 * Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more. In any case, there is testing to be done
-* Consider switching steam name handling in collection.c from static arrays to allocated heap memory
 * Don't allow Ctrl+C SIGINT in interactive mode to prevent accidental issues
-* Autosaving
+* `retry` ing in console will have another first connecting occurrence, treating it like a new game. Maybe set `retry` bind to also `echo` some code to tell TF2PW to not count next occurrence of connected?
+* Autosaving in interactive mode
 * Compress history file during save/load using something like gzip
 * Look into [SourceCmd](https://github.com/rannmann/SourceCmd), [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder), and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
-* May have issues parsing certain characters in player names <!-- See /meta/player_name_unknown_IGN.txt. If you're not TehhX, you won't have this file -->
+* May have issues parsing certain characters in player names <!-- See /meta/player_name_unknown_IGN.txt. If you're not me, you won't have this file -->
 
 ## Inline TODOs
 

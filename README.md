@@ -1,23 +1,10 @@
 # TF2 Played With
 
-A program to keep track of who you've played with in Valve's Team Fortress 2. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md).
+A program to keep track of who you've played with in Valve's Team Fortress 2. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md). Run tf2pw --help for more.
 
 ## Download
 
 TF2PW is not yet viable so no builds are available, nor would I recommend you use them if they were.
-
-## Functionality
-
-The software will have the ability to do the following:
-
-* Add [data](/README-technical.md#visualization) to history file during gameplay
-* Retrieve data from history file by name, STEAMID64 or STEAMID3, display in a human-readable format
-* Print histories of players encountered during gameplay
-* Stop printing (but not stop collecting) during gameplay to accept user input via CLI. Input may include:
-  * Getting data from history
-  * Stop tf2pw
-  * Save to disk
-  * Load from disk
 
 ## Helpful Resources and Thanks
 
@@ -39,7 +26,6 @@ The software will have the ability to do the following:
 General ideas and brainstorming for new features:
 
 * Set history file live-log path via command line argument
-* Other games (Same or different repo?)
 * Requesting specific info on player instead of vomiting it all out
   * Date histories (current vomit)
   * First encounter date
@@ -48,7 +34,7 @@ General ideas and brainstorming for new features:
   * All names
   * Times name was changed
   * Most common name
-  * Profile link
+  * Open profile in browser
 * Requesting info by date
 * Filters for retrieval eg. after/before date
 * Retrieval wildcards/regex, especially for retrieving names
