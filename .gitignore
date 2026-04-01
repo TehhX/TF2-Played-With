@@ -6,3 +6,7 @@
 
 # Ignored files
 *_IGN*
+
+# Dependencies
+/include/
+/lib/
