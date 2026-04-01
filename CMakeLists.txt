@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(tf2pw LANGUAGES C VERSION 0.0.0 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 
-if(NOT LINUX)
-    message(STATUS "This software is not tested on platforms other than linux. Continue at your own risk by commenting this out. Take special care with argp.")
-endif()
-
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED true)
 
@@ -46,3 +42,7 @@ endif ()
 if (DEFINED TF2_PLAYED_WITH_NO_ANSI_COLORING)
     target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_NO_ANSI_COLORING=1)
 endif ()
+
+# Installation
+# MAJOR_TODO: Confirm works on Windows
+install(TARGETS tf2pw DESTINATION bin)
