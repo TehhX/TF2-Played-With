@@ -15,6 +15,9 @@ The following are required for building:
   * Currently locking TF2PW to Linux, will be phased out
 * [Cider](https://github.com/TehhX/Cider)
   * For saving/loading
+* pthreads
+  * For multithreading
+  * Comes with most Linux distros, but on windows you'll need [pthread-win32](https://github.com/GerHobbelt/pthread-win32)
 
 Headers and libraries can be put in /include/ and /lib/ respectively if your include/lib paths don't have any specific dependency.
 
