@@ -10,7 +10,7 @@
 // Compiler specific definitions
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
-#elif defined(MSVC)
+#elif defined(_MSC_VER)
     // MAJOR_TODO: Test
     #define TF2PW_ATTR_ALWINL __declspec(__forceinline)
 #else

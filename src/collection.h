@@ -7,13 +7,12 @@
 	Contains functionality for collecting data into history memory from log files.
 */
 
-#include "stdatomic.h"
 #include "stdbool.h"
 #include "stdio.h"
 
 struct collection_read_live_routine_params
 {
-	atomic_bool continue_running;    // True if continue, else false
+	bool continue_running;    // True if continue, else false
 	FILE *input_file;                // Input file
 };
 

@@ -1,5 +1,7 @@
-# VSCode
+# Visual Studio
 /.vscode/
+/.vs/
+/out/
 
 # Build folder
 /build/
