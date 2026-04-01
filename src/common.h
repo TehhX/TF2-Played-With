@@ -11,8 +11,7 @@
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
 #elif defined(_MSC_VER)
-    // MAJOR_TODO: Test
-    #define TF2PW_ATTR_ALWINL __declspec(__forceinline)
+    #define TF2PW_ATTR_ALWINL __forceinline
 #else
     #error "Unknown compiler."
 #endif

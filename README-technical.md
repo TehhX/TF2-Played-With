@@ -165,6 +165,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 Technical things to be worked out:
 
 * Replace argp.h with Windows-friendly alternative
+* Replace pthreads.h with Windows-friendly alternative
 * Implement installing via CMake
 * Can't backspace in interactive mode for some reason. Should be able to
 * Change history_add_record(...) to accept an array of records and length to accept instead of just one
