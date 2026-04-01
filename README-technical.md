@@ -137,14 +137,14 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 #### Header
 
-|         Name          |                                         Description                                         |            Size (Bytes)            |                           Example                           |
-|:---------------------:|:-------------------------------------------------------------------------------------------:|:----------------------------------:|:-----------------------------------------------------------:|
-|        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |                 5                  |                            TF2PW                            |
-|  Save Format Version  |              The version of history file format used with this particular file              |                 1                  |                           (u8) 0                            |
-|   Live Log Path Len   |                            The length in bytes of Live Log Path                             |                 1                  |                           (u8) 82                           |
-|     Live Log Path     |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     |       1 * Live_Log_Path_Len        | (i8 *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
-| Player Records Length |               How many unique player records there are in the following array               |                 4                  |                        (u32) 12,000                         |
-|    Player Records     | An array of player records. See [Player Record](#player-record) for its particular contents | 12 + (1 * Date_Record.Name_Length) |                             N/A                             |
+|         Name          |                                         Description                                         |            Size (Bytes)            |                            Example                            |
+|:---------------------:|:-------------------------------------------------------------------------------------------:|:----------------------------------:|:-------------------------------------------------------------:|
+|        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |                 5                  |                             TF2PW                             |
+|  Save Format Version  |              The version of history file format used with this particular file              |                 1                  |                            (u8) 0                             |
+|   Live Log Path Len   |                            The length in bytes of Live Log Path                             |                 1                  |                            (u8) 82                            |
+|     Live Log Path     |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     |       1 * Live_Log_Path_Len        | (char *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
+| Player Records Length |               How many unique player records there are in the following array               |                 4                  |                         (u32) 12,000                          |
+|    Player Records     | An array of player records. See [Player Record](#player-record) for its particular contents | 12 + (1 * Date_Record.Name_Length) |                              N/A                              |
 
 #### Player Record
 
