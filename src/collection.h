@@ -14,7 +14,6 @@
 struct collection_read_live_routine_params
 {
 	atomic_bool continue_running;    // True if continue, else false
-	char *collection_fullname; // Fullname
 	FILE *input_file;                // Input file
 };
 

@@ -46,7 +46,6 @@ void interactive_enter()
     struct collection_read_live_routine_params live_params =
     {
         .continue_running = false,
-        .collection_fullname = history_live_log_path
     };
 
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
@@ -97,9 +96,9 @@ void interactive_enter()
 
             printf("Starting live-collecting...\n");
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, live_params.collection_fullname);
+            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_live_log_path);
 
-            FILE *const input_file_ptr = fopen(live_params.collection_fullname, "r");
+            FILE *const input_file_ptr = fopen(history_live_log_path, "r");
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
@@ -141,6 +140,8 @@ void interactive_enter()
             {
                 printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
             }
+
+            interactive_action("Delete live log file? (Must do before next live collection)", remove(history_live_log_path));
 
             if (fclose(live_params.input_file))
             {

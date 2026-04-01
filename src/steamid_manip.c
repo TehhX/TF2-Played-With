@@ -87,53 +87,57 @@ uint32_t sidm_parse_sid3e(const char *const restrict string_input, const enum Es
         }
     )
 
-    // TODO: Stress test unknown capabilities
-    // Unknown type, parse and try all
-    if (possible_types == Esteamid_type_unknown)
+    switch (possible_types)
     {
-        // STEAMID3
-        if (string_input[0] == '[')
+        break; case Esteamid_type_sid3:
         {
             return parse_exp_sid3(string_input);
         }
-        else
+        break; case Esteamid_type_sid3e:
         {
-            errno = 0;
-
-            char *end;
-            const uint64_t value = strtol(string_input, &end, 10);
-
-            // Bad input misc
-            if (*end != '\0')
+            return parse_exp_sid3e(string_input);
+        }
+        break; case Esteamid_type_sid64:
+        {
+            return parse_exp_sid64(string_input);
+        }
+        // TODO: Stress test unknown capabilities
+        break; case Esteamid_type_unknown:
+        {
+            // STEAMID3
+            if (string_input[0] == '[')
             {
-                return SIDM_ERR_MISC;
+                return parse_exp_sid3(string_input);
             }
-            // Bad input range
-            else if (errno == ERANGE)
-            {
-                errno = 0;
-                return SIDM_ERR_RNGE;
-            }
-            // STEAMID64
-            else if (value > UINT32_MAX)
-            {
-                return sidm_sid64_to_sid3e(value);
-            }
-            // STEAMID3E
             else
             {
-                return value;
+                errno = 0;
+
+                char *end;
+                const uint64_t value = strtol(string_input, &end, 10);
+
+                // Bad input misc
+                if (*end != '\0')
+                {
+                    return SIDM_ERR_MISC;
+                }
+                // Bad input range
+                else if (errno == ERANGE)
+                {
+                    errno = 0;
+                    return SIDM_ERR_RNGE;
+                }
+                // STEAMID64
+                else if (value > UINT32_MAX)
+                {
+                    return sidm_sid64_to_sid3e(value);
+                }
+                // STEAMID3E
+                else
+                {
+                    return value;
+                }
             }
-        }
-    }
-    // Type is explicit
-    else
-    {
-        switch (possible_types)
-        {
-            case Esteamid_type_sid3:  return parse_exp_sid3(string_input);
-            case Esteamid_type_sid3e: return parse_exp_sid3e(string_input);
-            case Esteamid_type_sid64: return parse_exp_sid64(string_input);
         }
     }
 

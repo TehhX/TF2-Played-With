@@ -45,13 +45,8 @@ struct player_info_arr
     int len;
 };
 
-static void parse_log(FILE *file_stream, const bool caller, const char *const collection_fullname, steam_name_stack user_name, struct player_info_arr *pinfo_arr)
+static void parse_log(FILE *file_stream, const bool caller, steam_name_stack user_name, struct player_info_arr *pinfo_arr)
 {
-    if (caller == COLLECTION_ARCHIVE)
-    {
-        history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
-    }
-
     TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1; int match_index = 1;)
 
     for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); TF2_PLAYED_WITH_DEBUG_INSERT(++file_line_index))
@@ -227,7 +222,7 @@ void *collection_read_live_routine(void *_params)
 
     while (params->continue_running)
     {
-        parse_log(params->input_file, COLLECTION_LIVE, params->collection_fullname, user_name, &live_pinfo_arr);
+        parse_log(params->input_file, COLLECTION_LIVE, user_name, &live_pinfo_arr);
         clearerr(params->input_file);
         tf2pw_sleep(1);
     }
@@ -248,7 +243,9 @@ void collection_read_archived(const char *collection_fullname)
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
-    parse_log(input_file_ptr, COLLECTION_ARCHIVE, collection_fullname, (steam_name_stack){ '\0' }, &(struct player_info_arr){ .len = 0 });
+    history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
+
+    parse_log(input_file_ptr, COLLECTION_ARCHIVE, (steam_name_stack){ '\0' }, &(struct player_info_arr){ .len = 0 });
 
     if (fclose(input_file_ptr))
     {

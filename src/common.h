@@ -11,8 +11,8 @@
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
 #elif defined(MSVC)
-    // TODO: Check out __force_inline
-    #define TF2PW_ATTR_ALWINL
+    // MAJOR_TODO: Test
+    #define TF2PW_ATTR_ALWINL __declspec(__forceinline)
 #else
     #error "Unknown compiler."
 #endif
@@ -68,9 +68,6 @@
 
 // Literal tab. A tab is just 4 spaces to a guy like me
 #define LTAB "    "
-
-// Seconds in a day
-#define SECONDS_PER_DAY (24 * 60 * 60)
 
 // ANSI Color Escape Codes (Disable by passing below def)
 #ifdef TF2_PLAYED_WITH_NO_ANSI_COLORING

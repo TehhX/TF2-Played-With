@@ -12,7 +12,7 @@ The following are required for building:
 
 * [GNU-C's argp](https://sourceware.org/glibc/)
   * For argument parsing via `argp.h`
-  * Not sure of its Windows availability
+  * Currently locking TF2PW to Linux, will be phased out
 * [Cider](https://github.com/TehhX/Cider)
   * For saving/loading
 
@@ -166,6 +166,7 @@ Technical things to be worked out:
 
 * Replace argp.h with Windows-friendly alternative
 * Implement installing via CMake
+* Can't backspace in interactive mode for some reason. Should be able to
 * Change history_add_record(...) to accept an array of records and length to accept instead of just one
 * Create builds for Windows and Linux
 * Interactive mode should ask user to close live collection if shutdown detected (check logs for this behavior)
