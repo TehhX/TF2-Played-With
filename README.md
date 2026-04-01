@@ -4,7 +4,7 @@ A program to keep track of who you've played with in Valve's Team Fortress 2. Fo
 
 ## Download
 
-TF2PW is not yet viable so no builds are available, nor would I recommend you use them if they were.
+Check the [1.0.0 milestone](https://github.com/TehhX/TF2-Played-With/milestone/1) for when builds will be available for general download and use.
 
 ## Helpful Resources and Thanks
 
@@ -20,32 +20,3 @@ TF2PW is not yet viable so no builds are available, nor would I recommend you us
   * The source of all console output for analysis and testing
   * A great game that this entire repo is made for
 * [Steam-ID-Converter](https://github.com/ElektroStudios/Steam-ID-Converter/): For STEAMID conversion implementation
-
-## Future Improvement Ideas
-
-General ideas and brainstorming for new features:
-
-* Set history file live-log path via command line argument
-* Requesting specific info on player instead of vomiting it all out
-  * Date histories (current vomit)
-  * First encounter date
-  * Data for specific date
-  * Last encountered
-  * All names
-  * Times name was changed
-  * Most common name
-  * Open profile in browser
-* Requesting info by date
-* Filters for retrieval eg. after/before date
-* Retrieval wildcards/regex, especially for retrieving names
-* Interactive mode auto-complete and up/down arrows for recent commands
-* Option to record chat messages
-
-Proposed save format changes:
-
-|                                  Idea Description                                   | Expected Save Format Version Range |
-|:-----------------------------------------------------------------------------------:|:----------------------------------:|
-|                  Sorting for use of binary searches (BSEARCH_TODO)                  |                 0                  |
-|                The ability to record notes about players or servers                 |                 0                  |
-|                 Record kills/deaths regarding user for each player                  |               [1,2]                |
-| Record servers connected to along with relevant server records (K/D, maps seen etc) |             [1,never]              |

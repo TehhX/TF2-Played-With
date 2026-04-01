@@ -17,7 +17,7 @@ The following are required for building:
   * For saving/loading
 * pthreads
   * For multithreading
-  * Comes with most Linux distros, but on windows you'll need [pthread-win32](https://github.com/GerHobbelt/pthread-win32)
+  * Comes with most Linux distros, but on windows you'll need [pthread-win32](https://github.com/GerHobbelt/pthread-win32) (I haven't tested it well yet)
 
 Headers and libraries can be put in /include/ and /lib/ respectively if your include/lib paths don't have any specific dependency.
 
@@ -163,39 +163,10 @@ The following data will be required (Quasi-JSON format here for visualization, b
 |   Name Length   |            The length of the following name             |        1        |    (u8) 13     |
 |      Name       |           The name of the player on this date           | 1 * Name_Length | (i8 *) "Timmy" |
 
-## Todo
-
-Technical things to be worked out:
-
-* Replace argp.h with Windows-friendly alternative
-* Replace pthreads.h with Windows-friendly alternative
-* Implement installing via CMake
-* Can't backspace in interactive mode for some reason. Should be able to
-* Change history_add_record(...) to accept an array of records and length to accept instead of just one
-* Create builds for Windows and Linux
-* Interactive mode should ask user to close live collection if shutdown detected (check logs for this behavior)
-* See if there's a way to output commands directly to a file, console window gets easily clogged. Maybe output via interactive mode
-* The entire history file is written to in its entirety every save/load when only certain parts may require rewriting
-* The name is a bit clunky, maybe just use the acronym
-* In interactive mode, some functions which abort or exit should be converted to return an error:
-  * collection_read_archived(...) being fed an incorrect file accidentally will abort the process
-  * history_load() getting a file which doesn't start with the proper header (TF2PW)
-* Not sure how someone sharing the user's name will affect tf2pw. If unknown player gets original ownership of user's name, reporting will likely break. See [the above notes](#console-output-notes) for more. In any case, there is testing to be done
-* Don't allow Ctrl+C SIGINT in interactive mode to prevent accidental issues
-* `retry` ing in console will have another first connecting occurrence, treating it like a new game. Maybe set `retry` bind to also `echo` some code to tell TF2PW to not count next occurrence of connected?
-* Autosaving in interactive mode
-* Compress history file during save/load using something like gzip
-* Look into [SourceCmd](https://github.com/rannmann/SourceCmd), [ConsoleForwarder](https://github.com/SNWCreations/ConsoleForwarder), and other codebases for a potential increase in ease-of-use (no `status` binds, no console clogging, maybe more)
-* May have issues parsing certain characters in player names <!-- See /meta/player_name_unknown_IGN.txt. If you're not me, you won't have this file -->
-
-## Inline TODOs
+## Inline TODO's
 
 A list of TODO prefixes found in the source code and their meanings:
 
 * MAJOR_TODO: Major/program-breaking issue under the right circumstances/changes
 * IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
 * IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
-
-Temporary common issues:
-
-* BSEARCH_TODO: Suggests the use of binary search instead of whatever current implementation is
