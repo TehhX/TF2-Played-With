@@ -15,20 +15,66 @@
 // Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is case bit/flag
 #define ccasecmp(C1, C2) (((C1) | 0x20) == (C2))
 
-#define interactive_action(OUTPUT, ACTION)\
-{\
-    printf(ANSI_YELLOW OUTPUT " (Y/N) " ANSI_RESET);\
-    const int input = fgetc(stdin);\
-    if (ccasecmp(input, 'y') || input == '\n')\
-    {\
-        ACTION;\
-    }\
-\
-    if (input != '\n')\
-    {\
-        /* MAJOR_TODO: When using option eg. load, Y/N prompt being given more than 1 character causes errant behavior. Should be fixed */\
-        fgetc(stdin);\
-    }\
+// Will print OUTPUT and if subsequent user input is positive, perform ACTION
+HYPER_MACRO void interactive_action(const char *output, void (*action)())
+{
+    printf(ANSI_YELLOW "%s (Y/N) " ANSI_RESET, output);
+    const int input = fgetc(stdin);
+    if (ccasecmp(input, 'y') || input == '\n')
+    {
+        action();
+    }
+
+    if (input != '\n')
+    {
+        // MAJOR_TODO: When using option eg. load, Y/N prompt being given more than 1 character causes errant behavior. Should be fixed
+        fgetc(stdin);
+    }
+}
+
+// Parse SID3E from input_buf, perform action on it
+HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e))
+{
+    char *cursor, *specifier_start = NULL;
+    for (cursor = input_buf; *cursor != '\n'; ++cursor)
+    {
+        if (!specifier_start && *cursor == ' ')
+        {
+            specifier_start = cursor + 1;
+        }
+    }
+    if (!specifier_start)
+    {
+        fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
+        return;
+    }
+    *cursor = '\0';
+
+    const uint32_t sid3e = sidm_parse_sid3e(specifier_start, Esteamid_type_unknown);
+
+    // Assuming name due to misc parsing error
+    if (sid3e == SIDM_ERR_MISC)
+    {
+        // MAJOR_TODO: Is name, need thing to do
+    }
+    else if (sid3e == SIDM_ERR_RNGE)
+    {
+        printf(ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+    }
+    else
+    {
+        action(sid3e);
+    }
+}
+
+HYPER_MACRO void action_delete_log()
+{
+    remove(history_live_log_path);
+}
+
+HYPER_MACRO void action_exit()
+{
+    exit(EXIT_SUCCESS);
 }
 
 // What tells the user to enter their input
@@ -53,38 +99,11 @@ void interactive_enter()
     {
         if (INPUT_IS("retrieve", 0))
         {
-            // TODO: Repeated behavior with collect-archive
-            // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
-            char *cursor, *specifier_start = NULL;
-            for (cursor = input_buf; *cursor != '\n'; ++cursor)
-            {
-                if (!specifier_start && *cursor == ' ')
-                {
-                    specifier_start = cursor + 1;
-                }
-            }
-            if (!specifier_start)
-            {
-                fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
-                continue;
-            }
-            *cursor = '\0';
-
-            const uint32_t sid3e = sidm_parse_sid3e(specifier_start, Esteamid_type_unknown);
-
-            // Assuming name due to misc parsing error
-            if (sid3e == SIDM_ERR_MISC)
-            {
-                history_print_records(specifier_start);
-            }
-            else if (sid3e == SIDM_ERR_RNGE)
-            {
-                printf(ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
-            }
-            else
-            {
-                history_print_record(sid3e);
-            }
+            perform_on_sid3e(input_buf, history_print_record);
+        }
+        else if (INPUT_IS("edit-notes", 5))
+        {
+            perform_on_sid3e(input_buf, history_edit_notes);
         }
         else if (INPUT_IS("collect-live", 10))
         {
@@ -141,7 +160,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
             }
 
-            interactive_action("Delete live log file? (Must do before next live collection)", remove(history_live_log_path));
+            interactive_action("Delete live log file? (Must do before next live collection)", action_delete_log);
 
             if (fclose(live_params.input_file))
             {
@@ -174,12 +193,12 @@ void interactive_enter()
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 0))
         {
-            interactive_action("Overwrite file and save?", history_save());
+            interactive_action("Overwrite file and save?", history_save);
         }
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("load", 0))
         {
-            interactive_action("Overwrite current data and load?", history_load());
+            interactive_action("Overwrite current data and load?", history_load);
         }
         else if (INPUT_IS("help", 0))
         {
@@ -189,6 +208,8 @@ void interactive_enter()
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Retrieve and print associated record.\n"
+                    LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
+                    LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n"
                     LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
                     LTAB LTAB LTAB "Collects live data from FULLNAME. If FULLNAME not provided, collect from saved path.\n"
                     LTAB LTAB "s(t)op-live\n"
@@ -212,9 +233,9 @@ void interactive_enter()
         }
         else if (INPUT_IS("exit", 0) || INPUT_IS("quit", 0))
         {
-            interactive_action("Save before quitting?", history_save());
+            interactive_action("Save before quitting?", history_save);
 
-            interactive_action("Really exit?", return);
+            interactive_action("Really exit?", action_exit);
         }
         else if (INPUT_IS("force-exit", -1) || INPUT_IS("force-quit", -1))
         {

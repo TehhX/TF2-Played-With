@@ -11,6 +11,7 @@
 #include "errno.h"
 #include "stdio.h"
 #include "time.h"
+#include "stdlib.h"
 
 // Inter-unit variable defs
 uint8_t history_initialized = 0;
@@ -33,6 +34,8 @@ static uint32_t player_records_len = 0;
 static struct
 {
     uint32_t sid3e;
+
+    char *notes;
 
     uint32_t date_records_len;
     struct
@@ -97,6 +100,7 @@ HYPER_MACRO void history_free_memory()
         }
 
         free(player_records[player_i].date_records);
+        free(player_records[player_i].notes);
     }
 
     free(player_records);
@@ -219,6 +223,27 @@ void history_load()
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
         fread_one(player_records[player_records_i].sid3e);
+
+        // BUFF_TODO
+        player_records[player_records_i].notes = NULL;
+        int input;
+        size_t notes_len = 0;
+        while ((input = fgetc(input_file_ptr)) != '\0')
+        {
+            player_records[player_records_i].notes = realloc(player_records[player_records_i].notes, sizeof(char) * ++notes_len);
+            player_records[player_records_i].notes[notes_len - 1] = input;
+        }
+
+        player_records[player_records_i].notes = realloc(player_records[player_records_i].notes, sizeof(char) * notes_len + 1);
+        player_records[player_records_i].notes[notes_len] = '\0';
+
+        // If just '\0', set to NULL
+        if (notes_len == 0)
+        {
+            free(player_records[player_records_i].notes);
+            player_records[player_records_i].notes = NULL;
+        }
+
         fread_one(player_records[player_records_i].date_records_len);
 
         char *last_real_name;
@@ -297,6 +322,15 @@ void history_save()
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
         fwrite_one(player_records[player_records_i].sid3e);
+
+        // Only write notes if they exist, else just '\0'
+        if (player_records[player_records_i].notes)
+        {
+            fprintf(output_file_ptr, "%s", player_records[player_records_i].notes);
+        }
+
+        putc('\0', output_file_ptr);
+
         fwrite_one(player_records[player_records_i].date_records_len);
 
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
@@ -391,7 +425,7 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
     const uint_fast32_t date_records_i = player_records[player_records_i].date_records_len;
     #define current_date_record player_records[player_records_i].date_records[date_records_i]
 
-    player_records[player_records_i].date_records = reallocarray(player_records[player_records_i].date_records, ++player_records[player_records_i].date_records_len, sizeof(*player_records[player_records_i].date_records));
+    player_records[player_records_i].date_records = realloc(player_records[player_records_i].date_records, sizeof(*player_records[player_records_i].date_records) * ++player_records[player_records_i].date_records_len);
 
     current_date_record.date = current_date;
     current_date_record.encounter_count = 0;
@@ -430,6 +464,25 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
     #undef current_date_record
 }
 
+// Sentinel value for if player index doesn't exist
+#define PLAYER_INDEX_ENOENT UINT_FAST32_MAX
+
+// BSEARCH_TODO
+// Returns index of `requested_sid3e`
+HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
+{
+    for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
+    {
+        if (player_records[player_records_i].sid3e == requested_sid3e)
+        {
+            return player_records_i;
+        }
+    }
+
+    // Couldn't find
+    return PLAYER_INDEX_ENOENT;
+}
+
 void history_add_record(const struct player_info *const restrict pinfo)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -443,51 +496,44 @@ void history_add_record(const struct player_info *const restrict pinfo)
 
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
 
-    // BSEARCH_TODO
-    for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
+    const uint_fast32_t player_index = get_player_index(pinfo->sid3e);
+    if (player_index != PLAYER_INDEX_ENOENT)
     {
-        if (player_records[player_records_i].sid3e != pinfo->sid3e)
-        {
-            continue;
-        }
-
         // Found requested player
         TF2_PLAYED_WITH_DEBUG_LOGF(" is in records");
-        for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
+        for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_index].date_records_len; ++date_records_i)
         {
-            if (player_records[player_records_i].date_records[date_records_i].date != current_date)
+            if (player_records[player_index].date_records[date_records_i].date != current_date)
             {
                 continue;
             }
 
             TF2_PLAYED_WITH_DEBUG_LOGF(" on current_date %" PRIu16 ". Incrementing encounter count.\n", current_date);
 
-            ++player_records[player_records_i].date_records[date_records_i].encounter_count;
+            ++player_records[player_index].date_records[date_records_i].encounter_count;
 
             return;
         }
 
         // No record found for current_date
         TF2_PLAYED_WITH_DEBUG_LOGF(", but not on current_date %" PRIu16 ". Adding new date record.\n", current_date);
-        history_add_date_record(player_records_i, pinfo->name);
+        history_add_date_record(player_index, pinfo->name);
 
         return;
     }
+    else
+    {
+        // Couldn't find requested player
+        TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records. Adding new player and date records.\n" ANSI_RESET);
 
-    // Couldn't find requested player
-    TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records. Adding new player and date records.\n");
+        player_records = realloc(player_records, sizeof(*player_records) * ++player_records_len);
+        player_records[player_records_len - 1].sid3e = pinfo->sid3e;
+        player_records[player_records_len - 1].notes = NULL;
+        player_records[player_records_len - 1].date_records_len = 0;
+        player_records[player_records_len - 1].date_records = NULL;
 
-    // Clean up previous color changes
-    SET_COLOR(stdout, ANSI_RESET);
-
-    player_records = reallocarray(player_records, ++player_records_len, sizeof(*player_records));
-    player_records[player_records_len - 1].sid3e = pinfo->sid3e;
-    player_records[player_records_len - 1].date_records_len = 0;
-    player_records[player_records_len - 1].date_records = NULL;
-
-    history_add_date_record(player_records_len - 1, pinfo->name);
-
-    return;
+        history_add_date_record(player_records_len - 1, pinfo->name);
+    }
 }
 
 void history_print_record(const uint32_t requested_sid3e)
@@ -501,32 +547,116 @@ void history_print_record(const uint32_t requested_sid3e)
         }
     )
 
-    // BSEARCH_TODO
-    for (uint_fast32_t player_i = 0; player_i < player_records_len; ++player_i)
+    const uint_fast32_t player_index = get_player_index(requested_sid3e);
+    if (player_index != PLAYER_INDEX_ENOENT)
     {
-        if (player_records[player_i].sid3e == requested_sid3e)
+        printf("Records for requested player SID3E=%" PRIu32 ":\n", requested_sid3e);
+
+        if (player_records[player_index].notes)
         {
-            printf("Records for requested player SID3E=%" PRIu32 ":\n", requested_sid3e);
+            // TODO: Prints notes with multiple lines badly
+            printf(LTAB "Notes:\n" LTAB LTAB "%s", player_records[player_index].notes);
+        }
 
-            for (uint_fast32_t date_i = 0; date_i < player_records[player_i].date_records_len; ++date_i)
-            {
-                printf(LTAB);
-                time_manip_print_ued(player_records[player_i].date_records[date_i].date);
-                printf(":\n");
+        for (uint_fast32_t date_i = 0; date_i < player_records[player_index].date_records_len; ++date_i)
+        {
+            printf(LTAB);
+            time_manip_print_ued(player_records[player_index].date_records[date_i].date);
+            printf(":\n");
 
-                printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_i].date_records[date_i].encounter_count + 1);
-                printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_i].date_records[date_i].name);
-            }
-
-            return;
+            printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_index].date_records[date_i].encounter_count + 1);
+            printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_index].date_records[date_i].name);
         }
     }
-
-    printf("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
+    else
+    {
+        printf("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
+    }
 }
 
 void history_print_records(const char *const name)
 {
     // IMPL_TODO
     fprintf(stderr, "Haven't implemented history_print_records(...) yet, don't get ahead of yourself. Ignoring.\n");
+}
+
+void history_edit_notes(uint32_t requested_sid3e)
+{
+    const uint_fast32_t player_index = get_player_index(requested_sid3e);
+    if (player_index == PLAYER_INDEX_ENOENT)
+    {
+        fprintf(stderr, ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
+        return;
+    }
+
+    char *temporary_edit_file = cider_construct_fullname(cider_temp_filepath(), "tf2pw_note_editor.txt");
+
+    FILE *write = fopen(temporary_edit_file, "w");
+    if (!write)
+    {
+        fprintf(stderr, ANSI_RED "Failed to open temp file: ");
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        return;
+    }
+
+    if (player_records[player_index].notes)
+    {
+        fputs(player_records[player_index].notes, write);
+        fputc('\n', write);
+    }
+
+    if (fclose(write))
+    {
+        fprintf(stderr, ANSI_RED "Failed to close temp file: ");
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        return;
+    }
+
+    // MAJOR_TODO: Test on windows
+    const char *const editor = getenv("EDITOR");
+
+    char cmd_buff[128];
+    sprintf(cmd_buff, "%s %s", (editor ? editor : "vi"), temporary_edit_file);
+    system(cmd_buff);
+
+    FILE *read = fopen(temporary_edit_file, "r");
+    if (!read)
+    {
+        fprintf(stderr, ANSI_RED "Failed to open temp file: ");
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        return;
+    }
+
+    // BUFF_TODO
+    int input;
+    size_t notes_len = 0;
+    while ((input = fgetc(read)) != EOF)
+    {
+        player_records[player_index].notes = realloc(player_records[player_index].notes, sizeof(char) * (notes_len + 1));
+        player_records[player_index].notes[notes_len++] = input;
+    }
+
+    // TODO: Add newline if there is none at EOF
+    player_records[player_index].notes[notes_len - 1] = '\0';
+
+    if (fclose(read))
+    {
+        fprintf(stderr, ANSI_RED "Failed to close temp file: ");
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        return;
+    }
+
+    if (remove(temporary_edit_file))
+    {
+        fprintf(stderr, ANSI_RED "Failed to delete temp file: ");
+        perror(NULL);
+        SET_COLOR(stderr, ANSI_RESET);
+        return;
+    }
+
+    free(temporary_edit_file);
 }

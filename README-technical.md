@@ -88,7 +88,7 @@ Each save file will contain a version number of the formatting type and should b
 
 The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array).
 
-```json
+```txt
 {
     // File header, always "TF2PW"
     (string) HEADER,
@@ -104,6 +104,8 @@ The following data will be required (Quasi-JSON format here for visualization, b
         {
             // STEAMID3 excerpt of the player whose records are in the following array
             (u32) STEAMID3_EXCERPT,
+
+            (string) NOTES,
 
             DATE_RECORDS:
             [
@@ -137,22 +139,23 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 #### Header
 
-|         Name          |                                         Description                                         |            Size (Bytes)            |                            Example                            |
-|:---------------------:|:-------------------------------------------------------------------------------------------:|:----------------------------------:|:-------------------------------------------------------------:|
-|        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |                 5                  |                             TF2PW                             |
-|  Save Format Version  |              The version of history file format used with this particular file              |                 1                  |                            (u8) 0                             |
-|   Live Log Path Len   |                            The length in bytes of Live Log Path                             |                 1                  |                            (u8) 82                            |
-|     Live Log Path     |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     |       1 * Live_Log_Path_Len        | (char *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
-| Player Records Length |               How many unique player records there are in the following array               |                 4                  |                         (u32) 12,000                          |
-|    Player Records     | An array of player records. See [Player Record](#player-record) for its particular contents | 12 + (1 * Date_Record.Name_Length) |                              N/A                              |
+|         Name          |                                         Description                                         |     Size (Bytes)      |                            Example                            |
+|:---------------------:|:-------------------------------------------------------------------------------------------:|:---------------------:|:-------------------------------------------------------------:|
+|        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |           5           |                             TF2PW                             |
+|  Save Format Version  |              The version of history file format used with this particular file              |           1           |                            (u8) 0                             |
+|   Live Log Path Len   |                            The length in bytes of Live Log Path                             |           1           |                            (u8) 82                            |
+|     Live Log Path     |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     | 1 * Live_Log_Path_Len | (char *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
+| Player Records Length |               How many unique player records there are in the following array               |           4           |                         (u32) 12,000                          |
+|    Player Records     | An array of player records. See [Player Record](#player-record) for its particular contents |          N/A          |                              N/A                              |
 
 #### Player Record
 
-|        Name         |                                      Description                                      |           Size (Bytes)            |   Example   |
-|:-------------------:|:-------------------------------------------------------------------------------------:|:---------------------------------:|:-----------:|
-|  STEAMID3 Excerpt   |                                  This player's SID3E                                  |                 4                 | (u32) 22202 |
-| Date Records Length |                         How many date records this player has                         |                 4                 |  (u32) 13   |
-|    Date Records     | An array of date records. See [Date Record](#date-record) for its particular contents | 4 + (1 * Date_Record.Name_Length) |     N/A     |
+|        Name         |                                      Description                                      | Size (Bytes) |                 Example                 |
+|:-------------------:|:-------------------------------------------------------------------------------------:|:------------:|:---------------------------------------:|
+|  STEAMID3 Excerpt   |                                  This player's SID3E                                  |      4       |               (u32) 22202               |
+|        Notes        |                Notes taken by the user on this player. Null terminated                |     N/A      | (char *) "They were very nice to me.\0" |
+| Date Records Length |                         How many date records this player has                         |      4       |                (u32) 13                 |
+|    Date Records     | An array of date records. See [Date Record](#date-record) for its particular contents |     N/A      |                   N/A                   |
 
 #### Date Record
 

@@ -58,4 +58,15 @@ extern void history_print_record(uint32_t requested_sid3e);
 */
 extern void history_print_records(const char *name);
 
+/*
+	Opens up the user's editor to edit the notes of the requested player
+		@param requested_sid3e The player's SID3E to edit
+
+		@returns True if failure, else false
+
+		@warning If user environment variable EDITOR is not set, this will use "vi" instead
+		@warning Only tested with vim
+*/
+extern void history_edit_notes(uint32_t requested_sid3e);
+
 #endif // HISTORY_H
