@@ -33,13 +33,14 @@ struct arg_option
 };
 
 // NEWARGS_TODO
-static void operation_print_help       (const char *invocation, char *arg);
+static void operation_print_help           (const char *invocation, char *arg);
 static void operation_set_live_log_location(const char *invocation, char *arg);
-static void operation_set_save_location(const char *invocation, char *arg);
-static void operation_interactive      (const char *invocation, char *arg);
-static void operation_collect_archived (const char *invocation, char *arg);
-static void operation_type             (const char *invocation, char *arg);
-static void operation_retrieve_records (const char *invocation, char *arg);
+static void operation_set_save_location    (const char *invocation, char *arg);
+static void operation_interactive          (const char *invocation, char *arg);
+static void operation_collect_archived     (const char *invocation, char *arg);
+static void operation_type                 (const char *invocation, char *arg);
+static void operation_retrieve_records     (const char *invocation, char *arg);
+static void operation_edit_notes           (const char *invocation, char *arg);
 
 // NEWARGS_TODO
 static struct arg_option arg_options[] =
@@ -99,10 +100,18 @@ static struct arg_option arg_options[] =
         .opt_long = "retrieve-records",
         .opt_short = 'r',
         .operation = operation_retrieve_records
+    },
+    {
+        .name = "--edit-(n)otes",
+        .doc = "Use $EDITOR to edit the notes of the provided player record. If $EDITOR is not set, this will use \"vi\".\n",
+        .arg = "[STEAMID3|STEAMID3E|STEAMID64|NAME]",
+        .opt_long = "edit-notes",
+        .opt_short = 'n',
+        .operation = operation_edit_notes
     }
 };
 
-#define HELP_OUTP LTAB "%s %s\n" LTAB LTAB "%s\n"
+#define HELP_OUTP LTAB "%s %s\n" LTAB LTAB "%s"
 
 // Will be VAL if VAL != 0/NULL/etc, else will be NVAL
 #define NULLABLE(VAL, NVAL) ((VAL) ? (VAL) : (NVAL))
@@ -117,13 +126,14 @@ static void operation_print_help(const char *invocation, char *unused)
         "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
-        HELP_OUTP // 0
-        HELP_OUTP // 1
-        HELP_OUTP // 2
-        HELP_OUTP // 3
-        HELP_OUTP // 4
-        HELP_OUTP // 5
-        HELP_OUTP // 6
+        HELP_OUTP "\n" // 0
+        HELP_OUTP "\n" // 1
+        HELP_OUTP "\n" // 2
+        HELP_OUTP "\n" // 3
+        HELP_OUTP "\n" // 4
+        HELP_OUTP "\n" // 5
+        HELP_OUTP "\n" // 6
+        HELP_OUTP      // 7
         ,
         invocation,
 
@@ -134,7 +144,8 @@ static void operation_print_help(const char *invocation, char *unused)
         HELP_INFO(3),
         HELP_INFO(4),
         HELP_INFO(5),
-        HELP_INFO(6)
+        HELP_INFO(6),
+        HELP_INFO(7)
     );
 
     exit(EXIT_SUCCESS);
@@ -217,6 +228,33 @@ static void operation_retrieve_records(const char *_, char *arg)
     }
 }
 
+static void operation_edit_notes(const char *_, char *arg)
+{
+    const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
+
+    switch (sid3e)
+    {
+        break; default:
+        {
+            history_edit_notes(sid3e);
+        }
+        break; case SIDM_ERR_NAME:
+        {
+            // IMPL_TODO: Not sure what to do here
+        }
+        break; case SIDM_ERR_MISC:
+        {
+            fprintf(stderr, ANSI_RED "Not correct/specified form of ID: \"%s\".\n" ANSI_RESET, arg);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+        break; case SIDM_ERR_RNGE:
+        {
+            fprintf(stderr, ANSI_RED "Passed ID \"%s\" too large.\n" ANSI_RESET, arg);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+    }
+}
+
 static void parse_option(const int argc, char **argv, const int option_i)
 {
     int i = 1;
@@ -283,6 +321,8 @@ int main(const int argc, char **argv)
     parse_option(argc, argv, 5); // Type
 
     parse_option(argc, argv, 6); // Retrieve records
+
+    parse_option(argc, argv, 7); // Edit notes
 
     // NEWARGS_TODO
 
