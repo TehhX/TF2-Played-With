@@ -3,8 +3,9 @@
 /.vs/
 /out/
 
-# Build folder
+# Build folders
 /build/
+/build-ming/
 
 # Ignored files
 *_IGN*

@@ -40,12 +40,25 @@ Analyzing console output from entire sessions has produced valuable information.
 * The regex `^# {2,}` will output *only* lines output by `status` relating player names to associated data
 * The regex `connected$` will output *only* lines notifying of player connect events, including the user's own
 * The first instance of `<NAME> connected` will always contain the TF2PW user's name
-* If last occurrence of string BOT is later than last occurrence of character `]`, player is a bot
+* If last occurrence of string `BOT` is later than last occurrence of character `]`, player is a bot
 * Players with duplicate names will have their names changed by the following algorithm (assuming no abuse of whitespace characters vis-a-vis the bot crisis, where seemingly duplicate names are actually):
   * 1: `<NAME>`
   * 2: (1)`<NAME>`
   * n {n > 1}: `(<n - 1>)<NAME>`
 * Note that there is no space between the name and duplicate number/parentheses
+* General duplicated name observations:
+  * User joins game first
+    * `<NAME> connected`: Just like normal
+    * `(1)<NAME> connected`: Other person, won't interfere as it's treated as a different name
+  * User joins game second
+    * `(1)<NAME> connected`: Won't output token for new match properly, is seen as another person
+  * Solutions:
+    * Instead of checking for `<NAME> connected`, check for (regex for example) `(\([0-9]{1,2}\))*<NAME> connected`
+      * Pros:
+        * Easy to implement
+        * Will record new game in all required instances
+      * Cons:
+        * Will record new game when other player with user's name joins in any scenario
 * `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
   * Queue for game, join server:
     * `Connected to <IP>`
@@ -56,6 +69,7 @@ Analyzing console output from entire sessions has produced valuable information.
     * `Connected to <IP>`
     * `<NAME> connected`
 * Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
+* On quit, seems to always print `CTFGCClientSystem::ShutdownGC`. Doesn't seem to print at other times. If multiple session outputs (launch to quit) are in the same file, it could also be used to differentiate and treat it as a new file
 
 #### Status Formatting
 
