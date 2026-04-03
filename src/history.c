@@ -483,7 +483,7 @@ HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
     return PLAYER_INDEX_ENOENT;
 }
 
-void history_add_record(const struct player_info *const restrict pinfo)
+void history_add_record(const struct player_info *const pinfo)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
     (

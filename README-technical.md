@@ -173,3 +173,4 @@ A list of TODO prefixes found in the source code and their meanings:
 * MAJOR_TODO: Major/program-breaking issue under the right circumstances/changes
 * IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
 * IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
+* NEWARGS_TODO: Signifies a function or line(s) which will need modifying on introduction of a new argument. Nothing necessarily needs to be done when present, more serves as a reminder than an actual TODO

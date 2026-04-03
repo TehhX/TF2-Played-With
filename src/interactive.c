@@ -15,6 +15,9 @@
 // Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is case bit/flag
 #define ccasecmp(C1, C2) (((C1) | 0x20) == (C2))
 
+// Test input against CMP and CMP[COFF]. If COFF is -1, no short version
+#define INPUT_IS(INPUT, CMP, COFF) (!strncasecmp(INPUT, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(INPUT[0], CMP[COFF])))
+
 // Will print OUTPUT and if subsequent user input is positive, perform ACTION
 HYPER_MACRO void interactive_action(const char *output, void (*action)())
 {
@@ -52,14 +55,17 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
 
     const uint32_t sid3e = sidm_parse_sid3e(specifier_start, Esteamid_type_unknown);
 
-    // Assuming name due to misc parsing error
-    if (sid3e == SIDM_ERR_MISC)
+    if (sid3e == SIDM_ERR_NAME)
     {
         // MAJOR_TODO: Is name, need thing to do
     }
     else if (sid3e == SIDM_ERR_RNGE)
     {
-        printf(ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+    }
+    else if (sid3e == SIDM_ERR_MISC)
+    {
+        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
     }
     else
     {
@@ -80,9 +86,6 @@ HYPER_MACRO void action_exit()
 // What tells the user to enter their input
 #define USER_POKE "TF2PW > "
 
-// Test input against CMP and CMP[COFF]. If COFF is -1, no short version
-#define INPUT_IS(CMP, COFF) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(input_buf[0], CMP[COFF])))
-
 static pthread_t thread_collection;
 
 void interactive_enter()
@@ -97,15 +100,15 @@ void interactive_enter()
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
     for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
     {
-        if (INPUT_IS("retrieve", 0))
+        if (INPUT_IS(input_buf, "retrieve", 0))
         {
             perform_on_sid3e(input_buf, history_print_record);
         }
-        else if (INPUT_IS("edit-notes", 5))
+        else if (INPUT_IS(input_buf, "edit-notes", 5))
         {
             perform_on_sid3e(input_buf, history_edit_notes);
         }
-        else if (INPUT_IS("collect-live", 10))
+        else if (INPUT_IS(input_buf, "collect-live", 10))
         {
             if (live_params.continue_running)
             {
@@ -139,7 +142,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection started successfully.\n" ANSI_RESET);
             }
         }
-        else if (INPUT_IS("stop-live", 1))
+        else if (INPUT_IS(input_buf, "stop-live", 1))
         {
             if (!live_params.continue_running)
             {
@@ -164,13 +167,13 @@ void interactive_enter()
 
             if (fclose(live_params.input_file))
             {
-                perror(ANSI_RED "Failed to close live-file. Error: ");
+                perror(ANSI_RED "Failed to close live-file. Error");
                 SET_COLOR(stderr, ANSI_RESET);
 
                 continue;
             }
         }
-        else if (INPUT_IS("collect-archived", 8))
+        else if (INPUT_IS(input_buf, "collect-archived", 8))
         {
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
@@ -191,16 +194,16 @@ void interactive_enter()
             collection_read_archived(specifier_start);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS("save", 0))
+        else if (INPUT_IS(input_buf, "save", 0))
         {
             interactive_action("Overwrite file and save?", history_save);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS("load", 0))
+        else if (INPUT_IS(input_buf, "load", 0))
         {
             interactive_action("Overwrite current data and load?", history_load);
         }
-        else if (INPUT_IS("help", 0))
+        else if (INPUT_IS(input_buf, "help", 0))
         {
             printf
             (
@@ -231,20 +234,21 @@ void interactive_enter()
                 ANSI_RESET
             );
         }
-        else if (INPUT_IS("exit", 0) || INPUT_IS("quit", 0))
+        else if (INPUT_IS(input_buf, "exit", 0) || INPUT_IS(input_buf, "quit", 0))
         {
             interactive_action("Save before quitting?", history_save);
 
             interactive_action("Really exit?", action_exit);
         }
-        else if (INPUT_IS("force-exit", -1) || INPUT_IS("force-quit", -1))
+        else if (INPUT_IS(input_buf, "force-exit", -1) || INPUT_IS(input_buf, "force-quit", -1))
         {
             return;
         }
-        else if (INPUT_IS("clear", 0))
+        else if (INPUT_IS(input_buf, "clear", 0))
         {
             system("clear");
         }
+        // NEWARGS_TODO
         else if (input_buf[0] != '\n')
         {
             printf(ANSI_RED "Bad input, try again.\n" ANSI_RESET);

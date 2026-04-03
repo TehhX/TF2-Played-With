@@ -8,12 +8,12 @@
 #include "errno.h"
 
 // Explicitly parse SID3E from type SID3 contained in `string_input`
-HYPER_MACRO uint32_t parse_exp_sid3(const char *const restrict string_input)
+HYPER_MACRO uint32_t parse_exp_sid3(const char *const string_input)
 {
     errno = 0;
 
     char *end;
-    const uint32_t current_sid3e = strtol(string_input + sizeof("[U:1:") - 1, &end, 10);
+    const uint32_t current_sid3e = strtoul(string_input + sizeof("[U:1:") - 1, &end, 10);
 
     // Bad input misc
     if (*end != ']')
@@ -31,12 +31,12 @@ HYPER_MACRO uint32_t parse_exp_sid3(const char *const restrict string_input)
 }
 
 // Explicitly parse SID3E from type SID64 contained in `string_input`
-HYPER_MACRO uint32_t parse_exp_sid64(const char *const restrict string_input)
+HYPER_MACRO uint32_t parse_exp_sid64(const char *const string_input)
 {
     errno = 0;
 
     char *end;
-    const uint32_t current_sid64 = strtol(string_input, &end, 10);
+    const uint32_t current_sid3e = sidm_sid64_to_sid3e(strtoull(string_input, &end, 10));
 
     // Bad input misc
     if (*end != '\0')
@@ -50,17 +50,18 @@ HYPER_MACRO uint32_t parse_exp_sid64(const char *const restrict string_input)
         return SIDM_ERR_RNGE;
     }
 
-    return current_sid64;
+    return current_sid3e;
 }
 
 // Explicitly parse SID3E from type SID3 contained in `string_input`
-HYPER_MACRO uint32_t parse_exp_sid3e(const char *const restrict string_input)
+HYPER_MACRO uint32_t parse_exp_sid3e(const char *const string_input)
 {
     errno = 0;
 
     char *end;
-    const uint32_t current_sid3 = strtol(string_input, &end, 10);
+    const uint32_t current_sid3 = strtoul(string_input, &end, 10);
 
+    // MAJOR_TODO: Even if string_input is confirmed SID64, this returns SID3E correctly???
     // Bad input misc
     if (*end != '\0')
     {
@@ -76,19 +77,14 @@ HYPER_MACRO uint32_t parse_exp_sid3e(const char *const restrict string_input)
     return current_sid3;
 }
 
-uint32_t sidm_parse_sid3e(const char *const restrict string_input, const enum Esteamid_type possible_types)
+uint32_t sidm_parse_sid3e(const char *const string_input, const enum Esteamid_type type)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (possible_types == Esteamid_type_name)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Passed Esteamid_type_name to sidm_parse_sid3e(...).possible_types.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
-    switch (possible_types)
+    switch (type)
     {
+        break; case Esteamid_type_name:
+        {
+            return SIDM_ERR_NAME;
+        }
         break; case Esteamid_type_sid3:
         {
             return parse_exp_sid3(string_input);
@@ -116,10 +112,10 @@ uint32_t sidm_parse_sid3e(const char *const restrict string_input, const enum Es
                 char *end;
                 const uint64_t value = strtol(string_input, &end, 10);
 
-                // Bad input misc
+                // Bad input
                 if (*end != '\0')
                 {
-                    return SIDM_ERR_MISC;
+                    return SIDM_ERR_NAME;
                 }
                 // Bad input range
                 else if (errno == ERANGE)

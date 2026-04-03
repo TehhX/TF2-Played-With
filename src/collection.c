@@ -192,6 +192,7 @@ static void parse_log(FILE *file_stream, const bool caller, steam_name_stack use
                         {
                             for (int i = 0; i < pinfo_arr->len; ++i)
                             {
+                                // #4_TODO
                                 history_add_record(pinfo_arr->arr + i);
                             }
                         }
