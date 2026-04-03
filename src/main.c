@@ -33,12 +33,13 @@ struct arg_option
 };
 
 // NEWARGS_TODO
-static void operation_print_help(const char *invocation, char *arg);
+static void operation_print_help       (const char *invocation, char *arg);
+static void operation_set_live_log_location(const char *invocation, char *arg);
 static void operation_set_save_location(const char *invocation, char *arg);
-static void operation_interactive(const char *invocation, char *arg);
-static void operation_collect_archived(const char *invocation, char *arg);
-static void operation_type(const char *invocation, char *arg);
-static void operation_retrieve_records(const char *invocation, char *arg);
+static void operation_interactive      (const char *invocation, char *arg);
+static void operation_collect_archived (const char *invocation, char *arg);
+static void operation_type             (const char *invocation, char *arg);
+static void operation_retrieve_records (const char *invocation, char *arg);
 
 // NEWARGS_TODO
 static struct arg_option arg_options[] =
@@ -59,6 +60,14 @@ static struct arg_option arg_options[] =
         .opt_long = "set-save-location",
         .opt_short = 's',
         .operation = operation_set_save_location
+    },
+    {
+        .name = "--set-(l)ive-log-location",
+        .doc = "Sets the location of the live log. Should be inside \".../Team Fortress 2/tf/\".",
+        .arg = "[FULLNAME]",
+        .opt_long = "set-live-log-location",
+        .opt_short = 'l',
+        .operation = operation_set_live_log_location
     },
     {
         .name = "--(i)nteractive",
@@ -114,6 +123,7 @@ static void operation_print_help(const char *invocation, char *unused)
         HELP_OUTP // 3
         HELP_OUTP // 4
         HELP_OUTP // 5
+        HELP_OUTP // 6
         ,
         invocation,
 
@@ -123,18 +133,24 @@ static void operation_print_help(const char *invocation, char *unused)
         HELP_INFO(2),
         HELP_INFO(3),
         HELP_INFO(4),
-        HELP_INFO(5)
+        HELP_INFO(5),
+        HELP_INFO(6)
     );
 
     exit(EXIT_SUCCESS);
 }
 
-void operation_set_save_location(const char *_, char *arg)
+static void operation_set_live_log_location(const char *_, char *arg)
+{
+    history_set_live_log_location(strcpy(malloc(strlen(arg) + 1), arg));
+}
+
+static void operation_set_save_location(const char *_, char *arg)
 {
     history_init(arg);
 }
 
-void operation_interactive(const char *_, char *__)
+static void operation_interactive(const char *_, char *__)
 {
     interactive_enter();
 
@@ -143,7 +159,7 @@ void operation_interactive(const char *_, char *__)
     exit(EXIT_SUCCESS);
 }
 
-void operation_collect_archived(const char *_, char *arg)
+static void operation_collect_archived(const char *_, char *arg)
 {
     collection_read_archived(arg);
 }
@@ -151,7 +167,7 @@ void operation_collect_archived(const char *_, char *arg)
 // The type passed via --type. Will stay unknown if none passed
 static enum Esteamid_type passed_type = Esteamid_type_unknown;
 
-void operation_type(const char *_, char *arg)
+static void operation_type(const char *_, char *arg)
 {
     switch (*arg)
     {
@@ -174,7 +190,7 @@ void operation_type(const char *_, char *arg)
     }
 }
 
-void operation_retrieve_records(const char *_, char *arg)
+static void operation_retrieve_records(const char *_, char *arg)
 {
     const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 
@@ -226,7 +242,7 @@ static void parse_option(const int argc, char **argv, const int option_i)
         if (i + 1 >= argc || !strncmp(argv[i + 1], "--", 2) || argv[i + 1][0] == '-')
         {
             fprintf(stderr, "%s requires an argument.\n", arg_options[option_i].name);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+            exit(EXIT_FAILURE);
         }
         else
         {
@@ -258,13 +274,15 @@ int main(const int argc, char **argv)
 
     history_load();
 
-    parse_option(argc, argv, 2); // Interactive (Will exit in here if found)
+    parse_option(argc, argv, 2); // Set live log location
 
-    parse_option(argc, argv, 3); // Collect archived
+    parse_option(argc, argv, 3); // Interactive (Will exit in here if found)
 
-    parse_option(argc, argv, 4); // Type
+    parse_option(argc, argv, 4); // Collect archived
 
-    parse_option(argc, argv, 5); // Retrieve records
+    parse_option(argc, argv, 5); // Type
+
+    parse_option(argc, argv, 6); // Retrieve records
 
     // NEWARGS_TODO
 

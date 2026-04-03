@@ -14,8 +14,6 @@
 
 extern uint8_t history_initialized;
 
-extern char *history_live_log_path;
-
 /*
 	Initialize history
 	   @param history_fullname: The file to save/load. If NULL, use default fullname, else must be on the heap
@@ -35,31 +33,52 @@ extern void history_save();
 #define HISTORY_SET_DATE_TODAY ((uint16_t) 1)
 
 /*
-	Sets the date variable to a new date
+	@brief Sets the date variable to a new date
+
 		@param new_date: A pointer to the new date to set. If equal to HISTORY_SET_DATE_TODAY, set date to today
 */
 extern void history_set_date(uint16_t new_date);
 
 /*
-	Adds a player to the records
+	@brief Sets the live_log_location to a new fullname
+
+		@param live_log_location The new location. Should be free-able ie. on the heap
+
+		@warning Triple check parameters for heapness(?)
+*/
+extern void history_set_live_log_location(char *live_log_location);
+
+/*
+	@brief Retrieves the live_log_location fullname
+
+		@returns A constant pointer to the live_log_location
+*/
+extern const char *history_get_live_log_location();
+
+/*
+	@brief Adds a player to the records
+
 		@param p_info: Should point to a struct player_info containing data on the player to add/update a record for
 */
 extern void history_add_record(const struct player_info *p_info);
 
 /*
-	Prints a record's data to given stream
+	@brief Prints a record's data to given stream
+
 		@param requested_sid3e: The STEAMID3 excerpt to retrieve
 */
 extern void history_print_record(uint32_t requested_sid3e);
 
 /*
-	Prints all records of players which have ever had `name` as their username
+	@brief Prints all records of players which have ever had `name` as their username
+
 		@param name: The username of the requested player
 */
 extern void history_print_records(const char *name);
 
 /*
-	Opens up the user's editor to edit the notes of the requested player
+	@brief Opens up the user's editor to edit the notes of the requested player
+
 		@param requested_sid3e The player's SID3E to edit
 
 		@returns True if failure, else false

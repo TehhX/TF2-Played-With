@@ -26,8 +26,8 @@ uint8_t history_initialized = 0;
 static uint16_t  current_date;
 static  uint8_t  save_version;
 
-static  uint8_t  history_live_log_path_len;
-           char *history_live_log_path;
+static uint8_t  history_live_log_location_len;
+static    char *history_live_log_location;
 
 // TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
@@ -104,7 +104,7 @@ HYPER_MACRO void history_free_memory()
     }
 
     free(player_records);
-    free(history_live_log_path);
+    free(history_live_log_location);
 }
 
 void history_free()
@@ -176,11 +176,11 @@ void history_load()
                         goto USER_GET_TLP;
                     }
 
-                    history_live_log_path_len = 0;
-                    for (; stdin_buffer[history_live_log_path_len] != '\n'; ++history_live_log_path_len);
+                    history_live_log_location_len = 0;
+                    for (; stdin_buffer[history_live_log_location_len] != '\n'; ++history_live_log_location_len);
 
-                    history_live_log_path = memcpy(malloc(history_live_log_path_len + 1), stdin_buffer, history_live_log_path_len);
-                    history_live_log_path[history_live_log_path_len] = '\0';
+                    history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), stdin_buffer, history_live_log_location_len);
+                    history_live_log_location[history_live_log_location_len] = '\0';
 
                     history_free_memory();
 
@@ -212,11 +212,11 @@ void history_load()
 
     fread_one(save_version);
     fread_one(player_records_len);
-    fread_one(history_live_log_path_len);
+    fread_one(history_live_log_location_len);
 
-    history_live_log_path = malloc(history_live_log_path_len + 1);
-    fread_arr(history_live_log_path);
-    history_live_log_path[history_live_log_path_len] = '\0';
+    history_live_log_location = malloc(history_live_log_location_len + 1);
+    fread_arr(history_live_log_location);
+    history_live_log_location[history_live_log_location_len] = '\0';
 
     // MAJOR_TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
@@ -316,8 +316,8 @@ void history_save()
 
     fwrite_one(save_version);
     fwrite_one(player_records_len);
-    fwrite_one(history_live_log_path_len);
-    fwrite_arr(history_live_log_path);
+    fwrite_one(history_live_log_location_len);
+    fwrite_arr(history_live_log_location);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
@@ -356,6 +356,35 @@ void history_save()
     }
 }
 
+void history_set_live_log_location(char *live_log_location)
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_live_log_location.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    free(history_live_log_location);
+    history_live_log_location = live_log_location;
+    history_live_log_location_len = strlen(history_live_log_location);
+}
+
+const char *history_get_live_log_location()
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized get_live_log_location.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    return history_live_log_location;
+}
 
 // MAJOR_TODO: Dates sometimes errantly set as 0 (epoch) during live-testing
 void history_set_date(const uint16_t new_date)
@@ -393,8 +422,8 @@ void history_set_log_file_path(char *log_file_path)
         }
     )
 
-    history_live_log_path_len = strlen(log_file_path);
-    history_live_log_path = log_file_path;
+    history_live_log_location_len = strlen(log_file_path);
+    history_live_log_location = log_file_path;
 }
 
 const char *history_get_log_file_path()
@@ -408,7 +437,7 @@ const char *history_get_log_file_path()
         }
     )
 
-    return history_live_log_path;
+    return history_live_log_location;
 }
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)

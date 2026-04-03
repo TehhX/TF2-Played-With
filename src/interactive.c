@@ -16,7 +16,7 @@
 #define ccasecmp(C1, C2) (((C1) | 0x20) == (C2))
 
 // Test input against CMP and CMP[COFF]. If COFF is -1, no short version
-#define INPUT_IS(INPUT, CMP, COFF) (!strncasecmp(INPUT, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(INPUT[0], CMP[COFF])))
+#define INPUT_IS(CMP, COFF) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(input_buf[0], CMP[COFF])))
 
 // Will print OUTPUT and if subsequent user input is positive, perform ACTION
 HYPER_MACRO void interactive_action(const char *output, void (*action)())
@@ -35,8 +35,8 @@ HYPER_MACRO void interactive_action(const char *output, void (*action)())
     }
 }
 
-// Parse SID3E from input_buf, perform action on it
-HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e))
+// Get specifier start
+HYPER_MACRO char *get_spec_start(char *input_buf)
 {
     char *cursor, *specifier_start = NULL;
     for (cursor = input_buf; *cursor != '\n'; ++cursor)
@@ -49,9 +49,21 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
     if (!specifier_start)
     {
         fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
-        return;
+        return NULL;
     }
     *cursor = '\0';
+
+    return specifier_start;
+}
+
+// Parse SID3E from input_buf, perform action on it
+HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e))
+{
+    char *const specifier_start = get_spec_start(input_buf);
+    if (!specifier_start)
+    {
+        return;
+    }
 
     const uint32_t sid3e = sidm_parse_sid3e(specifier_start, Esteamid_type_unknown);
 
@@ -75,7 +87,7 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
 
 HYPER_MACRO void action_delete_log()
 {
-    remove(history_live_log_path);
+    remove(history_get_live_log_location());
 }
 
 HYPER_MACRO void action_exit()
@@ -100,15 +112,26 @@ void interactive_enter()
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
     for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
     {
-        if (INPUT_IS(input_buf, "retrieve", 0))
+        if (INPUT_IS("retrieve", 0))
         {
             perform_on_sid3e(input_buf, history_print_record);
         }
-        else if (INPUT_IS(input_buf, "edit-notes", 5))
+        else if (INPUT_IS("set-live-log-location", 4))
+        {
+            char *const specifier_start = get_spec_start(input_buf);
+            if (specifier_start)
+            {
+                char *const specifier_start_heap = strcpy(malloc(strlen(specifier_start) + 1), specifier_start);
+                history_set_live_log_location(specifier_start_heap);
+
+                printf("Successfully set LLL to \"%s\".\n", specifier_start);
+            }
+        }
+        else if (INPUT_IS("edit-notes", 5))
         {
             perform_on_sid3e(input_buf, history_edit_notes);
         }
-        else if (INPUT_IS(input_buf, "collect-live", 10))
+        else if (INPUT_IS("collect-live", 10))
         {
             if (live_params.continue_running)
             {
@@ -118,9 +141,9 @@ void interactive_enter()
 
             printf("Starting live-collecting...\n");
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_live_log_path);
+            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_location());
 
-            FILE *const input_file_ptr = fopen(history_live_log_path, "r");
+            FILE *const input_file_ptr = fopen(history_get_live_log_location(), "r");
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
@@ -142,7 +165,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection started successfully.\n" ANSI_RESET);
             }
         }
-        else if (INPUT_IS(input_buf, "stop-live", 1))
+        else if (INPUT_IS("stop-live", 1))
         {
             if (!live_params.continue_running)
             {
@@ -173,7 +196,7 @@ void interactive_enter()
                 continue;
             }
         }
-        else if (INPUT_IS(input_buf, "collect-archived", 8))
+        else if (INPUT_IS("collect-archived", 8))
         {
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
@@ -194,16 +217,16 @@ void interactive_enter()
             collection_read_archived(specifier_start);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS(input_buf, "save", 0))
+        else if (INPUT_IS("save", 0))
         {
             interactive_action("Overwrite file and save?", history_save);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS(input_buf, "load", 0))
+        else if (INPUT_IS("load", 0))
         {
             interactive_action("Overwrite current data and load?", history_load);
         }
-        else if (INPUT_IS(input_buf, "help", 0))
+        else if (INPUT_IS("help", 0))
         {
             printf
             (
@@ -211,6 +234,8 @@ void interactive_enter()
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Retrieve and print associated record.\n"
+                    LTAB LTAB "set-(l)ive-log-location [FULLNAME]\n"
+                    LTAB LTAB LTAB "Sets the location of the live log. Should be inside \".../Team Fortress 2/tf/\".\n"
                     LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n"
                     LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
@@ -234,17 +259,17 @@ void interactive_enter()
                 ANSI_RESET
             );
         }
-        else if (INPUT_IS(input_buf, "exit", 0) || INPUT_IS(input_buf, "quit", 0))
+        else if (INPUT_IS("exit", 0) || INPUT_IS("quit", 0))
         {
             interactive_action("Save before quitting?", history_save);
 
             interactive_action("Really exit?", action_exit);
         }
-        else if (INPUT_IS(input_buf, "force-exit", -1) || INPUT_IS(input_buf, "force-quit", -1))
+        else if (INPUT_IS("force-exit", -1) || INPUT_IS("force-quit", -1))
         {
             return;
         }
-        else if (INPUT_IS(input_buf, "clear", 0))
+        else if (INPUT_IS("clear", 0))
         {
             system("clear");
         }
