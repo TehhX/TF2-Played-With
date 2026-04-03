@@ -39,12 +39,13 @@ Analyzing console output from entire sessions has produced valuable information.
 * Player names can have `"`s anywhere in their name without any escape characters in the output of `status` to denote them as special
 * The regex `^# {2,}` will output *only* lines output by `status` relating player names to associated data
 * The regex `connected$` will output *only* lines notifying of player connect events, including the user's own
-* The first instance of `<NAME> connected` will always contain the user's name
+* The first instance of `<NAME> connected` will always contain the TF2PW user's name
 * If last occurrence of string BOT is later than last occurrence of character `]`, player is a bot
 * Players with duplicate names will have their names changed by the following algorithm (assuming no abuse of whitespace characters vis-a-vis the bot crisis, where seemingly duplicate names are actually):
   * 1: `<NAME>`
-  * 2: (1) `<NAME>`
-  * n {n > 1}: (`<n - 1>`) `<NAME>`
+  * 2: (1)`<NAME>`
+  * n {n > 1}: `(<n - 1>)<NAME>`
+* Note that there is no space between the name and duplicate number/parentheses
 * `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
   * Queue for game, join server:
     * `Connected to <IP>`
@@ -55,7 +56,6 @@ Analyzing console output from entire sessions has produced valuable information.
     * `Connected to <IP>`
     * `<NAME> connected`
 * Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
-* `<NAME> connected` may print erroneously if there is another player by the same name as the user
 
 #### Status Formatting
 
