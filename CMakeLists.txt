@@ -38,9 +38,9 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     endif ()
 endif ()
 
-# Use -DTF2_PLAYED_WITH_NO_ANSI_COLORING when configuring to disable ANSI color escapes
-if (DEFINED TF2_PLAYED_WITH_NO_ANSI_COLORING)
-    target_compile_definitions(tf2pw PRIVATE TF2_PLAYED_WITH_NO_ANSI_COLORING=1)
+# Use -DNO_ANSI_COLORING when configuring to disable ANSI color escapes
+if (DEFINED NO_ANSI_COLORING)
+    target_compile_definitions(tf2pw PRIVATE NO_ANSI_COLORING=1)
 endif ()
 
 # Installation

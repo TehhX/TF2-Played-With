@@ -69,7 +69,7 @@
 #define LTAB "    "
 
 // ANSI Color Escape Codes (Disable by passing below def)
-#ifdef TF2_PLAYED_WITH_NO_ANSI_COLORING
+#ifdef NO_ANSI_COLORING
     #define ANSI_RED
     #define ANSI_GREEN
     #define ANSI_YELLOW
@@ -91,7 +91,7 @@
 
     // ON  Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
-#endif // TF2_PLAYED_WITH_NO_ANSI_COLORING
+#endif // NO_ANSI_COLORING
 
 // ANSI Aliases
 #define ANSI_LOG ANSI_CYAN

@@ -39,6 +39,7 @@ static void operation_set_save_location    (const char *invocation, char *arg);
 static void operation_interactive          (const char *invocation, char *arg);
 static void operation_collect_archived     (const char *invocation, char *arg);
 static void operation_type                 (const char *invocation, char *arg);
+static void operation_set_user_sid3e       (const char *invocation, char *arg);
 static void operation_retrieve_records     (const char *invocation, char *arg);
 static void operation_edit_notes           (const char *invocation, char *arg);
 
@@ -87,11 +88,19 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--(t)ype",
-        .doc = "Explicitly specify type of STEAMID to use with -r (retrieve), else is guessed.",
+        .doc = "Explicitly specify type of STEAMID to use with applicable arguments.",
         .arg = "3|E|6|N",
         .opt_long = "type",
         .opt_short = 't',
         .operation = operation_type
+    },
+    {
+        .name = "--set-user-sid3(e)",
+        .doc = "Sets the user's STEAMID3 excerpt.",
+        .arg = "[STEAMID3|STEAMID3E|STEAMID64|NAME]",
+        .opt_long = "set-user-sid3e",
+        .opt_short = 'e',
+        .operation = operation_set_user_sid3e
     },
     {
         .name = "--(r)etrieve-records",
@@ -118,7 +127,7 @@ static struct arg_option arg_options[] =
 
 #define HELP_INFO(INDEX) arg_options[INDEX].name, NULLABLE(arg_options[INDEX].arg, ""), arg_options[INDEX].doc
 
-static void operation_print_help(const char *invocation, char *unused)
+static void operation_print_help(const char *invocation, char *_)
 {
     printf
     (
@@ -133,7 +142,8 @@ static void operation_print_help(const char *invocation, char *unused)
         HELP_OUTP "\n" // 4
         HELP_OUTP "\n" // 5
         HELP_OUTP "\n" // 6
-        HELP_OUTP      // 7
+        HELP_OUTP "\n" // 7
+        HELP_OUTP      // 8
         ,
         invocation,
 
@@ -145,7 +155,8 @@ static void operation_print_help(const char *invocation, char *unused)
         HELP_INFO(4),
         HELP_INFO(5),
         HELP_INFO(6),
-        HELP_INFO(7)
+        HELP_INFO(7),
+        HELP_INFO(8)
     );
 
     exit(EXIT_SUCCESS);
@@ -198,6 +209,23 @@ static void operation_type(const char *_, char *arg)
         {
             passed_type = Esteamid_type_sid64;
         }
+    }
+}
+
+static void operation_set_user_sid3e(const char *_, char *arg)
+{
+    const uint32_t new_user_sid3e = sidm_parse_sid3e(arg, passed_type);
+    if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
+    {
+        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
+    }
+    else if (new_user_sid3e == SIDM_ERR_RNGE)
+    {
+        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+    }
+    else
+    {
+        history_set_user_sid3e(new_user_sid3e);
     }
 }
 
@@ -305,7 +333,7 @@ int main(const int argc, char **argv)
 
     parse_option(argc, argv, 1); // Set save location
 
-    if (!history_initialized)
+    if (!history_is_initialized())
     {
         history_init(NULL);
     }
@@ -320,9 +348,11 @@ int main(const int argc, char **argv)
 
     parse_option(argc, argv, 5); // Type
 
-    parse_option(argc, argv, 6); // Retrieve records
+    parse_option(argc, argv, 6); // Set user STEAMID3 excerpt
 
-    parse_option(argc, argv, 7); // Edit notes
+    parse_option(argc, argv, 7); // Retrieve records
+
+    parse_option(argc, argv, 8); // Edit notes
 
     // NEWARGS_TODO
 

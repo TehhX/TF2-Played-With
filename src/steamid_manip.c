@@ -113,7 +113,7 @@ uint32_t sidm_parse_sid3e(const char *const string_input, const enum Esteamid_ty
                 const uint64_t value = strtol(string_input, &end, 10);
 
                 // Bad input
-                if (*end != '\0')
+                if (*end != '\0' && *end != '\n')
                 {
                     return SIDM_ERR_NAME;
                 }

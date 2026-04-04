@@ -11,22 +11,43 @@
 
 #include "stdint.h"
 #include "stdlib.h"
-
-extern uint8_t history_initialized;
+#include "stdbool.h"
 
 /*
-	Initialize history
+	@brief Initialize history
+
 	   @param history_fullname: The file to save/load. If NULL, use default fullname, else must be on the heap
 */
 extern void history_init(char *history_fullname);
 
-// Free resources used by history
+/*
+	@brief Check if history has been initialized (history_init(...) has been called)
+
+		@returns A boolean containing initialization status
+*/
+extern bool history_is_initialized();
+
+/*
+	@brief Set user's STEAMID3 excerpt
+
+		@param user_sid3e What to set the end-user's STEAMID3 excerpt to
+*/
+extern void history_set_user_sid3e(uint32_t user_sid3e);
+
+/*
+	@brief Get user's STEAMID3 excerpt
+
+		@returns The end-user's STEAMID3 excerpt
+*/
+extern uint32_t history_get_user_sid3e();
+
+// @brief Free resources used by history
 extern void history_free();
 
-// Loads history file ~/.local/share/tf2pwXX.sav into memory
+// @brief Loads history file ~/.local/share/tf2pwXX.sav into memory
 extern void history_load();
 
-// Saves memory into history file ~/.local/share/tf2pwXX.sav
+// @brief Saves memory into history file ~/.local/share/tf2pwXX.sav
 extern void history_save();
 
 // A sentinel value for use with history_set_date(...)

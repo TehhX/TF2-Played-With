@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "time_manip.h"
+#include "steamid_manip.h"
 
 #include "cider.h"
 
@@ -13,9 +14,6 @@
 #include "time.h"
 #include "stdlib.h"
 
-// Inter-unit variable defs
-uint8_t history_initialized = 0;
-
 // The header of any given tf2pw file. If not first 5 bytes of TF2PW file, it is invalid
 #define HEADER "TF2PW"
 #define HEADER_SIZE (sizeof(HEADER) - 1)
@@ -23,11 +21,13 @@ uint8_t history_initialized = 0;
 // The latest available save format version. Remember to keep this updated
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
+static bool history_initialized = false;
 static uint16_t  current_date;
-static  uint8_t  save_version;
+static  uint8_t  history_live_log_location_len;
+static     char *history_live_log_location;
 
-static uint8_t  history_live_log_location_len;
-static    char *history_live_log_location;
+static  uint8_t save_version;
+static uint32_t user_sid3e;
 
 // TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
@@ -66,7 +66,7 @@ void history_init(char *requested_history_fullname)
         }
     )
 
-    history_initialized = 1;
+    history_initialized = true;
 
     if (requested_history_fullname)
     {
@@ -78,6 +78,41 @@ void history_init(char *requested_history_fullname)
     }
 
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: History initialized with history_fullname as \"%s\".\n" ANSI_RESET, history_fullname);
+}
+
+bool history_is_initialized()
+{
+    return history_initialized;
+}
+
+void history_set_user_sid3e(const uint32_t new_user_sid3e)
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_user_sid3e.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    user_sid3e = new_user_sid3e;
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set user_sid3e to %" PRIu32 ".\n" ANSI_RESET, user_sid3e);
+}
+
+uint32_t history_get_user_sid3e()
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized get_user_sid3e.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    return user_sid3e;
 }
 
 // Frees memory associated with history, sets `player_records_len` to 0
@@ -120,7 +155,7 @@ void history_free()
 
     history_free_memory();
 
-    history_initialized = 0;
+    history_initialized = false;
 }
 
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
@@ -176,11 +211,32 @@ void history_load()
                         goto USER_GET_TLP;
                     }
 
-                    history_live_log_location_len = 0;
-                    for (; stdin_buffer[history_live_log_location_len] != '\n'; ++history_live_log_location_len);
-
+                    for (history_live_log_location_len = 0; stdin_buffer[history_live_log_location_len] != '\n'; ++history_live_log_location_len);
                     history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), stdin_buffer, history_live_log_location_len);
                     history_live_log_location[history_live_log_location_len] = '\0';
+
+                    USER_GET_SID3E:;
+                    fprintf(stderr, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
+                    if (fgets(stdin_buffer, STDIN_BUFB, stdin)[0] == '\n')
+                    {
+                        goto USER_GET_SID3E;
+                    }
+
+                    const uint32_t new_user_sid3e = sidm_parse_sid3e(stdin_buffer, Esteamid_type_unknown);
+                    if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
+                    {
+                        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
+                        goto USER_GET_SID3E;
+                    }
+                    else if (new_user_sid3e == SIDM_ERR_RNGE)
+                    {
+                        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+                        goto USER_GET_SID3E;
+                    }
+                    else
+                    {
+                        user_sid3e = new_user_sid3e;
+                    }
 
                     history_free_memory();
 
@@ -211,6 +267,7 @@ void history_load()
     }
 
     fread_one(save_version);
+    fread_one(user_sid3e);
     fread_one(player_records_len);
     fread_one(history_live_log_location_len);
 
@@ -315,6 +372,7 @@ void history_save()
     fwrite(HEADER, sizeof(char), HEADER_SIZE, output_file_ptr);
 
     fwrite_one(save_version);
+    fwrite_one(user_sid3e);
     fwrite_one(player_records_len);
     fwrite_one(history_live_log_location_len);
     fwrite_arr(history_live_log_location);
@@ -370,6 +428,8 @@ void history_set_live_log_location(char *live_log_location)
     free(history_live_log_location);
     history_live_log_location = live_log_location;
     history_live_log_location_len = strlen(history_live_log_location);
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set live_log_location to \"%s\"." ANSI_RESET, history_live_log_location);
 }
 
 const char *history_get_live_log_location()
@@ -409,35 +469,6 @@ void history_set_date(const uint16_t new_date)
 
     // TODO: Log human-readable date instead of days
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set current_date to %" PRIu16 ".\n" ANSI_RESET, current_date);
-}
-
-void history_set_log_file_path(char *log_file_path)
-{
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_log_file_path.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
-    history_live_log_location_len = strlen(log_file_path);
-    history_live_log_location = log_file_path;
-}
-
-const char *history_get_log_file_path()
-{
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_log_file_path.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
-    return history_live_log_location;
 }
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)
@@ -668,8 +699,17 @@ void history_edit_notes(uint32_t requested_sid3e)
         player_records[player_index].notes[notes_len++] = input;
     }
 
-    // TODO: Add newline if there is none at EOF
-    player_records[player_index].notes[notes_len - 1] = '\0';
+    if (notes_len > 0)
+    {
+        // TODO: Add newline if there is none at EOF
+        player_records[player_index].notes[notes_len - 1] = '\0';
+    }
+    // If user entered nothing/deleted all notes, free and set to NULL
+    else
+    {
+        free(player_records[player_index].notes);
+        player_records[player_index].notes = NULL;
+    }
 
     if (fclose(read))
     {

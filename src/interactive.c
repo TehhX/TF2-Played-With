@@ -15,8 +15,8 @@
 // Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is case bit/flag
 #define ccasecmp(C1, C2) (((C1) | 0x20) == (C2))
 
-// Test input against CMP and CMP[COFF]. If COFF is -1, no short version
-#define INPUT_IS(CMP, COFF) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (COFF == -1 ? 0 : ccasecmp(input_buf[0], CMP[COFF])))
+// Test input against CMP and CHAR. If COFF is -1, no short version
+#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 
 // Will print OUTPUT and if subsequent user input is positive, perform ACTION
 HYPER_MACRO void interactive_action(const char *output, void (*action)())
@@ -112,11 +112,11 @@ void interactive_enter()
     // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
     for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
     {
-        if (INPUT_IS("retrieve", 0))
+        if (INPUT_IS("retrieve", 'r'))
         {
             perform_on_sid3e(input_buf, history_print_record);
         }
-        else if (INPUT_IS("set-live-log-location", 4))
+        else if (INPUT_IS("set-live-log-location", 'o'))
         {
             char *const specifier_start = get_spec_start(input_buf);
             if (specifier_start)
@@ -127,11 +127,11 @@ void interactive_enter()
                 printf("Successfully set LLL to \"%s\".\n", specifier_start);
             }
         }
-        else if (INPUT_IS("edit-notes", 5))
+        else if (INPUT_IS("edit-notes", 'n'))
         {
             perform_on_sid3e(input_buf, history_edit_notes);
         }
-        else if (INPUT_IS("collect-live", 10))
+        else if (INPUT_IS("collect-live", 'v'))
         {
             if (live_params.continue_running)
             {
@@ -165,7 +165,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection started successfully.\n" ANSI_RESET);
             }
         }
-        else if (INPUT_IS("stop-live", 1))
+        else if (INPUT_IS("stop-live", 't'))
         {
             if (!live_params.continue_running)
             {
@@ -196,7 +196,7 @@ void interactive_enter()
                 continue;
             }
         }
-        else if (INPUT_IS("collect-archived", 8))
+        else if (INPUT_IS("collect-archived", 'a'))
         {
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
@@ -217,16 +217,16 @@ void interactive_enter()
             collection_read_archived(specifier_start);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS("save", 0))
+        else if (INPUT_IS("save", 's'))
         {
             interactive_action("Overwrite file and save?", history_save);
         }
         // MAJOR_TODO: Read FULLNAME if provided
-        else if (INPUT_IS("load", 0))
+        else if (INPUT_IS("load", 'l'))
         {
             interactive_action("Overwrite current data and load?", history_load);
         }
-        else if (INPUT_IS("help", 0))
+        else if (INPUT_IS("help", 'h'))
         {
             printf
             (
@@ -234,7 +234,7 @@ void interactive_enter()
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Retrieve and print associated record.\n"
-                    LTAB LTAB "set-(l)ive-log-location [FULLNAME]\n"
+                    LTAB LTAB "set-live-l(o)g-location [FULLNAME]\n"
                     LTAB LTAB LTAB "Sets the location of the live log. Should be inside \".../Team Fortress 2/tf/\".\n"
                     LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n"
@@ -259,7 +259,7 @@ void interactive_enter()
                 ANSI_RESET
             );
         }
-        else if (INPUT_IS("exit", 0) || INPUT_IS("quit", 0))
+        else if (INPUT_IS("exit", 'e') || INPUT_IS("quit", 'q'))
         {
             interactive_action("Save before quitting?", history_save);
 

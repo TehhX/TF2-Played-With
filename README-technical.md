@@ -46,6 +46,17 @@ Analyzing console output from entire sessions has produced valuable information.
   * 2: (1)`<NAME>`
   * n {n > 1}: `(<n - 1>)<NAME>`
 * Note that there is no space between the name and duplicate number/parentheses
+* `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
+  * Queue for game, join server:
+    * `Connected to <IP>`
+    * `<NAME> connected`
+  * Enter map based on vote in same server:
+    * `<NAME> connected`
+  * Requeuing in match:
+    * `Connected to <IP>`
+    * `<NAME> connected`
+* Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
+* On quit, seems to always print `CTFGCClientSystem::ShutdownGC`. Doesn't seem to print at other times. If multiple session outputs (launch to quit) are in the same file, it could also be used to differentiate and treat it as a new file
 * General duplicated name observations:
   * User joins game first
     * `<NAME> connected`: Just like normal
@@ -59,17 +70,14 @@ Analyzing console output from entire sessions has produced valuable information.
         * Will record new game in all required instances
       * Cons:
         * Will record new game when other player with user's name joins in any scenario
-* `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
-  * Queue for game, join server:
-    * `Connected to <IP>`
-    * `<NAME> connected`
-  * Enter map based on vote in same server:
-    * `<NAME> connected`
-  * Requeuing in match:
-    * `Connected to <IP>`
-    * `<NAME> connected`
-* Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
-* On quit, seems to always print `CTFGCClientSystem::ShutdownGC`. Doesn't seem to print at other times. If multiple session outputs (launch to quit) are in the same file, it could also be used to differentiate and treat it as a new file
+    * Instead of checking for `<NAME> connected`, check for `Client reached server_spawn.`. After light testing, it seems to print at the same times as `<NAME> connected`, only outputting more if player disconnects while in the loading screen. This causes no practical changes however, because the status array will be of length 0
+      * Pros:
+        * Easy to implement
+        * User's name saving no longer required
+        * Simpler checking
+        * Duplicate names no longer have any problem
+      * Cons:
+        * None(?)
 
 #### Status Formatting
 
@@ -109,6 +117,9 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
     // The version of the save format
     (u8) SAVE_VERSION,
+
+    // The STEAMID3 excerpt of the user
+    (u32) USER_SID3E,
 
     // The path to the live logging file
     (string) LIVE_LOG_PATH,
@@ -157,6 +168,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
 |:---------------------:|:-------------------------------------------------------------------------------------------:|:---------------------:|:-------------------------------------------------------------:|
 |        Header         |               Header of the file format. Always "TF2PW", else file is invalid               |           5           |                             TF2PW                             |
 |  Save Format Version  |              The version of history file format used with this particular file              |           1           |                            (u8) 0                             |
+|      User SID3E       |                              The STEAMID3 excerpt of the user                               |           4           |                        (u32) 12345678                         |
 |   Live Log Path Len   |                            The length in bytes of Live Log Path                             |           1           |                            (u8) 82                            |
 |     Live Log Path     |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     | 1 * Live_Log_Path_Len | (char *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
 | Player Records Length |               How many unique player records there are in the following array               |           4           |                         (u32) 12,000                          |
