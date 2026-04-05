@@ -46,16 +46,19 @@ Analyzing console output from entire sessions has produced valuable information.
   * 2: (1)`<NAME>`
   * n {n > 1}: `(<n - 1>)<NAME>`
 * Note that there is no space between the name and duplicate number/parentheses
-* `<NAME> connected` will output when entering a map, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
+* `<NAME> connected` and `Client reached server_spawn.` will output when entering a new map/server, while `Connected to <IP>` will output when connecting to a new server. Example events for clarification:
   * Queue for game, join server:
+    * `Client reached server_spawn.`
     * `Connected to <IP>`
     * `<NAME> connected`
   * Enter map based on vote in same server:
+    * `Client reached server_spawn.`
     * `<NAME> connected`
   * Requeuing in match:
+    * `Client reached server_spawn.`
     * `Connected to <IP>`
     * `<NAME> connected`
-* Each match is only guaranteed to output `<NAME> connected`, and not necessarily `Connected to <IP>`.
+* Each match is only guaranteed to output both `Client reached server_spawn.` and `<NAME> connected`, and not necessarily `Connected to <IP>`. For this reason, `Client reached server_spawn.` will be used
 * On quit, seems to always print `CTFGCClientSystem::ShutdownGC`. Doesn't seem to print at other times. If multiple session outputs (launch to quit) are in the same file, it could also be used to differentiate and treat it as a new file
 * General duplicated name observations:
   * User joins game first
