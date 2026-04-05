@@ -78,6 +78,7 @@ Analyzing console output from entire sessions has produced valuable information.
         * Duplicate names no longer have any problem
       * Cons:
         * None(?)
+* Chat output can be captured by the following regex: `(\*DEAD\*){0,1}(\(TEAM\)){0,1}( ){0,1}((.+)) :  (.*)`, where group 5 is player name, and group 6 is message
 
 #### Status Formatting
 
