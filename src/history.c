@@ -624,12 +624,40 @@ void history_print_record(const uint32_t requested_sid3e)
 
 void history_print_records(const char *const name)
 {
-    // IMPL_TODO
-    fprintf(stderr, "Haven't implemented history_print_records(...) yet, don't get ahead of yourself. Ignoring.\n");
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized print_records.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    for (uint_fast32_t player_i = 0; player_i < player_records_len; ++player_i)
+    {
+        for (uint_fast32_t date_i = 0; date_i < player_records[player_i].date_records_len; ++date_i)
+        {
+            // If name is not pointer to previous copycat name, and matches requested name, print record of that player, continue to next player_i
+            if (player_records[player_i].date_records[date_i].name_len && !strcmp(player_records[player_i].date_records[date_i].name, name))
+            {
+                history_print_record(player_records[player_i].sid3e);
+                continue;
+            }
+        }
+    }
 }
 
 void history_edit_notes(uint32_t requested_sid3e)
 {
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized edit_notes.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
     const uint_fast32_t player_index = get_player_index(requested_sid3e);
     if (player_index == PLAYER_INDEX_ENOENT)
     {

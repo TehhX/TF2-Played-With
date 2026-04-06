@@ -69,7 +69,7 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
 
     if (sid3e == SIDM_ERR_NAME)
     {
-        // MAJOR_TODO: Is name, need thing to do
+        history_print_records(specifier_start);
     }
     else if (sid3e == SIDM_ERR_RNGE)
     {
