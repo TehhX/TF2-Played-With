@@ -3,6 +3,7 @@
 #include "common.h"
 #include "time_manip.h"
 #include "steamid_manip.h"
+#include "user_input.h"
 
 #include "cider.h"
 
@@ -24,8 +25,8 @@
 static bool history_initialized = false;
 static uint16_t  current_date;
 static  uint8_t  history_live_log_location_len;
-static     char *history_live_log_location;
 
+static     char *history_live_log_location;
 static  uint8_t save_version;
 static uint32_t user_sid3e;
 
@@ -183,70 +184,57 @@ void history_load()
         {
             errno = 0;
 
-            USER_GET_START:;
-            fprintf(stderr, "No history file found at \"%s\". Start setup? (Y/N): ", history_fullname);
+            char *input = NULL;
 
-            const int input_char = fgetc(stdin);
-            switch (input_char)
+            if (user_input_confirm("No history file found. Start setup? (Y/N): "))
             {
-                break; case '\n':
+                save_version = SAVE_VERSION_LATEST;
+
+                USER_GET_TLP:;
+                user_input_getline(&input, "Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
+                if (input[0] == '\n')
                 {
-                    goto USER_GET_START;
+                    goto USER_GET_TLP;
                 }
-                break; case 'y': case 'Y':
+
+                for (history_live_log_location_len = 0; input[history_live_log_location_len] != '\0'; ++history_live_log_location_len);
+                history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), input, history_live_log_location_len);
+                history_live_log_location[history_live_log_location_len] = '\0';
+
+                USER_GET_SID3E:;
+                user_input_getline(&input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
+                if (input[0] == '\n')
                 {
-                    save_version = SAVE_VERSION_LATEST;
-
-                    if (input_char != '\n')
-                    {
-                        // MAJOR_TODO: Same issue as in interactive.c
-                        fgetc(stdin);
-                    }
-
-                    USER_GET_TLP:;
-                    fprintf(stderr, "Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
-                    char stdin_buffer[STDIN_BUFB];
-                    if (fgets(stdin_buffer, STDIN_BUFB, stdin)[0] == '\n')
-                    {
-                        goto USER_GET_TLP;
-                    }
-
-                    for (history_live_log_location_len = 0; stdin_buffer[history_live_log_location_len] != '\n'; ++history_live_log_location_len);
-                    history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), stdin_buffer, history_live_log_location_len);
-                    history_live_log_location[history_live_log_location_len] = '\0';
-
-                    USER_GET_SID3E:;
-                    fprintf(stderr, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
-                    if (fgets(stdin_buffer, STDIN_BUFB, stdin)[0] == '\n')
-                    {
-                        goto USER_GET_SID3E;
-                    }
-
-                    const uint32_t new_user_sid3e = sidm_parse_sid3e(stdin_buffer, Esteamid_type_unknown);
-                    if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
-                    {
-                        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
-                        goto USER_GET_SID3E;
-                    }
-                    else if (new_user_sid3e == SIDM_ERR_RNGE)
-                    {
-                        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
-                        goto USER_GET_SID3E;
-                    }
-                    else
-                    {
-                        user_sid3e = new_user_sid3e;
-                    }
-
-                    history_free_memory();
-
-                    return;
+                    goto USER_GET_SID3E;
                 }
-                break; default:
+
+                const uint32_t new_user_sid3e = sidm_parse_sid3e(input, Esteamid_type_unknown);
+                if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
                 {
-                    fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
-                    exit(EXIT_FAILURE);
+                    fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
+                    goto USER_GET_SID3E;
                 }
+                else if (new_user_sid3e == SIDM_ERR_RNGE)
+                {
+                    fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+                    goto USER_GET_SID3E;
+                }
+                else
+                {
+                    user_sid3e = new_user_sid3e;
+                }
+
+                free(input);
+
+                history_free_memory();
+
+                return;
+            }
+            else
+            {
+                free(input);
+                fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
+                exit(EXIT_FAILURE);
             }
         }
         else

@@ -4,6 +4,7 @@
 #include "history.h"
 #include "steamid_manip.h"
 #include "collection.h"
+#include "user_input.h"
 
 #include "cider.h"
 
@@ -12,8 +13,8 @@
 #include "ctype.h"
 #include "pthread.h"
 
-// Check if characters are equal, case agnostic. Assumes C2 is lowercase. Magic number is case bit/flag
-#define ccasecmp(C1, C2) (((C1) | 0x20) == (C2))
+// Check if characters are equal, case agnostic. Assumes C2 is lowercase
+#define ccasecmp(C1, C2) (((C1) | CAPITAL_BIT) == (C2))
 
 // Test input against CMP and CHAR. If COFF is -1, no short version
 #define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
@@ -38,8 +39,8 @@ HYPER_MACRO void interactive_action(const char *output, void (*action)())
 // Get specifier start
 HYPER_MACRO char *get_spec_start(char *input_buf)
 {
-    char *cursor, *specifier_start = NULL;
-    for (cursor = input_buf; *cursor != '\n'; ++cursor)
+    char *specifier_start = NULL;
+    for (char *cursor = input_buf; *cursor != '\0'; ++cursor)
     {
         if (!specifier_start && *cursor == ' ')
         {
@@ -51,7 +52,6 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
         fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
         return NULL;
     }
-    *cursor = '\0';
 
     return specifier_start;
 }
@@ -102,16 +102,17 @@ static pthread_t thread_collection;
 
 void interactive_enter()
 {
-    printf("Interactive mode (try help):\n" USER_POKE);
+    puts("Interactive mode (try help):");
 
     struct collection_read_live_routine_params live_params =
     {
         .continue_running = false,
     };
 
-    // MAJOR_TODO: Pressing Ctrl+D in terminal while this reads will cause a seg fault (runtime error: load of null pointer of type 'char')
-    for (char input_buf[STDIN_BUFB]; fgets(input_buf, STDIN_BUFB, stdin)[0]; printf(USER_POKE))
+    for (char *input_buf = NULL;;)
     {
+        user_input_getline(&input_buf, USER_POKE);
+
         if (INPUT_IS("retrieve", 'r'))
         {
             perform_on_sid3e(input_buf, history_print_record);

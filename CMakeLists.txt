@@ -10,6 +10,7 @@ set(SRC
     interactive
     main
     steamid_manip
+    user_input
 )
 
 # Each item "{}" in SRC becomes "src/{}.c".
@@ -23,6 +24,10 @@ target_include_directories(tf2pw PRIVATE "include/")
 target_link_directories   (tf2pw PRIVATE "lib/")
 
 target_link_libraries(tf2pw PRIVATE cider)
+
+if (LINUX)
+    target_link_libraries(tf2pw PRIVATE readline)
+endif ()
 
 # Enable debugging when variant is "Debug"
 if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)

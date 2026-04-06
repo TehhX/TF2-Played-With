@@ -96,7 +96,7 @@
 // ANSI Aliases
 #define ANSI_LOG ANSI_CYAN
 
-// Max size of any/all stdin buffer(s) in bytes
-#define STDIN_BUFB 128
+// Capitalization bit of characters
+#define CAPITAL_BIT ((char) 0x20)
 
 #endif // COMMON_H
