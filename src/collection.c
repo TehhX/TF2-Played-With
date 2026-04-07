@@ -164,26 +164,43 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
 
         // Check for chat message
         {
+            // Get name beginning
             #define PREFIX_DEAD "*DEAD*"
             #define PREFIX_TEAM "(TEAM)"
+            #define MESSAGE_MID " :  "
 
-            const char *name, *message;
+            const char *current_name = line_buf, *message;
 
             if (LINE_MATCHES(PREFIX_DEAD))
             {
-                name = line_buf + sizeof(PREFIX_DEAD) + 1;
+                current_name += sizeof(PREFIX_DEAD);
 
-                if (STRINGS_MATCH(line_buf + sizeof(PREFIX_DEAD), PREFIX_TEAM))
+                if (STRINGS_MATCH(current_name - 1, PREFIX_TEAM))
                 {
-                    name += sizeof(PREFIX_TEAM);
+                    current_name += sizeof(PREFIX_TEAM) - 1;
                 }
             }
             else if (LINE_MATCHES(PREFIX_TEAM))
             {
-                name = line_buf + sizeof(PREFIX_TEAM) + 1;
+                current_name += sizeof(PREFIX_TEAM);
             }
 
-            // IMPL_TODO: Continue
+            // Check who said it
+            for (int i = 0; i < pinfo_arr->len; ++i)
+            {
+                const int name_len = strlen(pinfo_arr->arr[i].name);
+
+                // Found them, request to add
+                if (!memcmp(pinfo_arr->arr[i].name, current_name, name_len))
+                {
+                    if (!memcmp(current_name + name_len, MESSAGE_MID, sizeof(MESSAGE_MID) - 1))
+                    {
+                        message = current_name + name_len + sizeof(MESSAGE_MID) - 1;
+
+                        history_add_message(pinfo_arr->arr[i].sid3e, message);
+                    }
+                }
+            }
         }
     }
 }

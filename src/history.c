@@ -325,53 +325,45 @@ void history_load()
                 player_records[player_records_i].date_records[date_records_i].name = last_real_name;
             }
 
-
-
             // Only read messages if they exist aka. record_messages == 1
             if (player_records[player_records_i].record_messages)
             {
-                int messages_input;
-                size_t current_message_len = 0;
-                player_records[player_records_i].date_records[date_records_i].messages_len = 0;
+                size_t msg_len = 0, msgs_i = 0;
 
-                player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * 1);
+                player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * (msgs_i + 1));
+                player_records[player_records_i].date_records[date_records_i].messages[0] = NULL;
 
                 bool cont = true;
                 while (cont)
                 {
+                    int messages_input;
                     switch ((messages_input = fgetc(input_file_ptr)))
                     {
                         break; case '\0':
                         {
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), msg_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len] = '\0';
+
                             cont = false;
-
-                            // No messages
-                            if (player_records[player_records_i].date_records[date_records_i].messages_len == 0 && current_message_len == 0)
-                            {
-                                break;
-                            }
                         }
-                        // fallthrough
-                               case '\n':
+                        break; case '\n':
                         {
-                            // Add space for, assign NULL terminator
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len], sizeof(char), ++current_message_len + 1);
-                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len][current_message_len] = '\0';
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), msg_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len] = '\0';
 
-                            // Allocate space for new character pointer in character pointer array messages
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++player_records[player_records_i].date_records[date_records_i].messages_len + 1);
-
-                            // Allocate space for new character in character array messages[player_records[player_records_i].date_records[date_records_i].messages_len]
-                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len] = malloc(sizeof(char) * 1);
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++msgs_i + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i] = NULL;
+                            msg_len = 0;
                         }
                         break; default:
                         {
-                            // Allocate space for, assign next character
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len], sizeof(char), ++current_message_len + 1);
-                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len][current_message_len] = (char) messages_input;
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), ++msg_len);
+                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len - 1] = (char) messages_input;
                         }
                     }
                 }
+
+                player_records[player_records_i].date_records[date_records_i].messages_len = msgs_i + 1;
             }
         }
     }
@@ -457,7 +449,11 @@ void history_save()
                 for (size_t message_i = 0; message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
                 {
                     fputs(player_records[player_records_i].date_records[date_records_i].messages[message_i], output_file_ptr);
-                    fputc('\n', output_file_ptr);
+
+                    if (message_i != player_records[player_records_i].date_records[date_records_i].messages_len - 1)
+                    {
+                        fputc('\n', output_file_ptr);
+                    }
                 }
 
                 fputc('\0', output_file_ptr);
@@ -754,7 +750,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     FILE *write = fopen(temporary_edit_file, "w");
     if (!write)
     {
-        fprintf(stderr, ANSI_RED "Failed to open temp file: ");
+        fprintf(stderr, ANSI_RED "Failed to open temp note-editing file: ");
         perror(NULL);
         SET_COLOR(stderr, ANSI_RESET);
         return;
@@ -768,7 +764,7 @@ void history_edit_notes(uint32_t requested_sid3e)
 
     if (fclose(write))
     {
-        fprintf(stderr, ANSI_RED "Failed to close temp file: ");
+        fprintf(stderr, ANSI_RED "Failed to close temp note-editing file: ");
         perror(NULL);
         SET_COLOR(stderr, ANSI_RESET);
         return;
@@ -784,7 +780,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     FILE *read = fopen(temporary_edit_file, "r");
     if (!read)
     {
-        fprintf(stderr, ANSI_RED "Failed to open temp file: ");
+        fprintf(stderr, ANSI_RED "Failed to open temp note-editing file: ");
         perror(NULL);
         SET_COLOR(stderr, ANSI_RESET);
         return;
@@ -813,7 +809,7 @@ void history_edit_notes(uint32_t requested_sid3e)
 
     if (fclose(read))
     {
-        fprintf(stderr, ANSI_RED "Failed to close temp file: ");
+        fprintf(stderr, ANSI_RED "Failed to close temp note-editing file: ");
         perror(NULL);
         SET_COLOR(stderr, ANSI_RESET);
         return;
@@ -821,11 +817,50 @@ void history_edit_notes(uint32_t requested_sid3e)
 
     if (remove(temporary_edit_file))
     {
-        fprintf(stderr, ANSI_RED "Failed to delete temp file: ");
+        fprintf(stderr, ANSI_RED "Failed to delete temp note-editing file: ");
         perror(NULL);
         SET_COLOR(stderr, ANSI_RESET);
         return;
     }
 
     free(temporary_edit_file);
+}
+
+void history_add_message(const uint32_t requested_sid3e, const char *const message)
+{
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        if (!history_initialized)
+        {
+            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized add_message.\n" ANSI_RESET);
+            abort();
+        }
+    )
+
+    // WARNING: Below assumes player has record and record on this date. Should always be true, however
+    const uint_fast32_t player_i = get_player_index(requested_sid3e);
+    if (player_records[player_i].record_messages)
+    {
+        // BSEARCH_TODO
+        for (uint_fast32_t date_i = 0; date_i < player_records[player_i].date_records_len; ++date_i)
+        {
+            if (player_records[player_i].date_records[date_i].date == current_date)
+            {
+                int message_len = 0;
+                for (; message[message_len] != '\n'; ++message_len);
+
+                prealloc(player_records[player_i].date_records[date_i].messages, sizeof(char *), ++player_records[player_i].date_records[date_i].messages_len);
+                player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1] = malloc(sizeof(char) * (message_len + 1));
+                player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1][message_len] = '\0';
+                memcpy(player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1], message, message_len);
+
+                TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1]);
+                return;
+            }
+        }
+
+        // Should have returned above. Getting here means there was no applicable record
+        fprintf(stderr, "FATAL: No applicable record in history_add_message(...) for SID3E=%" PRIu32 ".\n", requested_sid3e);
+        abort();
+    }
 }
