@@ -44,6 +44,12 @@ struct player_info_arr
     int len;
 };
 
+// Returns true if S1 matches S2. Will use length of S2
+#define STRINGS_MATCH(S1, S2) (!memcmp(S1, S2, sizeof(S2) - 1))
+
+// Returns true if line_buf matches STRING
+#define LINE_MATCHES(STRING) STRINGS_MATCH(line_buf, STRING)
+
 static void parse_log(FILE *file_stream, const bool caller, struct player_info_arr *pinfo_arr)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1;)
@@ -52,12 +58,11 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
     {
         // All status lines containing a name-sid3e have 2 spaces after the octothorpe, title only has 1
         #define STATUS_PREFIX "#  "
-        #define STATUS_PREFIX_SIZE (sizeof(STATUS_PREFIX) - 1)
 
         // Check for status output
-        if (!memcmp(line_buf, STATUS_PREFIX, STATUS_PREFIX_SIZE))
+        if (LINE_MATCHES(STATUS_PREFIX))
         {
-            int line_i = STATUS_PREFIX_SIZE;
+            int line_i = sizeof(STATUS_PREFIX) - 1;
 
             // Get player name start index
             while (line_buf[line_i++] != '"');
@@ -71,7 +76,7 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
                 {
                     last_close_bracket_i = line_i;
                 }
-                else if (!strncmp(line_buf + line_i, "BOT", 3))
+                else if (!memcmp(line_buf + line_i, "BOT", sizeof("BOT") - 1))
                 {
                     last_bot_str_i = line_i;
                 }
@@ -139,20 +144,46 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
         STATUS_FINISH:;
 
         // Check for connected message in the form `<NAME> connected`
-        #define NEW_MATCH "Client reached server_spawn."
-        #define NEW_MATCH_SIZE ((int) sizeof(NEW_MATCH) - 1)
-
-        // Detected NEW_MATCH
-        if (!strncmp(line_buf, NEW_MATCH, NEW_MATCH_SIZE))
         {
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Detected \"" NEW_MATCH "\", starting new match.\n" ANSI_RESET);
+            #define NEW_MATCH "Client reached server_spawn."
 
-            if (caller == COLLECTION_LIVE)
+            // Detected NEW_MATCH
+            // if (!strncmp(line_buf, NEW_MATCH, NEW_MATCH_SIZE))
+            if (LINE_MATCHES(NEW_MATCH))
             {
-                history_set_date(HISTORY_SET_DATE_TODAY);
+                TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Detected \"" NEW_MATCH "\", starting new match.\n" ANSI_RESET);
+
+                if (caller == COLLECTION_LIVE)
+                {
+                    history_set_date(HISTORY_SET_DATE_TODAY);
+                }
+
+                pinfo_arr->len = 0;
+            }
+        }
+
+        // Check for chat message
+        {
+            #define PREFIX_DEAD "*DEAD*"
+            #define PREFIX_TEAM "(TEAM)"
+
+            const char *name, *message;
+
+            if (LINE_MATCHES(PREFIX_DEAD))
+            {
+                name = line_buf + sizeof(PREFIX_DEAD) + 1;
+
+                if (STRINGS_MATCH(line_buf + sizeof(PREFIX_DEAD), PREFIX_TEAM))
+                {
+                    name += sizeof(PREFIX_TEAM);
+                }
+            }
+            else if (LINE_MATCHES(PREFIX_TEAM))
+            {
+                name = line_buf + sizeof(PREFIX_TEAM) + 1;
             }
 
-            pinfo_arr->len = 0;
+            // IMPL_TODO: Continue
         }
     }
 }

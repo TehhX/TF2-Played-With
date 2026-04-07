@@ -18,7 +18,7 @@ void user_input_getline(char **const input, const char *const prompt)
     *input = readline(prompt);
 
     // User entered nothing
-    if (!input[0])
+    if (!*input || !*input[0])
     {
         goto RETRY_INPUT;
     }
@@ -35,11 +35,11 @@ void user_input_getline(char **const input, const char *const prompt)
     // BUFF_TODO
     while ((next = fgetc(stdin)) != '\n')
     {
-        buff = realloc(buff, sizeof(char) * ++len);
+        prealloc(buff, sizeof(char), ++len);
         buff[len - 1] = (char) next;
     }
 
-    buff = realloc(buff, sizeof(char) * len + 1);
+    prealloc(buff, sizeof(char), len + 1);
     buff[len] = '\0';
 
     if (!*input[0])

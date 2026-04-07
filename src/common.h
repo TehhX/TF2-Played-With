@@ -99,4 +99,7 @@
 // Capitalization bit of characters
 #define CAPITAL_BIT ((char) 0x20)
 
+// Proper realloc without repeated code
+#define prealloc(PTR, SIZE, LEN) PTR = realloc(PTR, (SIZE) * (LEN))
+
 #endif // COMMON_H

@@ -267,10 +267,7 @@ static void operation_edit_notes(const char *_, char *arg)
             history_edit_notes(sid3e);
         }
         break; case SIDM_ERR_NAME:
-        {
-            // IMPL_TODO: Not sure what to do here
-        }
-        break; case SIDM_ERR_MISC:
+               case SIDM_ERR_MISC:
         {
             fprintf(stderr, ANSI_RED "Not correct/specified form of ID: \"%s\".\n" ANSI_RESET, arg);
             TF2_PLAYED_WITH_DEBUG_ABEX();

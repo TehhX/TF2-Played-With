@@ -201,7 +201,7 @@ void interactive_enter()
         {
             // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
             char *cursor, *specifier_start = NULL;
-            for (cursor = input_buf; *cursor != '\n'; ++cursor)
+            for (cursor = input_buf; *cursor != '\0'; ++cursor)
             {
                 if (!specifier_start && *cursor == ' ')
                 {
@@ -225,7 +225,7 @@ void interactive_enter()
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("load", 'l'))
         {
-            interactive_action("Overwrite current data and load?", history_load);
+            interactive_action("Discard changes in memory and load?", history_load);
         }
         else if (INPUT_IS("help", 'h'))
         {

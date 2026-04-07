@@ -29,6 +29,7 @@ static  uint8_t  history_live_log_location_len;
 static     char *history_live_log_location;
 static  uint8_t save_version;
 static uint32_t user_sid3e;
+static  uint8_t default_record_messages;
 
 // TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
@@ -36,12 +37,17 @@ static struct
 {
     uint32_t sid3e;
 
+    uint8_t record_messages;
+
     char *notes;
 
     uint32_t date_records_len;
     struct
     {
         uint16_t date;
+
+        size_t messages_len;
+        char **messages;
 
         uint8_t  name_len;
            char *name;
@@ -133,6 +139,16 @@ HYPER_MACRO void history_free_memory()
             {
                 free(player_records[player_i].date_records[date_i].name);
             }
+
+            if (player_records[player_i].record_messages)
+            {
+                for (size_t msg_i = 0; msg_i < player_records[player_i].date_records[date_i].messages_len; ++msg_i)
+                {
+                    free(player_records[player_i].date_records[date_i].messages[msg_i]);
+                }
+
+                free(player_records[player_i].date_records[date_i].messages);
+            }
         }
 
         free(player_records[player_i].date_records);
@@ -190,12 +206,7 @@ void history_load()
             {
                 save_version = SAVE_VERSION_LATEST;
 
-                USER_GET_TLP:;
                 user_input_getline(&input, "Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
-                if (input[0] == '\n')
-                {
-                    goto USER_GET_TLP;
-                }
 
                 for (history_live_log_location_len = 0; input[history_live_log_location_len] != '\0'; ++history_live_log_location_len);
                 history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), input, history_live_log_location_len);
@@ -203,10 +214,6 @@ void history_load()
 
                 USER_GET_SID3E:;
                 user_input_getline(&input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
-                if (input[0] == '\n')
-                {
-                    goto USER_GET_SID3E;
-                }
 
                 const uint32_t new_user_sid3e = sidm_parse_sid3e(input, Esteamid_type_unknown);
                 if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
@@ -223,6 +230,8 @@ void history_load()
                 {
                     user_sid3e = new_user_sid3e;
                 }
+
+                default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ");
 
                 free(input);
 
@@ -256,6 +265,7 @@ void history_load()
 
     fread_one(save_version);
     fread_one(user_sid3e);
+    fread_one(default_record_messages);
     fread_one(player_records_len);
     fread_one(history_live_log_location_len);
 
@@ -268,18 +278,19 @@ void history_load()
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
         fread_one(player_records[player_records_i].sid3e);
+        fread_one(player_records[player_records_i].record_messages);
 
         // BUFF_TODO
         player_records[player_records_i].notes = NULL;
-        int input;
+        int notes_input;
         size_t notes_len = 0;
-        while ((input = fgetc(input_file_ptr)) != '\0')
+        while ((notes_input = fgetc(input_file_ptr)) != '\0')
         {
-            player_records[player_records_i].notes = realloc(player_records[player_records_i].notes, sizeof(char) * ++notes_len);
-            player_records[player_records_i].notes[notes_len - 1] = input;
+            prealloc(player_records[player_records_i].notes, sizeof(char), ++notes_len);
+            player_records[player_records_i].notes[notes_len - 1] = notes_input;
         }
 
-        player_records[player_records_i].notes = realloc(player_records[player_records_i].notes, sizeof(char) * notes_len + 1);
+        prealloc(player_records[player_records_i].notes, sizeof(char), notes_len + 1);
         player_records[player_records_i].notes[notes_len] = '\0';
 
         // If just '\0', set to NULL
@@ -301,7 +312,7 @@ void history_load()
             fread_one(player_records[player_records_i].date_records[date_records_i].name_len);
 
             // Only read real names, else set ptr to original
-            if (player_records[player_records_i].date_records[date_records_i].name_len)
+            if (player_records[player_records_i].date_records[date_records_i].name_len > 0)
             {
                 player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(char) * (player_records[player_records_i].date_records[date_records_i].name_len + 1));
                 fread_arr(player_records[player_records_i].date_records[date_records_i].name);
@@ -312,6 +323,55 @@ void history_load()
             else
             {
                 player_records[player_records_i].date_records[date_records_i].name = last_real_name;
+            }
+
+
+
+            // Only read messages if they exist aka. record_messages == 1
+            if (player_records[player_records_i].record_messages)
+            {
+                int messages_input;
+                size_t current_message_len = 0;
+                player_records[player_records_i].date_records[date_records_i].messages_len = 0;
+
+                player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * 1);
+
+                bool cont = true;
+                while (cont)
+                {
+                    switch ((messages_input = fgetc(input_file_ptr)))
+                    {
+                        break; case '\0':
+                        {
+                            cont = false;
+
+                            // No messages
+                            if (player_records[player_records_i].date_records[date_records_i].messages_len == 0 && current_message_len == 0)
+                            {
+                                break;
+                            }
+                        }
+                        // fallthrough
+                               case '\n':
+                        {
+                            // Add space for, assign NULL terminator
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len], sizeof(char), ++current_message_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len][current_message_len] = '\0';
+
+                            // Allocate space for new character pointer in character pointer array messages
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++player_records[player_records_i].date_records[date_records_i].messages_len + 1);
+
+                            // Allocate space for new character in character array messages[player_records[player_records_i].date_records[date_records_i].messages_len]
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len] = malloc(sizeof(char) * 1);
+                        }
+                        break; default:
+                        {
+                            // Allocate space for, assign next character
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len], sizeof(char), ++current_message_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len][current_message_len] = (char) messages_input;
+                        }
+                    }
+                }
             }
         }
     }
@@ -361,6 +421,7 @@ void history_save()
 
     fwrite_one(save_version);
     fwrite_one(user_sid3e);
+    fwrite_one(default_record_messages);
     fwrite_one(player_records_len);
     fwrite_one(history_live_log_location_len);
     fwrite_arr(history_live_log_location);
@@ -368,17 +429,16 @@ void history_save()
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++player_records_i)
     {
         fwrite_one(player_records[player_records_i].sid3e);
+        fwrite_one(player_records[player_records_i].record_messages);
 
         // Only write notes if they exist, else just '\0'
         if (player_records[player_records_i].notes)
         {
             fprintf(output_file_ptr, "%s", player_records[player_records_i].notes);
         }
-
         putc('\0', output_file_ptr);
 
         fwrite_one(player_records[player_records_i].date_records_len);
-
         for (uint_fast32_t date_records_i = 0; date_records_i < player_records[player_records_i].date_records_len; ++date_records_i)
         {
             fwrite_one(player_records[player_records_i].date_records[date_records_i].date);
@@ -389,6 +449,18 @@ void history_save()
             if (player_records[player_records_i].date_records[date_records_i].name_len)
             {
                 fwrite_arr(player_records[player_records_i].date_records[date_records_i].name);
+            }
+
+            // Only write messages if flag set
+            if (player_records[player_records_i].record_messages)
+            {
+                for (size_t message_i = 0; message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
+                {
+                    fputs(player_records[player_records_i].date_records[date_records_i].messages[message_i], output_file_ptr);
+                    fputc('\n', output_file_ptr);
+                }
+
+                fputc('\0', output_file_ptr);
             }
         }
     }
@@ -473,9 +545,11 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
     const uint_fast32_t date_records_i = player_records[player_records_i].date_records_len;
     #define current_date_record player_records[player_records_i].date_records[date_records_i]
 
-    player_records[player_records_i].date_records = realloc(player_records[player_records_i].date_records, sizeof(*player_records[player_records_i].date_records) * ++player_records[player_records_i].date_records_len);
+    prealloc(player_records[player_records_i].date_records, sizeof(*player_records[player_records_i].date_records), ++player_records[player_records_i].date_records_len);
 
     current_date_record.date = current_date;
+    current_date_record.messages_len = 0;
+    current_date_record.messages = NULL;
     current_date_record.encounter_count = 0;
 
     // This player record has date records aka. is not new
@@ -574,8 +648,9 @@ void history_add_record(const struct player_info *const pinfo)
         // Couldn't find requested player
         TF2_PLAYED_WITH_DEBUG_LOGF(" is not in records. Adding new player and date records.\n" ANSI_RESET);
 
-        player_records = realloc(player_records, sizeof(*player_records) * ++player_records_len);
+        prealloc(player_records, sizeof(*player_records), ++player_records_len);
         player_records[player_records_len - 1].sid3e = pinfo->sid3e;
+        player_records[player_records_len - 1].record_messages = default_record_messages;
         player_records[player_records_len - 1].notes = NULL;
         player_records[player_records_len - 1].date_records_len = 0;
         player_records[player_records_len - 1].date_records = NULL;
@@ -598,7 +673,7 @@ void history_print_record(const uint32_t requested_sid3e)
     const uint_fast32_t player_index = get_player_index(requested_sid3e);
     if (player_index != PLAYER_INDEX_ENOENT)
     {
-        printf("Records for requested player SID3E=%" PRIu32 ":\n", requested_sid3e);
+        printf("Records for requested player [U:1:%" PRIu32 "]:\n", requested_sid3e);
 
         if (player_records[player_index].notes)
         {
@@ -614,6 +689,15 @@ void history_print_record(const uint32_t requested_sid3e)
 
             printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_index].date_records[date_i].encounter_count + 1);
             printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_index].date_records[date_i].name);
+
+            if (player_records[player_index].record_messages)
+            {
+                printf(LTAB LTAB "Messages:\n");
+                for (size_t msg_i = 0; msg_i < player_records[player_index].date_records[date_i].messages_len; ++msg_i)
+                {
+                    printf(LTAB LTAB LTAB "\"%s\"\n", player_records[player_index].date_records[date_i].messages[msg_i]);
+                }
+            }
         }
     }
     else
@@ -711,7 +795,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     size_t notes_len = 0;
     while ((input = fgetc(read)) != EOF)
     {
-        player_records[player_index].notes = realloc(player_records[player_index].notes, sizeof(char) * (notes_len + 1));
+        prealloc(player_records[player_index].notes, sizeof(char), (notes_len + 1));
         player_records[player_index].notes[notes_len++] = input;
     }
 
