@@ -45,7 +45,7 @@ endif ()
 
 # Use -DNO_ANSI_COLORING when configuring to disable ANSI color escapes
 if (DEFINED NO_ANSI_COLORING)
-    target_compile_definitions(tf2pw PRIVATE NO_ANSI_COLORING=1)
+    target_compile_definitions(tf2pw PRIVATE NO_ANSI_COLORING=${NO_ANSI_COLORING})
 endif ()
 
 # Installation
