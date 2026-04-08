@@ -36,24 +36,52 @@ HYPER_MACRO void interactive_action(const char *output, void (*action)())
     }
 }
 
+enum Especifier_status
+{
+    Especifier_status_invocation,    // Eg. retrieve
+    Especifier_status_pre_specifier, // Whitespace between invocation and specifier
+    Especifier_status_specifier,     // Inside specifier
+};
+
 // Get specifier start
 HYPER_MACRO char *get_spec_start(char *input_buf)
 {
-    char *specifier_start = NULL;
-    for (char *cursor = input_buf; *cursor != '\0'; ++cursor)
+    enum Especifier_status curr_status = Especifier_status_pre_specifier;
+
+    char *specifier_start;
+    for (char *cursor = input_buf + 1; true; ++cursor)
     {
-        if (!specifier_start && *cursor == ' ')
+        switch (curr_status)
         {
-            specifier_start = cursor + 1;
+            break; case Especifier_status_invocation:
+            {
+                if (*cursor == ' ')
+                {
+                    curr_status = Especifier_status_pre_specifier;
+                }
+            }
+            break; case Especifier_status_pre_specifier:
+            {
+                if (*cursor != ' ')
+                {
+                    specifier_start = cursor;
+                    curr_status = Especifier_status_specifier;
+                }
+            }
+            break; case Especifier_status_specifier:
+            {
+                if (*cursor == ' ')
+                {
+                    *cursor = '\0';
+                    return specifier_start;
+                }
+                else if (*cursor == '\0')
+                {
+                    return specifier_start;
+                }
+            }
         }
     }
-    if (!specifier_start)
-    {
-        fprintf(stderr, ANSI_RED "Forgot argument [SPEC]. Try 'help'.\n" ANSI_RESET);
-        return NULL;
-    }
-
-    return specifier_start;
 }
 
 // Parse SID3E from input_buf, perform action on it
