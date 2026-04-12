@@ -46,7 +46,7 @@ enum Especifier_status
 // Get specifier start
 HYPER_MACRO char *get_spec_start(char *input_buf)
 {
-    enum Especifier_status curr_status = Especifier_status_pre_specifier;
+    enum Especifier_status curr_status = Especifier_status_invocation;
 
     char *specifier_start;
     for (char *cursor = input_buf + 1; true; ++cursor)
@@ -59,6 +59,10 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
                 {
                     curr_status = Especifier_status_pre_specifier;
                 }
+                else if (*cursor == '\0')
+                {
+                    goto SPEC_FAILURE;
+                }
             }
             break; case Especifier_status_pre_specifier:
             {
@@ -66,6 +70,10 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
                 {
                     specifier_start = cursor;
                     curr_status = Especifier_status_specifier;
+                }
+                else if (*cursor == '\0')
+                {
+                    goto SPEC_FAILURE;
                 }
             }
             break; case Especifier_status_specifier:
@@ -82,6 +90,10 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
             }
         }
     }
+
+    SPEC_FAILURE:;
+    fputs(ANSI_RED "Failed to get start of specifier.\n" ANSI_RESET, stderr);
+    return NULL;
 }
 
 // Parse SID3E from input_buf, perform action on it
@@ -151,7 +163,7 @@ void interactive_enter()
             if (specifier_start)
             {
                 char *const specifier_start_heap = strcpy(malloc(strlen(specifier_start) + 1), specifier_start);
-                history_set_live_log_location(specifier_start_heap);
+                history_set_tf2_filepath(specifier_start_heap);
 
                 printf("Successfully set LLL to \"%s\".\n", specifier_start);
             }
@@ -298,7 +310,7 @@ void interactive_enter()
         {
             return;
         }
-        else if (INPUT_IS("clear", 0))
+        else if (INPUT_IS("clear", 'c'))
         {
             system("clear");
         }

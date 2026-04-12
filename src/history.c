@@ -181,6 +181,9 @@ void history_free()
 // Reads an array from input_file_ptr of length ARR##_len
 #define fread_arr(ARR) fread(ARR, sizeof(*(ARR)), ARR##_len, input_file_ptr)
 
+#define TF2PW_AUTOEXEC_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S "autoexec.cfg"
+#define TF2PW_LOG_FILENAME "tf2pw_log.txt"
+
 void history_load()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
@@ -206,15 +209,42 @@ void history_load()
             {
                 save_version = SAVE_VERSION_LATEST;
 
-                user_input_getline(&input, "Enter path to TF2 live-logfile (eg. .../tf/log.txt): ");
+                // TODO: Accept non trailing slash input in both this and CLI argument
+                user_input_getline(&input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ");
+
+                if (user_input_confirm("Append con_logfile to autoexec? (Y/N): "))
+                {
+                    char *autoexec_fullname = cider_construct_fullname(strcpy(malloc(strlen(input) + 1), input), TF2PW_AUTOEXEC_SEMINAME);
+                    FILE *autoexec_handle = fopen(autoexec_fullname, "a");
+                    if (!autoexec_handle)
+                    {
+                        fprintf(stderr, ANSI_RED "MAJOR: Failed to open autoexec file \"%s\" for appending.\n" ANSI_RESET, autoexec_fullname);
+                        free(autoexec_fullname);
+                        TF2_PLAYED_WITH_DEBUG_ABEX();
+                    }
+
+                    fprintf(autoexec_handle, "// BEGIN Generated automatically by TF2PW, don't edit.\n" LTAB "con_logfile " TF2PW_LOG_FILENAME "\n// END   Generated automatically by TF2PW, don't edit.\n");
+
+                    if (fclose(autoexec_handle))
+                    {
+                        fprintf(stderr, ANSI_RED "MAJOR: Failed to close autoexec file \"%s\".\n" ANSI_RESET, autoexec_fullname);
+                        free(autoexec_fullname);
+                        TF2_PLAYED_WITH_DEBUG_ABEX();
+                    }
+
+                    free(autoexec_fullname);
+                }
+
+                #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
 
                 for (history_live_log_location_len = 0; input[history_live_log_location_len] != '\0'; ++history_live_log_location_len);
-                history_live_log_location = memcpy(malloc(history_live_log_location_len + 1), input, history_live_log_location_len);
-                history_live_log_location[history_live_log_location_len] = '\0';
+                history_live_log_location = strncpy(malloc(history_live_log_location_len + 1), input, history_live_log_location_len + 1);
+
+                history_live_log_location = cider_construct_fullname(history_live_log_location, TF2PW_LOG_SEMINAME);
+                TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set history_live_log_location to \"%s\".\n", history_live_log_location);
 
                 USER_GET_SID3E:;
                 user_input_getline(&input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
-
                 const uint32_t new_user_sid3e = sidm_parse_sid3e(input, Esteamid_type_unknown);
                 if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
                 {
@@ -470,7 +500,7 @@ void history_save()
     }
 }
 
-void history_set_live_log_location(char *live_log_location)
+void history_set_tf2_filepath(char *tf2_filepath)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
     (
@@ -482,10 +512,10 @@ void history_set_live_log_location(char *live_log_location)
     )
 
     free(history_live_log_location);
-    history_live_log_location = live_log_location;
+    history_live_log_location = cider_construct_fullname(tf2_filepath, TF2PW_LOG_SEMINAME);
     history_live_log_location_len = strlen(history_live_log_location);
 
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set live_log_location to \"%s\"." ANSI_RESET, history_live_log_location);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\"." ANSI_RESET, history_live_log_location);
 }
 
 const char *history_get_live_log_location()

@@ -67,7 +67,7 @@ extern void history_set_date(uint16_t new_date);
 
 		@warning Triple check parameters for heapness(?)
 */
-extern void history_set_live_log_location(char *live_log_location);
+extern void history_set_tf2_filepath(char *live_log_location);
 
 /*
 	@brief Retrieves the live_log_location fullname

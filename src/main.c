@@ -19,9 +19,7 @@
 */
 typedef void (*operation_callback)(const char *invocation, char *arg);
 
-/*
-    @brief Contains information about option
-*/
+// @brief Contains information about option
 struct arg_option
 {
     const char *name;
@@ -33,15 +31,15 @@ struct arg_option
 };
 
 // NEWARGS_TODO
-static void operation_print_help           (const char *invocation, char *arg);
-static void operation_set_live_log_location(const char *invocation, char *arg);
-static void operation_set_save_location    (const char *invocation, char *arg);
-static void operation_interactive          (const char *invocation, char *arg);
-static void operation_collect_archived     (const char *invocation, char *arg);
-static void operation_type                 (const char *invocation, char *arg);
-static void operation_set_user_sid3e       (const char *invocation, char *arg);
-static void operation_retrieve_records     (const char *invocation, char *arg);
-static void operation_edit_notes           (const char *invocation, char *arg);
+static void operation_print_help       (const char *invocation, char *arg);
+static void operation_set_tf2_filepath (const char *invocation, char *arg);
+static void operation_set_save_location(const char *invocation, char *arg);
+static void operation_interactive      (const char *invocation, char *arg);
+static void operation_collect_archived (const char *invocation, char *arg);
+static void operation_type             (const char *invocation, char *arg);
+static void operation_set_user_sid3e   (const char *invocation, char *arg);
+static void operation_retrieve_records (const char *invocation, char *arg);
+static void operation_edit_notes       (const char *invocation, char *arg);
 
 // NEWARGS_TODO
 static struct arg_option arg_options[] =
@@ -56,20 +54,19 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--(s)et-save-location",
-        // TODO: ~/.local... is not platform agnostic. Get user's data path from cider and add tf2pw.sav something
-        .doc = "If provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\". Supersedes all below arguments.",
+        .doc = "If provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
         .arg = "[FULLNAME]",
         .opt_long = "set-save-location",
         .opt_short = 's',
         .operation = operation_set_save_location
     },
     {
-        .name = "--set-(l)ive-log-location",
-        .doc = "Sets the location of the live log. Should be inside \".../Team Fortress 2/tf/\".",
-        .arg = "[FULLNAME]",
-        .opt_long = "set-live-log-location",
-        .opt_short = 'l',
-        .operation = operation_set_live_log_location
+        .name = "--set-tf2-(f)ilepath",
+        .doc = "Sets the filepath of the Team Fortress Two folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\" (With trailing slash).",
+        .arg = "[FILEPATH]",
+        .opt_long = "set-tf2-filepath",
+        .opt_short = 'f',
+        .operation = operation_set_tf2_filepath
     },
     {
         .name = "--(i)nteractive",
@@ -162,9 +159,9 @@ static void operation_print_help(const char *invocation, char *_)
     exit(EXIT_SUCCESS);
 }
 
-static void operation_set_live_log_location(const char *_, char *arg)
+static void operation_set_tf2_filepath(const char *_, char *arg)
 {
-    history_set_live_log_location(strcpy(malloc(strlen(arg) + 1), arg));
+    history_set_tf2_filepath(strcpy(malloc(strlen(arg) + 1), arg));
 }
 
 static void operation_set_save_location(const char *_, char *arg)
