@@ -175,14 +175,191 @@ void history_free()
     history_initialized = false;
 }
 
+HYPER_MACRO void history_wizard()
+{
+    if (!user_input_confirm("No history file found. Start setup? (Y/N): "))
+    {
+        fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    save_version = SAVE_VERSION_LATEST;
+
+    char *user_input = NULL;
+
+    // TODO: Accept non trailing slash input in both this and CLI argument
+    user_input_getline(&user_input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ");
+
+    #define TF2PW_CFG_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S
+
+    if (user_input_confirm("Append con_logfile to autoexec? (Y/N): "))
+    {
+        #define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
+        #define TF2PW_LOG_FILENAME "tf2pw_log.txt"
+
+        char *autoexec_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_AUTOEXEC_SEMINAME);
+
+        FILE *autoexec_handle = fopen(autoexec_fullname, "a");
+        if (!autoexec_handle)
+        {
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to open autoexec file \"%s\" for appending: ", autoexec_fullname);
+            perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
+            free(autoexec_fullname);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        fprintf(autoexec_handle, "// BEGIN Generated automatically by TF2PW, don't edit.\ncon_logfile " TF2PW_LOG_FILENAME "\n// END   Generated automatically by TF2PW, don't edit.\n");
+
+        if (fclose(autoexec_handle))
+        {
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to close autoexec file \"%s\": ", autoexec_fullname);
+            perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
+            free(autoexec_fullname);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        free(autoexec_fullname);
+    }
+
+    if (user_input_confirm("Replace W bind with forward and status? (Y/N): "))
+    {
+        #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
+        #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
+
+        char *config_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_CONFIG_SEMINAME);
+
+        FILE *config_handle = fopen(config_fullname, "r");
+        if (!config_handle)
+        {
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to open config file \"%s\" for appending: ", config_fullname);
+            perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
+            free(config_fullname);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        // Search for `bind "w" "+forward"`. If exists, replace with `bind "w" "+forward ; status"`
+        const char
+            config_to_replace [] = "bind \"w\" \"+forward\"",
+            config_replacement[] = "bind \"w\" \"+forward ; status\""
+        ;
+
+        char *temporary_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_TEMP_SEMINAME);
+        FILE *file_output = fopen(temporary_fullname, "w");
+        if (!file_output)
+        {
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to open temporary file \"%s\" for writing.\n" ANSI_RESET, temporary_fullname);
+            free(config_fullname);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        char *temp_buf = NULL;
+        int config_input_char;
+
+        do
+        {
+            size_t buf_len = 0;
+
+            bool
+                found = true,
+                in_offender = true
+            ;
+
+            while ((config_input_char = fgetc(config_handle)) != '\n' && config_input_char != EOF)
+            {
+                // Allocate space for, assign config_input_char onto temp_buf
+                temp_buf = realloc(temp_buf, sizeof(char) * (++buf_len));
+                temp_buf[buf_len - 1] = (char) config_input_char;
+
+                found =
+                    (found) && // Has matched up to this point
+                    (in_offender = in_offender && (config_to_replace[buf_len - 1] != '\0')) && // Haven't gone past offender null terminator either before or just now
+                    (config_to_replace[buf_len - 1] == config_input_char) // Matches on this character as well
+                ;
+            }
+
+            if (buf_len && found && (config_to_replace[buf_len] == '\0'))
+            {
+                fprintf(file_output, "%s\n", config_replacement);
+            }
+            else if (buf_len)
+            {
+                fwrite(temp_buf, sizeof(char), buf_len, file_output);
+                fputc('\n', file_output);
+            }
+        }
+        while (config_input_char != EOF);
+
+        free(temp_buf);
+
+        if (fclose(file_output))
+        {
+            fputs(ANSI_RED "Failed to close write file: ", stderr);
+            perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        if (fclose(config_handle))
+        {
+            fprintf(stderr, ANSI_RED "MAJOR: Failed to close config file \"%s\": ", config_fullname);
+            perror(NULL);
+            SET_COLOR(stderr, ANSI_RESET);
+            free(config_fullname);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        // Overwrite original file with temporary file to complete the process
+        if (rename(temporary_fullname, config_fullname))
+        {
+            perror(ANSI_RED "MAJOR: Failed to move temporary config file contents to real config location" ANSI_RESET);
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
+
+        free(temporary_fullname);
+        free(config_fullname);
+    }
+
+    #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
+
+    for (history_live_log_location_len = 0; user_input[history_live_log_location_len] != '\0'; ++history_live_log_location_len);
+    history_live_log_location = strncpy(malloc(history_live_log_location_len + 1), user_input, history_live_log_location_len + 1);
+
+    history_live_log_location = cider_construct_fullname(history_live_log_location, TF2PW_LOG_SEMINAME);
+    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set history_live_log_location to \"%s\".\n", history_live_log_location);
+
+    USER_GET_SID3E:;
+    user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
+    const uint32_t new_user_sid3e = sidm_parse_sid3e(user_input, Esteamid_type_unknown);
+    if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
+    {
+        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
+        goto USER_GET_SID3E;
+    }
+    else if (new_user_sid3e == SIDM_ERR_RNGE)
+    {
+        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+        goto USER_GET_SID3E;
+    }
+    else
+    {
+        user_sid3e = new_user_sid3e;
+    }
+
+    default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ");
+
+    free(user_input);
+
+    history_free_memory();
+}
+
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
 #define fread_one(VAR) fread(&VAR, sizeof(VAR), 1, input_file_ptr)
 
 // Reads an array from input_file_ptr of length ARR##_len
 #define fread_arr(ARR) fread(ARR, sizeof(*(ARR)), ARR##_len, input_file_ptr)
-
-#define TF2PW_AUTOEXEC_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S "autoexec.cfg"
-#define TF2PW_LOG_FILENAME "tf2pw_log.txt"
 
 void history_load()
 {
@@ -203,78 +380,8 @@ void history_load()
         {
             errno = 0;
 
-            char *input = NULL;
-
-            if (user_input_confirm("No history file found. Start setup? (Y/N): "))
-            {
-                save_version = SAVE_VERSION_LATEST;
-
-                // TODO: Accept non trailing slash input in both this and CLI argument
-                user_input_getline(&input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ");
-
-                if (user_input_confirm("Append con_logfile to autoexec? (Y/N): "))
-                {
-                    char *autoexec_fullname = cider_construct_fullname(strcpy(malloc(strlen(input) + 1), input), TF2PW_AUTOEXEC_SEMINAME);
-                    FILE *autoexec_handle = fopen(autoexec_fullname, "a");
-                    if (!autoexec_handle)
-                    {
-                        fprintf(stderr, ANSI_RED "MAJOR: Failed to open autoexec file \"%s\" for appending.\n" ANSI_RESET, autoexec_fullname);
-                        free(autoexec_fullname);
-                        TF2_PLAYED_WITH_DEBUG_ABEX();
-                    }
-
-                    fprintf(autoexec_handle, "// BEGIN Generated automatically by TF2PW, don't edit.\n" LTAB "con_logfile " TF2PW_LOG_FILENAME "\n// END   Generated automatically by TF2PW, don't edit.\n");
-
-                    if (fclose(autoexec_handle))
-                    {
-                        fprintf(stderr, ANSI_RED "MAJOR: Failed to close autoexec file \"%s\".\n" ANSI_RESET, autoexec_fullname);
-                        free(autoexec_fullname);
-                        TF2_PLAYED_WITH_DEBUG_ABEX();
-                    }
-
-                    free(autoexec_fullname);
-                }
-
-                #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
-
-                for (history_live_log_location_len = 0; input[history_live_log_location_len] != '\0'; ++history_live_log_location_len);
-                history_live_log_location = strncpy(malloc(history_live_log_location_len + 1), input, history_live_log_location_len + 1);
-
-                history_live_log_location = cider_construct_fullname(history_live_log_location, TF2PW_LOG_SEMINAME);
-                TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set history_live_log_location to \"%s\".\n", history_live_log_location);
-
-                USER_GET_SID3E:;
-                user_input_getline(&input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
-                const uint32_t new_user_sid3e = sidm_parse_sid3e(input, Esteamid_type_unknown);
-                if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
-                {
-                    fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
-                    goto USER_GET_SID3E;
-                }
-                else if (new_user_sid3e == SIDM_ERR_RNGE)
-                {
-                    fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
-                    goto USER_GET_SID3E;
-                }
-                else
-                {
-                    user_sid3e = new_user_sid3e;
-                }
-
-                default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ");
-
-                free(input);
-
-                history_free_memory();
-
-                return;
-            }
-            else
-            {
-                free(input);
-                fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
-                exit(EXIT_FAILURE);
-            }
+            history_wizard();
+            return;
         }
         else
         {
