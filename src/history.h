@@ -63,18 +63,20 @@ extern void history_set_date(uint16_t new_date);
 /*
 	@brief Sets the live_log_location to a new fullname
 
-		@param live_log_location The new location. Should be free-able ie. on the heap
+		@param new_tf2_filepath The new filepath. Should be free-able ie. on the heap
 
 		@warning Triple check parameters for heapness(?)
 */
-extern void history_set_tf2_filepath(char *live_log_location);
+extern void history_set_tf2_filepath(char *new_tf2_filepath);
 
 /*
 	@brief Retrieves the live_log_location fullname
 
-		@returns A constant pointer to the live_log_location
+		@returns A string containing the fullname of the live log file
+
+		@warning Return value is malloc'd string
 */
-extern const char *history_get_live_log_location();
+extern char *history_get_live_log_fullname();
 
 /*
 	@brief Adds a player to the records

@@ -97,7 +97,7 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
 }
 
 // Parse SID3E from input_buf, perform action on it
-HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e))
+HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3e), void (*specifier_action)(const char *specifier))
 {
     char *const specifier_start = get_spec_start(input_buf);
     if (!specifier_start)
@@ -109,7 +109,15 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
 
     if (sid3e == SIDM_ERR_NAME)
     {
-        history_print_records(specifier_start);
+        if (specifier_action)
+        {
+            specifier_action(specifier_start);
+        }
+        else
+        {
+            fputs(ANSI_RED "MAJOR: Parsed name for option without associated action.\n" ANSI_RESET, stderr);
+            return;
+        }
     }
     else if (sid3e == SIDM_ERR_RNGE)
     {
@@ -121,13 +129,15 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*action)(uint32_t sid3e
     }
     else
     {
-        action(sid3e);
+        sid3e_action(sid3e);
     }
 }
 
 HYPER_MACRO void action_delete_log()
 {
-    remove(history_get_live_log_location());
+    char *llf = history_get_live_log_fullname();
+    remove(llf);
+    free(llf);
 }
 
 HYPER_MACRO void action_exit()
@@ -155,9 +165,9 @@ void interactive_enter()
 
         if (INPUT_IS("retrieve", 'r'))
         {
-            perform_on_sid3e(input_buf, history_print_record);
+            perform_on_sid3e(input_buf, history_print_record, history_print_records);
         }
-        else if (INPUT_IS("set-live-log-location", 'o'))
+        else if (INPUT_IS("set-tf2-filepath", 'p'))
         {
             char *const specifier_start = get_spec_start(input_buf);
             if (specifier_start)
@@ -165,12 +175,12 @@ void interactive_enter()
                 char *const specifier_start_heap = strcpy(malloc(strlen(specifier_start) + 1), specifier_start);
                 history_set_tf2_filepath(specifier_start_heap);
 
-                printf("Successfully set LLL to \"%s\".\n", specifier_start);
+                printf("Successfully set TF2 filepath to \"%s\".\n", specifier_start);
             }
         }
         else if (INPUT_IS("edit-notes", 'n'))
         {
-            perform_on_sid3e(input_buf, history_edit_notes);
+            perform_on_sid3e(input_buf, history_edit_notes, NULL);
         }
         else if (INPUT_IS("collect-live", 'v'))
         {
@@ -182,9 +192,12 @@ void interactive_enter()
 
             printf("Starting live-collecting...\n");
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_location());
+            char *live_log_fullname = history_get_live_log_fullname();
 
-            FILE *const input_file_ptr = fopen(history_get_live_log_location(), "r");
+            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, live_log_fullname);
+
+            FILE *const input_file_ptr = fopen(live_log_fullname, "r");
+            free(live_log_fullname);
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
@@ -253,7 +266,7 @@ void interactive_enter()
                 fprintf(stderr, ANSI_RED "Forgot argument [FULLNAME]. Try 'help'.\n" ANSI_RESET);
                 continue;
             }
-            *cursor = '\0';
+            cursor[-1] = '\0';
 
             collection_read_archived(specifier_start);
         }
@@ -275,8 +288,8 @@ void interactive_enter()
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Retrieve and print associated record.\n"
-                    LTAB LTAB "set-live-l(o)g-location [FULLNAME]\n"
-                    LTAB LTAB LTAB "Sets the location of the live log. Should be inside \".../Team Fortress 2/tf/\".\n"
+                    LTAB LTAB "set-tf2-file(p)ath [FILEPATH]\n"
+                    LTAB LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n"
                     LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n"
                     LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
