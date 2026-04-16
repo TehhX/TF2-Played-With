@@ -312,7 +312,7 @@ HYPER_MACRO void history_wizard()
         }
 
         // Overwrite original file with temporary file to complete the process
-        if (rename(temporary_fullname, config_fullname))
+        if (remove(config_fullname) || rename(temporary_fullname, config_fullname))
         {
             perror(ANSI_RED "MAJOR: Failed to move temporary config file contents to real config location" ANSI_RESET);
             TF2_PLAYED_WITH_DEBUG_ABEX();

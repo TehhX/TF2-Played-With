@@ -11,14 +11,16 @@
 
 void user_input_getline(char **const input, const char *const prompt)
 {
+    free(*input);
+    *input = NULL;
+
     RETRY_INPUT:;
 
-    free(*input);
 #ifdef __linux__
     *input = readline(prompt);
 
     // User entered nothing
-    if (!*input || !*input[0])
+    if (!*input || !(*input)[0])
     {
         goto RETRY_INPUT;
     }
@@ -28,28 +30,24 @@ void user_input_getline(char **const input, const char *const prompt)
         printf(prompt);
     }
 
-    char *buff = NULL;
     int next;
-    size_t len = 0;
+    size_t input_len = 0;
 
     // BUFF_TODO
     while ((next = fgetc(stdin)) != '\n')
     {
-        prealloc(buff, sizeof(char), ++len);
-        buff[len - 1] = (char) next;
+        prealloc(*input, sizeof(char), ++input_len);
+        (*input)[input_len - 1] = (char) next;
     }
 
-    prealloc(buff, sizeof(char), len + 1);
-    buff[len] = '\0';
-
-    if (!*input[0])
+    if (!input_len)
     {
-        free(buff);
         goto RETRY_INPUT;
     }
     else
     {
-        *input = buff;
+        prealloc(*input, sizeof(char), ++input_len);
+        (*input)[input_len - 1] = '\0';
     }
 #else
     #error "Unknown OS."
