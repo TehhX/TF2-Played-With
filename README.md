@@ -1,6 +1,6 @@
 # TF2 Played With
 
-A program to keep track of who you've played with in Valve's Team Fortress 2. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md). Run tf2pw --help for more.
+ A small command-line program to keep track of people you play with in Team Fortress Two. For a more technical rundown of the software itself or building instructions, see the [technical README](/README-technical.md). Run tf2pw --help for more.
 
 ## Download
 
