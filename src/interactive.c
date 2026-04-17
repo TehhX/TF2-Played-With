@@ -135,9 +135,7 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t
 
 HYPER_MACRO void action_delete_log()
 {
-    char *llf = history_get_live_log_fullname();
-    remove(llf);
-    free(llf);
+    remove(history_get_live_log_fullname());
 }
 
 HYPER_MACRO void action_exit()
@@ -192,12 +190,9 @@ void interactive_enter()
 
             printf("Starting live-collecting...\n");
 
-            char *live_log_fullname = history_get_live_log_fullname();
+            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_fullname());
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, live_log_fullname);
-
-            FILE *const input_file_ptr = fopen(live_log_fullname, "r");
-            free(live_log_fullname);
+            FILE *const input_file_ptr = fopen(history_get_live_log_fullname(), "r");
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");

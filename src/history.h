@@ -72,11 +72,9 @@ extern void history_set_tf2_filepath(char *new_tf2_filepath);
 /*
 	@brief Retrieves the live_log_location fullname
 
-		@returns A string containing the fullname of the live log file
-
-		@warning Return value is malloc'd string
+		@returns A string containing the fullname of the live log file. Should not be modified
 */
-extern char *history_get_live_log_fullname();
+extern const char *history_get_live_log_fullname();
 
 /*
 	@brief Adds a player to the records

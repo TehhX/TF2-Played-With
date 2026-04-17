@@ -28,6 +28,8 @@ static uint16_t current_date;
 static uint8_t  tf2_filepath_len;
 static    char *tf2_filepath;
 
+static char *tf2_live_log_fullname;
+
 static  uint8_t save_version;
 static uint32_t user_sid3e;
 static  uint8_t default_record_messages;
@@ -158,6 +160,7 @@ HYPER_MACRO void history_free_memory()
 
     free(player_records);
     free(tf2_filepath);
+    free(tf2_live_log_fullname);
 }
 
 void history_free()
@@ -323,13 +326,16 @@ HYPER_MACRO void history_wizard()
         free(config_fullname);
     }
 
-    #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
-
     for (tf2_filepath_len = 0; user_input[tf2_filepath_len] != '\0'; ++tf2_filepath_len);
     tf2_filepath = strncpy(malloc(tf2_filepath_len + 1), user_input, tf2_filepath_len + 1);
 
-    tf2_filepath = cider_construct_fullname(tf2_filepath, TF2PW_LOG_SEMINAME);
-    TF2_PLAYED_WITH_DEBUG_LOGF("LOG: Set tf2_filepath to \"%s\".\n", tf2_filepath);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\".\n" ANSI_RESET, tf2_filepath);
+
+    #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
+
+    tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), TF2PW_LOG_SEMINAME);
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
     USER_GET_SID3E:;
     user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
@@ -410,6 +416,10 @@ void history_load()
     tf2_filepath = malloc(tf2_filepath_len + 1);
     fread_arr(tf2_filepath);
     tf2_filepath[tf2_filepath_len] = '\0';
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\".\n" ANSI_RESET, tf2_filepath);
+
+    tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), TF2PW_LOG_SEMINAME);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
     // MAJOR_TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
@@ -467,22 +477,30 @@ void history_load()
             if (player_records[player_records_i].record_messages)
             {
                 size_t msg_len = 0, msgs_i = 0;
+                int messages_input = fgetc(input_file_ptr);
 
-                player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * (msgs_i + 1));
-                player_records[player_records_i].date_records[date_records_i].messages[0] = NULL;
-
-                bool cont = true;
-                while (cont)
+                // If no messages, store nothing for consistency with live log behavior
+                if ((char) messages_input == '\0')
                 {
-                    int messages_input;
-                    switch ((messages_input = fgetc(input_file_ptr)))
+                    player_records[player_records_i].date_records[date_records_i].messages = NULL;
+                    goto STOP_READING_MESSAGES;
+                }
+                else
+                {
+                    player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * 1);
+                    player_records[player_records_i].date_records[date_records_i].messages[0] = NULL;
+                }
+
+                while (1)
+                {
+                    switch (messages_input)
                     {
                         break; case '\0':
                         {
                             prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), msg_len + 1);
                             player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len] = '\0';
 
-                            cont = false;
+                            goto STOP_READING_MESSAGES;
                         }
                         break; case '\n':
                         {
@@ -493,13 +511,21 @@ void history_load()
                             player_records[player_records_i].date_records[date_records_i].messages[msgs_i] = NULL;
                             msg_len = 0;
                         }
+                        break; case EOF:
+                        {
+                            fprintf(stderr, ANSI_RED "MAJOR: Reached end of history file before finishing parsing. File corruption likely. Exiting.\n" ANSI_RESET);
+                            TF2_PLAYED_WITH_DEBUG_ABEX();
+                        }
                         break; default:
                         {
                             prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), ++msg_len);
                             player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len - 1] = (char) messages_input;
                         }
                     }
+
+                    messages_input = fgetc(input_file_ptr);
                 }
+                STOP_READING_MESSAGES:;
 
                 player_records[player_records_i].date_records[date_records_i].messages_len = msgs_i + 1;
             }
@@ -619,14 +645,14 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
         }
     )
 
-    free(tf2_filepath);
-    tf2_filepath = cider_construct_fullname(new_tf2_filepath, TF2PW_LOG_SEMINAME);
-    tf2_filepath_len = strlen(tf2_filepath);
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Setting tf2_filepath to \"%s\"." ANSI_RESET, new_tf2_filepath);
 
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\"." ANSI_RESET, tf2_filepath);
+    free(tf2_filepath);
+    tf2_filepath = new_tf2_filepath;
+    tf2_filepath_len = strlen(new_tf2_filepath);
 }
 
-char *history_get_live_log_fullname()
+const char *history_get_live_log_fullname()
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
     (
@@ -637,7 +663,7 @@ char *history_get_live_log_fullname()
         }
     )
 
-    return cider_construct_fullname(memcpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME);
+    return (const char *) tf2_live_log_fullname;
 }
 
 // MAJOR_TODO: Dates sometimes errantly set as 0 (epoch) during live-testing
@@ -823,7 +849,7 @@ void history_print_record(const uint32_t requested_sid3e)
             printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", player_records[player_index].date_records[date_index].encounter_count + 1);
             printf(LTAB LTAB "Name: \"%s\"\n", player_records[player_index].date_records[date_index].name);
 
-            if (player_records[player_index].record_messages && player_records[player_index].date_records[date_index].messages[0][0])
+            if (player_records[player_index].record_messages && player_records[player_index].date_records[date_index].messages)
             {
                 printf(LTAB LTAB "Messages:\n");
                 for (size_t msg_i = 0; msg_i < player_records[player_index].date_records[date_index].messages_len; ++msg_i)
@@ -998,7 +1024,7 @@ void history_add_message(const uint32_t requested_sid3e, const char *const messa
                 player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1][message_len] = '\0';
                 memcpy(player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1], message, message_len);
 
-                TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1]);
+                TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Message add requested: (%" PRIu32 ", \"%s\").\n" ANSI_RESET, requested_sid3e, player_records[player_i].date_records[date_i].messages[player_records[player_i].date_records[date_i].messages_len - 1]);
                 return;
             }
         }
