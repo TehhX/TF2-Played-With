@@ -861,7 +861,7 @@ void history_print_record(const uint32_t requested_sid3e)
     }
     else
     {
-        printf("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
+        printf(ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
     }
 }
 

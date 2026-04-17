@@ -19,7 +19,7 @@
 // Test input against CMP and CHAR. If COFF is -1, no short version
 #define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 
-// Will print OUTPUT and if subsequent user input is positive, perform ACTION
+// @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
 HYPER_MACRO void interactive_action(const char *output, void (*action)())
 {
     printf(ANSI_YELLOW "%s (Y/N) " ANSI_RESET, output);
@@ -38,17 +38,18 @@ HYPER_MACRO void interactive_action(const char *output, void (*action)())
 
 enum Especifier_status
 {
-    Especifier_status_invocation,    // Eg. retrieve
-    Especifier_status_pre_specifier, // Whitespace between invocation and specifier
-    Especifier_status_specifier,     // Inside specifier
+    Especifier_status_invocation,     // Eg. retrieve
+    Especifier_status_pre_specifier,  // Whitespace between invocation and specifier
+    Especifier_status_specifier,      // Inside specifier
+    Especifier_status_post_specifier, // Testing whitespace after specifier until null-terminator
 };
 
-// Get specifier start
+// @brief Get specifier start
 HYPER_MACRO char *get_spec_start(char *input_buf)
 {
     enum Especifier_status curr_status = Especifier_status_invocation;
 
-    char *specifier_start;
+    char *specifier_start, *end_whitespace;
     for (char *cursor = input_buf + 1; true; ++cursor)
     {
         switch (curr_status)
@@ -80,12 +81,31 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
             {
                 if (*cursor == ' ')
                 {
-                    *cursor = '\0';
-                    return specifier_start;
+                    curr_status = Especifier_status_post_specifier;
+                    end_whitespace = cursor;
                 }
                 else if (*cursor == '\0')
                 {
                     return specifier_start;
+                }
+            }
+            break; case Especifier_status_post_specifier:
+            {
+                switch (*cursor)
+                {
+                    break; case ' ':
+                    {
+                        continue;
+                    }
+                    break; case '\0':
+                    {
+                        *end_whitespace = '\0';
+                        return specifier_start;
+                    }
+                    break; default:
+                    {
+                        curr_status = Especifier_status_specifier;
+                    }
                 }
             }
         }
@@ -96,7 +116,7 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
     return NULL;
 }
 
-// Parse SID3E from input_buf, perform action on it
+// @brief Parse SID3E from input_buf, perform action on it
 HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3e), void (*specifier_action)(const char *specifier))
 {
     char *const specifier_start = get_spec_start(input_buf);
@@ -247,23 +267,12 @@ void interactive_enter()
         }
         else if (INPUT_IS("collect-archived", 'a'))
         {
-            // Get start of specifier eg. "(r|retrieve) SPEC IF IER" -> "SPEC IF IER", replace '\n' with '\0'
-            char *cursor, *specifier_start = NULL;
-            for (cursor = input_buf; *cursor != '\0'; ++cursor)
-            {
-                if (!specifier_start && *cursor == ' ')
-                {
-                    specifier_start = cursor + 1;
-                }
-            }
-            if (!specifier_start)
-            {
-                fprintf(stderr, ANSI_RED "Forgot argument [FULLNAME]. Try 'help'.\n" ANSI_RESET);
-                continue;
-            }
-            cursor[-1] = '\0';
+            const char *const specifier_start = get_spec_start(input_buf);
 
-            collection_read_archived(specifier_start);
+            if (specifier_start)
+            {
+                collection_read_archived(specifier_start);
+            }
         }
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 's'))
