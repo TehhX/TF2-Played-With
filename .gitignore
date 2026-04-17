@@ -13,3 +13,6 @@
 # Dependencies
 /include/
 /lib/
+
+# Generated files
+/version.txt
