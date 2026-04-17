@@ -143,7 +143,7 @@ HYPER_MACRO void history_free_memory()
                 free(player_records[player_i].date_records[date_i].name);
             }
 
-            if (player_records[player_i].record_messages)
+            if (player_records[player_i].record_messages && player_records[player_i].date_records[date_i].messages)
             {
                 for (size_t msg_i = 0; msg_i < player_records[player_i].date_records[date_i].messages_len; ++msg_i)
                 {
@@ -610,7 +610,7 @@ void history_save()
             // Only write messages if flag set
             if (player_records[player_records_i].record_messages)
             {
-                for (size_t message_i = 0; message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
+                for (size_t message_i = 0; player_records[player_records_i].date_records[date_records_i].messages && message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
                 {
                     fputs(player_records[player_records_i].date_records[date_records_i].messages[message_i], output_file_ptr);
 
