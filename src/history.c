@@ -358,8 +358,6 @@ HYPER_MACRO void history_wizard()
     default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ");
 
     free(user_input);
-
-    history_free_memory();
 }
 
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
@@ -388,6 +386,7 @@ void history_load()
             errno = 0;
 
             history_wizard();
+            history_free_memory();
             return;
         }
         else
@@ -398,6 +397,8 @@ void history_load()
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
     }
+
+    history_free_memory();
 
     char header_buf[HEADER_SIZE];
     fread(header_buf, 1, HEADER_SIZE, input_file_ptr);
@@ -476,7 +477,9 @@ void history_load()
             // Only read messages if they exist aka. record_messages == 1
             if (player_records[player_records_i].record_messages)
             {
-                size_t msg_len = 0, msgs_i = 0;
+                size_t msg_len = 0;
+                player_records[player_records_i].date_records[date_records_i].messages_len = 0;
+
                 int messages_input = fgetc(input_file_ptr);
 
                 // If no messages, store nothing for consistency with live log behavior
@@ -487,7 +490,7 @@ void history_load()
                 }
                 else
                 {
-                    player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * 1);
+                    player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * ++player_records[player_records_i].date_records[date_records_i].messages_len);
                     player_records[player_records_i].date_records[date_records_i].messages[0] = NULL;
                 }
 
@@ -497,18 +500,18 @@ void history_load()
                     {
                         break; case '\0':
                         {
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), msg_len + 1);
-                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len] = '\0';
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), msg_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
                             goto STOP_READING_MESSAGES;
                         }
                         break; case '\n':
                         {
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), msg_len + 1);
-                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len] = '\0';
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), msg_len + 1);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++msgs_i + 1);
-                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i] = NULL;
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++player_records[player_records_i].date_records[date_records_i].messages_len);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1] = NULL;
                             msg_len = 0;
                         }
                         break; case EOF:
@@ -518,16 +521,14 @@ void history_load()
                         }
                         break; default:
                         {
-                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[msgs_i], sizeof(char), ++msg_len);
-                            player_records[player_records_i].date_records[date_records_i].messages[msgs_i][msg_len - 1] = (char) messages_input;
+                            prealloc(player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), ++msg_len);
+                            player_records[player_records_i].date_records[date_records_i].messages[player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len - 1] = (char) messages_input;
                         }
                     }
 
                     messages_input = fgetc(input_file_ptr);
                 }
                 STOP_READING_MESSAGES:;
-
-                player_records[player_records_i].date_records[date_records_i].messages_len = msgs_i + 1;
             }
         }
     }
@@ -610,16 +611,21 @@ void history_save()
             // Only write messages if flag set
             if (player_records[player_records_i].record_messages)
             {
-                for (size_t message_i = 0; player_records[player_records_i].date_records[date_records_i].messages && message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
+                // Only write messages if they are there to be written
+                if (player_records[player_records_i].date_records[date_records_i].messages)
                 {
-                    fputs(player_records[player_records_i].date_records[date_records_i].messages[message_i], output_file_ptr);
-
-                    if (message_i != player_records[player_records_i].date_records[date_records_i].messages_len - 1)
+                    for (size_t message_i = 0; message_i < player_records[player_records_i].date_records[date_records_i].messages_len; ++message_i)
                     {
-                        fputc('\n', output_file_ptr);
+                        fputs(player_records[player_records_i].date_records[date_records_i].messages[message_i], output_file_ptr);
+
+                        if (message_i != player_records[player_records_i].date_records[date_records_i].messages_len - 1)
+                        {
+                            fputc('\n', output_file_ptr);
+                        }
                     }
                 }
 
+                // Should write after messages, or by itself if there are no messages but flag is set
                 fputc('\0', output_file_ptr);
             }
         }
