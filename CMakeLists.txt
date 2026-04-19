@@ -50,7 +50,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
 endif ()
 
 # Use -DNO_ANSI_COLORING when configuring to disable ANSI color escapes
-if (DEFINED NO_ANSI_COLORING)
+if (NO_ANSI_COLORING EQUAL 1)
     target_compile_definitions(tf2pw PRIVATE NO_ANSI_COLORING=${NO_ANSI_COLORING})
 endif ()
 
