@@ -16,6 +16,11 @@
 // Check if characters are equal, case agnostic. Assumes C2 is lowercase
 #define ccasecmp(C1, C2) (((C1) | CAPITAL_BIT) == (C2))
 
+// Change definition of strncasecmp if on Windows
+#if defined(_WIN32) || defined(_WIN64)
+    #define strncasecmp _strnicmp
+#endif
+
 // Test input against CMP and CHAR. If COFF is -1, no short version
 #define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 

@@ -30,6 +30,11 @@ if (LINUX)
     target_link_libraries(tf2pw PRIVATE readline)
 endif ()
 
+# winpthreads, see /README-technical.md
+if (WIN32)
+    target_link_libraries(tf2pw PRIVATE pthreadVC3)
+endif ()
+
 # Enable debugging when variant is "Debug"
 if ("${CMAKE_BUILD_TYPE}" STREQUAL Debug)
     # Compiler/linker options
