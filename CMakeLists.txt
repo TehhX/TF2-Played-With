@@ -55,5 +55,4 @@ if (NO_ANSI_COLORING EQUAL 1)
 endif ()
 
 # Installation
-# MAJOR_TODO: Confirm works on Windows
 install(TARGETS tf2pw DESTINATION bin)
