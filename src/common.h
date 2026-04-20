@@ -10,8 +10,10 @@
 // Compiler specific definitions
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
+    #define TF2PW_ATTR_UNUSED __attribute__((unused))
 #elif defined(_MSC_VER)
     #define TF2PW_ATTR_ALWINL __forceinline
+    #define TF2PW_ATTR_UNUSED // MAJOR_TODO: Figure out what this should be
 #else
     #error "Unknown compiler."
 #endif
