@@ -25,13 +25,21 @@
 #define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 
 // @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
-HYPER_MACRO void interactive_action(const char *output, void (*action)())
+static bool interactive_action(const char *output, void (*action)())
 {
     printf(ANSI_YELLOW "%s (Y/N) " ANSI_RESET, output);
+
+    bool retval;
+
     const int input = fgetc(stdin);
     if (ccasecmp(input, 'y') || input == '\n')
     {
         action();
+        retval = true;
+    }
+    else
+    {
+        retval = false;
     }
 
     if (input != '\n')
@@ -39,6 +47,8 @@ HYPER_MACRO void interactive_action(const char *output, void (*action)())
         // MAJOR_TODO: When using option eg. load, Y/N prompt being given more than 1 character causes errant behavior. Should be fixed
         fgetc(stdin);
     }
+
+    return retval;
 }
 
 enum Especifier_status
@@ -50,7 +60,7 @@ enum Especifier_status
 };
 
 // @brief Get specifier start
-HYPER_MACRO char *get_spec_start(char *input_buf)
+static char *get_spec_start(char *input_buf)
 {
     enum Especifier_status curr_status = Especifier_status_invocation;
 
@@ -122,7 +132,7 @@ HYPER_MACRO char *get_spec_start(char *input_buf)
 }
 
 // @brief Parse SID3E from input_buf, perform action on it
-HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3e), void (*specifier_action)(const char *specifier))
+static void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3e), void (*specifier_action)(const char *specifier))
 {
     char *const specifier_start = get_spec_start(input_buf);
     if (!specifier_start)
@@ -158,14 +168,14 @@ HYPER_MACRO void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t
     }
 }
 
-HYPER_MACRO void action_delete_log()
+static void action_delete_log()
 {
     remove(history_get_live_log_fullname());
 }
 
-HYPER_MACRO void action_exit()
+static void action_none()
 {
-    exit(EXIT_SUCCESS);
+    // No-op
 }
 
 // What tells the user to enter their input
@@ -182,7 +192,8 @@ void interactive_enter()
         .continue_running = false,
     };
 
-    for (char *input_buf = NULL;;)
+    char *input_buf;
+    while (1)
     {
         user_input_getline(&input_buf, USER_POKE);
 
@@ -296,27 +307,25 @@ void interactive_enter()
                 ANSI_BLUE
                     LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
-                    LTAB LTAB LTAB "Retrieve and print associated record.\n"
+                    LTAB LTAB LTAB "Retrieve and print associated record.\n\n"
                     LTAB LTAB "set-tf2-file(p)ath [FILEPATH]\n"
-                    LTAB LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n"
+                    LTAB LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n\n"
                     LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
-                    LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n"
+                    LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n\n"
                     LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Collects live data from FULLNAME. If FULLNAME not provided, collect from saved path.\n"
+                    LTAB LTAB LTAB "Collects live data from FULLNAME. If FULLNAME not provided, collect from saved path.\n\n"
                     LTAB LTAB "s(t)op-live\n"
-                    LTAB LTAB LTAB "Stops collecting live data.\n"
+                    LTAB LTAB LTAB "Stops collecting live data.\n\n"
                     LTAB LTAB "collect-(a)rchived [FULLNAME]\n"
-                    LTAB LTAB LTAB "Collects data from an already completed log file located at FULLNAME.\n"
+                    LTAB LTAB LTAB "Collects data from an already completed log file located at FULLNAME.\n\n"
                     LTAB LTAB "(s)ave [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Save records to history file. If no FULLNAME provided, use default.\n"
+                    LTAB LTAB LTAB "Save records to history file. If no FULLNAME provided, use default.\n\n"
                     LTAB LTAB "(l)oad [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Load records from history file. If no FULLNAME provided, use default. IMPORTANT: Remember to load before manipulating/reading history.\n"
+                    LTAB LTAB LTAB "Load records from history file. If no FULLNAME provided, use default. IMPORTANT: Remember to load before manipulating/reading history.\n\n"
                     LTAB LTAB "(h)elp\n"
-                    LTAB LTAB LTAB "Display this help message.\n"
+                    LTAB LTAB LTAB "Display this help message.\n\n"
                     LTAB LTAB "(e)xit|(q)uit\n"
-                    LTAB LTAB LTAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n"
-                    LTAB LTAB "force-exit|force-quit\n"
-                    LTAB LTAB LTAB "Forcefully exit. Will not confirm, or ask to save first. May break save file, only slightly preferable to Ctrl+C-ing TF2PW.\n"
+                    LTAB LTAB LTAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n\n"
                     LTAB LTAB "(c)lear\n"
                     LTAB LTAB LTAB "Clear the terminal (Terminal dependent).\n"
                 ANSI_RESET
@@ -324,22 +333,30 @@ void interactive_enter()
         }
         else if (INPUT_IS("exit", 'e') || INPUT_IS("quit", 'q'))
         {
+            if (live_params.continue_running)
+            {
+                printf(ANSI_RED "Can't quit while live-collecting.\n" ANSI_RESET);
+
+                continue;
+            }
+
             interactive_action("Save before quitting?", history_save);
 
-            interactive_action("Really exit?", action_exit);
-        }
-        else if (INPUT_IS("force-exit", -1) || INPUT_IS("force-quit", -1))
-        {
-            return;
+            if (interactive_action("Really exit?", action_none))
+            {
+                break;
+            }
         }
         else if (INPUT_IS("clear", 'c'))
         {
             system("clear");
         }
         // NEWARGS_TODO
-        else if (input_buf[0] != '\n')
+        else
         {
             printf(ANSI_RED "Bad input, try again.\n" ANSI_RESET);
         }
     }
+
+    free(input_buf);
 }
