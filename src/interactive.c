@@ -336,7 +336,7 @@ void interactive_enter()
 
             interactive_action(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, history_save);
 
-            if (interactive_action(ANSI_YELLOW "Really exit? (Y/N): " ANSI_RESET, action_none))
+            if (interactive_action(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, action_none))
             {
                 break;
             }
