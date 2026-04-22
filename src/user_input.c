@@ -19,7 +19,7 @@ static bool caught_sigint = false;
 #elif defined(_WIN32)
     #include "windows.h"
 
-    BOOL WINAPI sigint_handler(ATTR_UNUSED_PARAM const DWORD sig_code)
+    BOOL WINAPI sigint_handler(TF2PW_ATTR_UNUSED const DWORD sig_code)
     {
         caught_sigint = true;
 

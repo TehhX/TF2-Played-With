@@ -20,7 +20,7 @@
 #elif defined(_MSC_VER)
     #define TF2PW_ATTR_ALWINL __forceinline
     #define TF2PW_ATTR_UNUSED // MAJOR_TODO: Figure out what this should be
-    #define TF2PW_ATTR_NONNULL // MAJOR_TODO: Figure out what this should be
+    #define TF2PW_ATTR_NONNULL(INDICES) // MAJOR_TODO: Figure out what this should be
 #else
     #error "Unknown compiler."
 #endif
