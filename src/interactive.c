@@ -19,7 +19,7 @@
 #endif
 
 // Test input against CMP and CHAR. If COFF is -1, no short version
-#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || ((((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)) && input_buf[1] == '\0'))
+#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 
 // @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
 static bool interactive_action(const char *prompt, void (*action)())
@@ -180,7 +180,7 @@ void interactive_enter()
 
     struct collection_read_live_routine_params live_params = COLLECTION_READ_LIVE_ROUTINE_PARAMS_INIT;
 
-    char *input_buf;
+    char *input_buf = NULL;
     while (1)
     {
         if (!user_input_getline(&input_buf, "TF2PW > ", sigint_action_warn))
