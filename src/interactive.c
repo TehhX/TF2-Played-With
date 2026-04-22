@@ -343,7 +343,11 @@ void interactive_enter()
         }
         else if (INPUT_IS("clear", 'c'))
         {
-            system("clear");
+            #ifdef __linux__
+                system("clear");
+            #elif defined(_WIN32)
+                system("cls");
+            #endif
         }
         // NEWARGS_TODO
         else
