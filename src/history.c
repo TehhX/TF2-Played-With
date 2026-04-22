@@ -181,7 +181,7 @@ void history_free()
 
 HYPER_MACRO void history_wizard()
 {
-    if (!user_input_confirm("No history file found. Start setup? (Y/N): "))
+    if (!user_input_confirm("No history file found. Start setup? (Y/N): ", NULL))
     {
         fputs(ANSI_RED "Either modify another history file or accept setup of a new file. Exiting.\n" ANSI_RESET, stderr);
         exit(EXIT_FAILURE);
@@ -192,11 +192,11 @@ HYPER_MACRO void history_wizard()
     char *user_input = NULL;
 
     // TODO: Accept non trailing slash input in both this and CLI argument
-    user_input_getline(&user_input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ");
+    user_input_getline(&user_input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ", NULL);
 
     #define TF2PW_CFG_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S
 
-    if (user_input_confirm("Append con_logfile to autoexec? (Y/N): "))
+    if (user_input_confirm("Append con_logfile to autoexec? (Y/N): ", NULL))
     {
         #define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
         #define TF2PW_LOG_FILENAME "tf2pw_log.txt"
@@ -227,7 +227,7 @@ HYPER_MACRO void history_wizard()
         free(autoexec_fullname);
     }
 
-    if (user_input_confirm("Replace W bind with forward and status? (Y/N): "))
+    if (user_input_confirm("Replace W bind with forward and status? (Y/N): ", NULL))
     {
         #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
         #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
@@ -338,7 +338,7 @@ HYPER_MACRO void history_wizard()
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
     USER_GET_SID3E:;
-    user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ");
+    user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ", NULL);
     const uint32_t new_user_sid3e = sidm_parse_sid3e(user_input, Esteamid_type_unknown);
     if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
     {
@@ -355,7 +355,7 @@ HYPER_MACRO void history_wizard()
         user_sid3e = new_user_sid3e;
     }
 
-    default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ");
+    default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ", NULL);
 
     free(user_input);
 }

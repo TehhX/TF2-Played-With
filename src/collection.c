@@ -22,8 +22,6 @@
 
     // MAJOR_TODO: Test this
     #define tf2pw_sleep(SECONDS) Sleep((SECONDS) * 1000)
-#else
-    #error "Unknown OS"
 #endif
 
 // MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for pinfo_arr->arr

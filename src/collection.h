@@ -13,8 +13,10 @@
 struct collection_read_live_routine_params
 {
 	bool continue_running;    // True if continue, else false
-	FILE *input_file;                // Input file
+	FILE *input_file;         // Input file handle
 };
+
+#define COLLECTION_READ_LIVE_ROUTINE_PARAMS_INIT { .continue_running = false, .input_file = NULL }
 
 /*
 	Begins collecting data live from `.../tf/log.txt`. If you have a complete log file without more changes coming, use collection_read_archived instead

@@ -7,13 +7,20 @@
     Contains definitions to be used in *all* files contained within this project
 */
 
+// Check that OS is supported
+#if !defined(_WIN32) && !defined(__linux__)
+    #error "Unknown OS."
+#endif
+
 // Compiler specific definitions
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
     #define TF2PW_ATTR_UNUSED __attribute__((unused))
+    #define TF2PW_ATTR_NONNULL(INDICES) __attribute__((nonnull (INDICES)))
 #elif defined(_MSC_VER)
     #define TF2PW_ATTR_ALWINL __forceinline
     #define TF2PW_ATTR_UNUSED // MAJOR_TODO: Figure out what this should be
+    #define TF2PW_ATTR_NONNULL // MAJOR_TODO: Figure out what this should be
 #else
     #error "Unknown compiler."
 #endif
@@ -98,8 +105,8 @@
 // ANSI Aliases
 #define ANSI_LOG ANSI_CYAN
 
-// Capitalization bit of characters
-#define CAPITAL_BIT ((char) 0x20)
+// Check that characters C1 and C2 match, regardless of capitalization
+#define ccasecmp(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
 
 // Proper realloc without repeated code
 #define prealloc(PTR, SIZE, LEN) PTR = realloc(PTR, (SIZE) * (LEN))

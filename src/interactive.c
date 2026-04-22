@@ -13,26 +13,20 @@
 #include "ctype.h"
 #include "pthread.h"
 
-// Check if characters are equal, case agnostic. Assumes C2 is lowercase
-#define ccasecmp(C1, C2) (((C1) | CAPITAL_BIT) == (C2))
-
 // Change definition of strncasecmp if on Windows
 #if defined(_WIN32) || defined(_WIN64)
     #define strncasecmp _strnicmp
 #endif
 
 // Test input against CMP and CHAR. If COFF is -1, no short version
-#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
+#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || ((((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)) && input_buf[1] == '\0'))
 
 // @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
-static bool interactive_action(const char *output, void (*action)())
+static bool interactive_action(const char *prompt, void (*action)())
 {
-    printf(ANSI_YELLOW "%s (Y/N) " ANSI_RESET, output);
-
     bool retval;
 
-    const int input = fgetc(stdin);
-    if (ccasecmp(input, 'y') || input == '\n')
+    if (user_input_confirm(prompt, NULL))
     {
         action();
         retval = true;
@@ -40,12 +34,6 @@ static bool interactive_action(const char *output, void (*action)())
     else
     {
         retval = false;
-    }
-
-    if (input != '\n')
-    {
-        // MAJOR_TODO: When using option eg. load, Y/N prompt being given more than 1 character causes errant behavior. Should be fixed
-        fgetc(stdin);
     }
 
     return retval;
@@ -178,24 +166,30 @@ static void action_none()
     // No-op
 }
 
-// What tells the user to enter their input
-#define USER_POKE "TF2PW > "
-
 static pthread_t thread_collection;
+
+static void sigint_action_warn(const char *prompt)
+{
+    printf(" | Caught SIGINT, use \"(q)uit\" to quit.\n%s", prompt);
+    fflush(stdout);
+}
 
 void interactive_enter()
 {
     puts("Interactive mode (try help):");
 
-    struct collection_read_live_routine_params live_params =
-    {
-        .continue_running = false,
-    };
+    struct collection_read_live_routine_params live_params = COLLECTION_READ_LIVE_ROUTINE_PARAMS_INIT;
 
     char *input_buf;
     while (1)
     {
-        user_input_getline(&input_buf, USER_POKE);
+        if (!user_input_getline(&input_buf, "TF2PW > ", sigint_action_warn))
+        {
+            perror(ANSI_RED "FATAL: Couldn't get user input.");
+            SET_COLOR(stderr, ANSI_RESET);
+
+            TF2_PLAYED_WITH_DEBUG_ABEX();
+        }
 
         if (INPUT_IS("retrieve", 'r'))
         {
@@ -271,7 +265,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
             }
 
-            interactive_action("Delete live log file? (Must do before next live collection)", action_delete_log);
+            interactive_action(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, action_delete_log);
 
             if (fclose(live_params.input_file))
             {
@@ -293,12 +287,12 @@ void interactive_enter()
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 's'))
         {
-            interactive_action("Overwrite file and save?", history_save);
+            interactive_action(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, history_save);
         }
         // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("load", 'l'))
         {
-            interactive_action("Discard changes in memory and load?", history_load);
+            interactive_action(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, history_load);
         }
         else if (INPUT_IS("help", 'h'))
         {
@@ -340,9 +334,9 @@ void interactive_enter()
                 continue;
             }
 
-            interactive_action("Save before quitting?", history_save);
+            interactive_action(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, history_save);
 
-            if (interactive_action("Really exit?", action_none))
+            if (interactive_action(ANSI_YELLOW "Really exit? (Y/N): " ANSI_RESET, action_none))
             {
                 break;
             }
@@ -354,7 +348,7 @@ void interactive_enter()
         // NEWARGS_TODO
         else
         {
-            printf(ANSI_RED "Bad input, try again.\n" ANSI_RESET);
+            printf(ANSI_RED "Bad input \"%s\", try again.\n" ANSI_RESET, input_buf);
         }
     }
 

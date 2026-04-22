@@ -4,31 +4,39 @@
 /*
     user_input.h
     ------------
-    Contains functionality for user input on the CLI
+    Contains functionality for user input via the CLI
 */
 
+#include "common.h"
+
 #include "stdbool.h"
+
+typedef void (*sigint_action_t)(const char *prompt);
 
 /*
     @brief Get a line of user input
 
-        @param input The character pointer to return into
-        @param prompt The prompt to print before reading, or NULL for none
+        @param input A pointer to a character pointer to receive the line once completed, to be free'd by user
+        @param prompt The prompt to print before reading, or NULL for no prompt
+        @param sigint_action If not NULL, it's called when SIGINT gets caught, else use default SIGINTs behavior
 
-        @returns A string containing the whole line of input. NULL terminated (not '\n')
+        @returns `*input` if successful, NULL if failed
 
-        @warning `input` is free'd before assignment, make sure is either NULL or contains malloc data
-        @warning Return value is malloc'd
+        @warning Make sure `*line` is either NULL or malloc'd
+        @warning Check return value is not NULL
 */
-extern void user_input_getline(char **input, const char *prompt);
+extern char *user_input_getline(char **input, const char *prompt, sigint_action_t sigint_action) TF2PW_ATTR_NONNULL(1);
 
 /*
     @brief Get user confirmation for an operation. Will keep asking until single character Y/N (case insensitive) is entered
 
         @param prompt The prompt to display beforehand
+        @param catch_sigints Pass
 
         @returns True if Y/y, false if N/n
+
+        @note Uses `user_input_getline(...)` internally
 */
-extern bool user_input_confirm(const char *prompt);
+extern bool user_input_confirm(const char *prompt, sigint_action_t sigint_action);
 
 #endif // USER_INPUT_H
