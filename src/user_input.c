@@ -136,7 +136,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         #endif
         ){
             perror(ANSI_RED "FATAL: Couldn't modify SIGINT handling");
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
 
             cleanup(NULL, NULL, NULL, sigint_action);
 
@@ -149,7 +149,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
     if (pthread_mutex_init(&params.input_lock, NULL))
     {
         perror(ANSI_RED "FATAL: Failed to initialize mutex");
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
 
         cleanup(NULL, NULL, params.input, sigint_action);
 
@@ -160,7 +160,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
     if (pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params))
     {
         perror(ANSI_RED "FATAL: Failed to spin up thread");
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
 
         cleanup(NULL, &params.input_lock, params.input, sigint_action);
 
@@ -180,7 +180,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
                 if (pthread_mutex_unlock(&params.input_lock))
                 {
                     perror(ANSI_RED "FATAL: Failed to unlock mutex from main");
-                    SET_COLOR(stderr, ANSI_RESET);
+                    RESET_STDERR_COL();
 
                     cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
 
@@ -190,7 +190,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
             break; default:
             {
                 perror(ANSI_RED "FATAL: Misc mutex error");
-                SET_COLOR(stderr, ANSI_RESET);
+                RESET_STDERR_COL();
 
                 cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
 
@@ -230,7 +230,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
             break; default:
             {
                 perror(ANSI_RED "FATAL: Misc mutex error");
-                SET_COLOR(stderr, ANSI_RESET);
+                RESET_STDERR_COL();
 
                 cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
 
@@ -252,7 +252,7 @@ bool user_input_confirm(const char *prompt, const sigint_action_t sigint_action)
         if (!user_input_getline(&input, prompt, sigint_action))
         {
             perror(ANSI_RED "FATAL: User confirmation input error");
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
 
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }

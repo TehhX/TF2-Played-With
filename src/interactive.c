@@ -186,7 +186,7 @@ void interactive_enter()
         if (!user_input_getline(&input_buf, "TF2PW > ", sigint_action_warn))
         {
             perror(ANSI_RED "FATAL: Couldn't get user input.");
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
 
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -226,7 +226,7 @@ void interactive_enter()
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
-                SET_COLOR(stderr, ANSI_RESET);
+                RESET_STDERR_COL();
 
                 live_params.continue_running = false;
 
@@ -270,7 +270,7 @@ void interactive_enter()
             if (fclose(live_params.input_file))
             {
                 perror(ANSI_RED "Failed to close live-file. Error");
-                SET_COLOR(stderr, ANSI_RESET);
+                RESET_STDERR_COL();
 
                 continue;
             }

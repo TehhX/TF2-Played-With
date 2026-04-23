@@ -11,6 +11,11 @@
 #include "errno.h"
 #include "string.h"
 
+#ifdef _WIN32
+    // For terminal coloring
+    #include "windows.h"
+#endif
+
 /*
     @brief For parsing purposes
 
@@ -317,9 +322,32 @@ static void parse_option(const int argc, char **argv, const int option_i)
 
 int main(const int argc, char **argv)
 {
+    // Enable VT100 terminal ANSI escapes if on windows
+    #if defined(_WIN32) && !defined(NO_ANSI_COLORING)
+        const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (stdout_handle == INVALID_HANDLE_VALUE)
+        {
+            fprintf(stderr, "Couldn't get stdout_handle: %d\n", GetLastError());
+            return 1;
+        }
+
+        DWORD mode;
+        if (!GetConsoleMode(stdout_handle, &mode))
+        {
+            fprintf(stderr, "Couldn't get console mode: %d\n", GetLastError());
+            return 1;
+        }
+
+        if (!SetConsoleMode(stdout_handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+        {
+            fprintf(stderr, "Couldn't set console mode: %d\n", GetLastError());
+            return 1;
+        }
+    #endif
+
     if (argc == 1)
     {
-        fprintf(stderr, "Need argument(s). Try \"%s --help\" for help.\n", argv[0]);
+        fprintf(stderr, ANSI_RED "Need argument(s). Try \"%s --help\" for help.\n" ANSI_RESET, argv[0]);
         return 1;
     }
 

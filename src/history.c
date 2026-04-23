@@ -208,7 +208,7 @@ HYPER_MACRO void history_wizard()
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to open autoexec file \"%s\" for appending: ", autoexec_fullname);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             free(autoexec_fullname);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -219,7 +219,7 @@ HYPER_MACRO void history_wizard()
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to close autoexec file \"%s\": ", autoexec_fullname);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             free(autoexec_fullname);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -239,7 +239,7 @@ HYPER_MACRO void history_wizard()
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to open config file \"%s\" for appending: ", config_fullname);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             free(config_fullname);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -302,7 +302,7 @@ HYPER_MACRO void history_wizard()
         {
             fputs(ANSI_RED "Failed to close write file: ", stderr);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
 
@@ -310,7 +310,7 @@ HYPER_MACRO void history_wizard()
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to close config file \"%s\": ", config_fullname);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             free(config_fullname);
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -393,7 +393,7 @@ void history_load()
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
-            SET_COLOR(stderr, ANSI_RESET);
+            RESET_STDERR_COL();
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
     }
@@ -543,7 +543,7 @@ void history_load()
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
@@ -570,7 +570,7 @@ void history_save()
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for writing. Error: ", history_fullname);
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
@@ -635,7 +635,7 @@ void history_save()
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }
@@ -928,7 +928,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     {
         fprintf(stderr, ANSI_RED "Failed to open temp note-editing file: ");
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         return;
     }
 
@@ -942,7 +942,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     {
         fprintf(stderr, ANSI_RED "Failed to close temp note-editing file: ");
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         return;
     }
 
@@ -958,7 +958,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     {
         fprintf(stderr, ANSI_RED "Failed to open temp note-editing file: ");
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         return;
     }
 
@@ -987,7 +987,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     {
         fprintf(stderr, ANSI_RED "Failed to close temp note-editing file: ");
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         return;
     }
 
@@ -995,7 +995,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     {
         fprintf(stderr, ANSI_RED "Failed to delete temp note-editing file: ");
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         return;
     }
 

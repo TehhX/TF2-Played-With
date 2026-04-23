@@ -228,7 +228,7 @@ void collection_read_archived(const char *collection_fullname)
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to open archive-file \"%s\" for reading. Error: ", collection_fullname);
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
@@ -240,7 +240,7 @@ void collection_read_archived(const char *collection_fullname)
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", collection_fullname);
         perror(NULL);
-        SET_COLOR(stderr, ANSI_RESET);
+        RESET_STDERR_COL();
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 }

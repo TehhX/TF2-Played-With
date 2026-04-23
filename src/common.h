@@ -89,17 +89,22 @@
 
     // OFF Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR)
+
+    // OFF Resets ANSI coloring of stderr
+    #define RESET_STDERR_COL()
 #else
-    #define ANSI_RED     "\x1b[31m"
-    #define ANSI_GREEN   "\x1b[32m"
-    #define ANSI_YELLOW  "\x1b[33m"
-    #define ANSI_BLUE    "\x1b[34m"
-    #define ANSI_MAGENTA "\x1b[35m"
-    #define ANSI_CYAN    "\x1b[36m"
-    #define ANSI_RESET   "\x1b[0m"
+    #define ANSI_RED     "\033[31m"
+    #define ANSI_GREEN   "\033[32m"
+    #define ANSI_YELLOW  "\033[33m"
+    #define ANSI_BLUE    "\033[34m"
+    #define ANSI_CYAN    "\033[36m"
+    #define ANSI_RESET   "\033[00m"
 
     // ON  Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
+
+    // ON  Resets ANSI coloring of stderr
+    #define RESET_STDERR_COL() SET_COLOR(stderr, ANSI_RESET)
 #endif // NO_ANSI_COLORING
 
 // ANSI Aliases
