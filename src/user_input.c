@@ -126,7 +126,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
 char *user_input_getline(char **input, const char *prompt, const sigint_action_t sigint_action)
 {
     // Change SIGINT behavior
-    if (sigint_action)
+    if (sigint_action != sigint_action_dont_catch)
     {
         if (
         #ifdef __linux__

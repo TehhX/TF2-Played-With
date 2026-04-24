@@ -89,31 +89,29 @@
 
     // OFF Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR)
-
-    // OFF Resets ANSI coloring of stderr
-    #define RESET_STDERR_COL()
 #else
-    #define ANSI_RED     "\033[31m"
-    #define ANSI_GREEN   "\033[32m"
-    #define ANSI_YELLOW  "\033[33m"
-    #define ANSI_BLUE    "\033[34m"
-    #define ANSI_CYAN    "\033[36m"
-    #define ANSI_RESET   "\033[00m"
+    #define ANSI_RED    "\033[31m"
+    #define ANSI_GREEN  "\033[32m"
+    #define ANSI_YELLOW "\033[33m"
+    #define ANSI_BLUE   "\033[34m"
+    #define ANSI_CYAN   "\033[36m"
+    #define ANSI_RESET  "\033[00m"
 
     // ON  Sets the color of output STR to ANSI color COLOR
     #define SET_COLOR(STR, COLOR) fprintf(STR, COLOR)
-
-    // ON  Resets ANSI coloring of stderr
-    #define RESET_STDERR_COL() SET_COLOR(stderr, ANSI_RESET)
 #endif // NO_ANSI_COLORING
 
-// ANSI Aliases
+// ANSI aliases
 #define ANSI_LOG ANSI_CYAN
+#define RESET_STDERR_COL() SET_COLOR(stderr, ANSI_RESET)
 
 // Check that characters C1 and C2 match, regardless of capitalization
 #define ccasecmp(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
 
 // Proper realloc without repeated code
 #define prealloc(PTR, SIZE, LEN) PTR = realloc(PTR, (SIZE) * (LEN))
+
+// Copy string `S` to heap
+#define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
 
 #endif // COMMON_H

@@ -13,12 +13,14 @@
 
 typedef void (*sigint_action_t)(const char *prompt);
 
+#define sigint_action_dont_catch NULL
+
 /*
     @brief Get a line of user input
 
         @param input A pointer to a character pointer to receive the line once completed, to be free'd by user
         @param prompt The prompt to print before reading, or NULL for no prompt
-        @param sigint_action If not NULL, it's called when SIGINT gets caught, else use default SIGINTs behavior
+        @param sigint_action Called when SIGINT gets caught, else use default SIGINTs behavior. May also pass one of the sigint_action funcs instead
 
         @returns `*input` if successful, NULL if failed
 

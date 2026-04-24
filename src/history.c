@@ -22,7 +22,6 @@
 // The latest available save format version. Remember to keep this updated
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
-static bool history_initialized = false;
 static uint16_t current_date;
 
 static uint8_t  tf2_filepath_len;
@@ -62,50 +61,8 @@ static struct
 }
 *player_records;
 
-// Fullname of the history file to read from/write to
-static char *history_fullname;
-
-void history_init(char *requested_history_fullname)
-{
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history double-init.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
-    history_initialized = true;
-
-    if (requested_history_fullname)
-    {
-        history_fullname = requested_history_fullname;
-    }
-    else
-    {
-        history_fullname = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav");
-    }
-
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: History initialized with history_fullname as \"%s\".\n" ANSI_RESET, history_fullname);
-}
-
-bool history_is_initialized()
-{
-    return history_initialized;
-}
-
 void history_set_user_sid3e(const uint32_t new_user_sid3e)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_user_sid3e.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     user_sid3e = new_user_sid3e;
 
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set user_sid3e to %" PRIu32 ".\n" ANSI_RESET, user_sid3e);
@@ -113,20 +70,11 @@ void history_set_user_sid3e(const uint32_t new_user_sid3e)
 
 uint32_t history_get_user_sid3e()
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized get_user_sid3e.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     return user_sid3e;
 }
 
 // Frees memory associated with history, sets `player_records_len` to 0
-HYPER_MACRO void history_free_memory()
+void history_free()
 {
     if (!player_records_len)
     {
@@ -163,22 +111,6 @@ HYPER_MACRO void history_free_memory()
     free(tf2_live_log_fullname);
 }
 
-void history_free()
-{
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history double-free.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
-    history_free_memory();
-
-    history_initialized = false;
-}
-
 HYPER_MACRO void history_wizard()
 {
     if (!user_input_confirm("No history file found. Start setup? (Y/N): ", NULL))
@@ -201,7 +133,7 @@ HYPER_MACRO void history_wizard()
         #define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
         #define TF2PW_LOG_FILENAME "tf2pw_log.txt"
 
-        char *autoexec_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_AUTOEXEC_SEMINAME);
+        char *autoexec_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_AUTOEXEC_SEMINAME);
 
         FILE *autoexec_handle = fopen(autoexec_fullname, "a");
         if (!autoexec_handle)
@@ -232,7 +164,7 @@ HYPER_MACRO void history_wizard()
         #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
         #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
 
-        char *config_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_CONFIG_SEMINAME);
+        char *config_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_CONFIG_SEMINAME);
 
         FILE *config_handle = fopen(config_fullname, "r");
         if (!config_handle)
@@ -250,7 +182,7 @@ HYPER_MACRO void history_wizard()
             config_replacement[] = "bind \"w\" \"+forward ; status\""
         ;
 
-        char *temporary_fullname = cider_construct_fullname(strcpy(malloc(strlen(user_input) + 1), user_input), TF2PW_TEMP_SEMINAME);
+        char *temporary_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_TEMP_SEMINAME);
         FILE *file_output = fopen(temporary_fullname, "w");
         if (!file_output)
         {
@@ -366,16 +298,33 @@ HYPER_MACRO void history_wizard()
 // Reads an array from input_file_ptr of length ARR##_len
 #define fread_arr(ARR) fread(ARR, sizeof(*(ARR)), ARR##_len, input_file_ptr)
 
-void history_load()
+static const char *_history_get_default_fullname_pre();
+
+// @brief Get default fullname of history file at `<Data filepath>/tf2pw.sav`
+static const char *(*history_get_default_fullname)() = _history_get_default_fullname_pre;
+
+// @warning Don't use this unless inside one of the `_history_get_default_fullname_(pre|post)...` functions
+static char *_default_history_fullname = NULL;
+
+// @warning Don't call this directly, use `history_get_default_fullname()` instead
+static const char *_history_get_default_fullname_post()
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized load.\n" ANSI_RESET);
-            abort();
-        }
-    )
+    return _default_history_fullname;
+}
+
+// @warning Don't call this directly, use `history_get_default_fullname()` instead
+static const char *_history_get_default_fullname_pre()
+{
+    TF2_PLAYED_WITH_DEBUG_ABORT_IF(_default_history_fullname != NULL);
+
+    history_get_default_fullname = _history_get_default_fullname_post;
+
+    return (_default_history_fullname = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav"));
+}
+
+void history_load(const char *const passed_history_fullname)
+{
+    const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
     FILE *const input_file_ptr = fopen(history_fullname, "r");
     if (input_file_ptr == NULL)
@@ -386,7 +335,9 @@ void history_load()
             errno = 0;
 
             history_wizard();
-            history_free_memory();
+            history_free();
+            history_save(history_fullname);
+
             return;
         }
         else
@@ -398,7 +349,7 @@ void history_load()
         }
     }
 
-    history_free_memory();
+    history_free();
 
     char header_buf[HEADER_SIZE];
     fread(header_buf, 1, HEADER_SIZE, input_file_ptr);
@@ -554,16 +505,9 @@ void history_load()
 // Writes an array to output_file_ptr of length ARR##_len
 #define fwrite_arr(ARR) if (ARR) fwrite(ARR, sizeof(*ARR), ARR##_len, output_file_ptr)
 
-void history_save()
+void history_save(const char *const passed_history_fullname)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized save.\n" ANSI_RESET);
-            abort();
-        }
-    )
+    const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
     FILE *const output_file_ptr = fopen(history_fullname, "w");
     if (!output_file_ptr)
@@ -642,15 +586,6 @@ void history_save()
 
 void history_set_tf2_filepath(char *new_tf2_filepath)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized history_set_tf2_filepath.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Setting tf2_filepath to \"%s\"." ANSI_RESET, new_tf2_filepath);
 
     free(tf2_filepath);
@@ -660,30 +595,12 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
 
 const char *history_get_live_log_fullname()
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized history_get_live_log_fullname.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     return (const char *) tf2_live_log_fullname;
 }
 
 // MAJOR_TODO: Dates sometimes errantly set as 0 (epoch) during live-testing
 void history_set_date(const uint16_t new_date)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized set_date.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     if (new_date == HISTORY_SET_DATE_TODAY)
     {
         current_date = time_manip_ues2ued(time(NULL));
@@ -699,15 +616,6 @@ void history_set_date(const uint16_t new_date)
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized add_date_record.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     const uint_fast32_t date_records_i = player_records[player_records_i].date_records_len;
     #define current_date_record player_records[player_records_i].date_records[date_records_i]
 
@@ -773,15 +681,6 @@ HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
 
 void history_add_record(const struct player_info *const pinfo)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized add_record.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
 
     const uint_fast32_t player_index = get_player_index(pinfo->sid3e);
@@ -827,15 +726,6 @@ void history_add_record(const struct player_info *const pinfo)
 
 void history_print_record(const uint32_t requested_sid3e)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized print_record.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     const uint_fast32_t player_index = get_player_index(requested_sid3e);
     if (player_index != PLAYER_INDEX_ENOENT)
     {
@@ -873,15 +763,6 @@ void history_print_record(const uint32_t requested_sid3e)
 
 void history_print_records(const char *const name)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized print_records.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     bool record_found = false;
     for (uint_fast32_t player_i = 0; player_i < player_records_len; ++player_i)
     {
@@ -905,15 +786,6 @@ void history_print_records(const char *const name)
 
 void history_edit_notes(uint32_t requested_sid3e)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized edit_notes.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     const uint_fast32_t player_index = get_player_index(requested_sid3e);
     if (player_index == PLAYER_INDEX_ENOENT)
     {
@@ -1004,15 +876,6 @@ void history_edit_notes(uint32_t requested_sid3e)
 
 void history_add_message(const uint32_t requested_sid3e, const char *const message)
 {
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    (
-        if (!history_initialized)
-        {
-            fprintf(stderr, ANSI_RED "FATAL: Attempted history uninitialized add_message.\n" ANSI_RESET);
-            abort();
-        }
-    )
-
     // WARNING: Below assumes player has record and record on this date. Should always be true, however
     const uint_fast32_t player_i = get_player_index(requested_sid3e);
     if (player_records[player_i].record_messages)

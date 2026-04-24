@@ -21,14 +21,49 @@
 // Test input against CMP and CHAR. If COFF is -1, no short version
 #define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
 
+static void sigint_action_reprint(const char *prompt)
+{
+    printf("\n%s", prompt);
+    fflush(stdout);
+}
+
+enum Einteractive_action_type
+{
+    Einteractive_action_type_none,
+    Einteractive_action_type_int_cchar,
+    Einteractive_action_type_void_cchar,
+};
+
+// TODO: Check if MSVC whines too
+// Complains about function pointer casting. Just comment out every commit and make sure that's the only thing it's complaining about, or if something new is wrong
+#ifdef __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 // @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
-static bool interactive_action(const char *prompt, void (*action)())
+static bool interactive_action(const char *prompt, enum Einteractive_action_type action_type, void *action, void *action_param, void *action_ret)
 {
     bool retval;
 
-    if (user_input_confirm(prompt, NULL))
+    if (user_input_confirm(prompt, sigint_action_reprint))
     {
-        action();
+        switch (action_type)
+        {
+            break; case Einteractive_action_type_none:
+            {
+                // No-op
+            }
+            break; case Einteractive_action_type_int_cchar:
+            {
+                *((int *) action_ret) = ((int (*)(const char *)) action)((const char *) action_param);
+            }
+            break; case Einteractive_action_type_void_cchar:
+            {
+                ((void (*)(const char *)) action)((const char *) action_param);
+            }
+        }
+
         retval = true;
     }
     else
@@ -47,8 +82,13 @@ enum Especifier_status
     Especifier_status_post_specifier, // Testing whitespace after specifier until null-terminator
 };
 
-// @brief Get specifier start
-static char *get_spec_start(char *input_buf)
+/*
+    @brief Get specifier start
+
+        @param input_buf The input buffer from which to retrieve the specifier
+        @param complain_if_no_param If true, complain about there being no parameter, else stay quiet
+*/
+static char *get_spec_start(char *input_buf, bool complain_if_no_param)
 {
     enum Especifier_status curr_status = Especifier_status_invocation;
 
@@ -115,14 +155,18 @@ static char *get_spec_start(char *input_buf)
     }
 
     SPEC_FAILURE:;
-    fputs(ANSI_RED "Failed to get start of specifier.\n" ANSI_RESET, stderr);
+    if (complain_if_no_param)
+    {
+        fputs(ANSI_RED "Failed to get start of specifier.\n" ANSI_RESET, stderr);
+    }
+
     return NULL;
 }
 
 // @brief Parse SID3E from input_buf, perform action on it
 static void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3e), void (*specifier_action)(const char *specifier))
 {
-    char *const specifier_start = get_spec_start(input_buf);
+    char *const specifier_start = get_spec_start(input_buf, true);
     if (!specifier_start)
     {
         return;
@@ -156,21 +200,11 @@ static void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3
     }
 }
 
-static void action_delete_log()
-{
-    remove(history_get_live_log_fullname());
-}
-
-static void action_none()
-{
-    // No-op
-}
-
-static pthread_t thread_collection;
-
 static void sigint_action_warn(const char *prompt)
 {
-    printf(" | Caught SIGINT, use \"(q)uit\" to quit.\n%s", prompt);
+    fputs(ANSI_RED " | Caught SIGINT, use \"(q)uit\" to quit.\n" ANSI_RESET, stderr);
+
+    printf(prompt);
     fflush(stdout);
 }
 
@@ -178,9 +212,13 @@ void interactive_enter()
 {
     puts("Interactive mode (try help):");
 
+    pthread_t thread_collection;
+    char *user_input_history_fullname = NULL;
+
     struct collection_read_live_routine_params live_params = COLLECTION_READ_LIVE_ROUTINE_PARAMS_INIT;
 
     char *input_buf = NULL;
+
     while (1)
     {
         if (!user_input_getline(&input_buf, "TF2PW > ", sigint_action_warn))
@@ -197,10 +235,10 @@ void interactive_enter()
         }
         else if (INPUT_IS("set-tf2-filepath", 'p'))
         {
-            char *const specifier_start = get_spec_start(input_buf);
+            char *const specifier_start = get_spec_start(input_buf, true);
             if (specifier_start)
             {
-                char *const specifier_start_heap = strcpy(malloc(strlen(specifier_start) + 1), specifier_start);
+                char *const specifier_start_heap = string_deep_copy(specifier_start);
                 history_set_tf2_filepath(specifier_start_heap);
 
                 printf("Successfully set TF2 filepath to \"%s\".\n", specifier_start);
@@ -265,7 +303,7 @@ void interactive_enter()
                 printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
             }
 
-            interactive_action(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, action_delete_log);
+            interactive_action(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, Einteractive_action_type_int_cchar, remove, history_get_live_log_fullname, NULL);
 
             if (fclose(live_params.input_file))
             {
@@ -277,22 +315,44 @@ void interactive_enter()
         }
         else if (INPUT_IS("collect-archived", 'a'))
         {
-            const char *const specifier_start = get_spec_start(input_buf);
+            const char *const specifier_start = get_spec_start(input_buf, true);
 
             if (specifier_start)
             {
                 collection_read_archived(specifier_start);
             }
         }
-        // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("save", 's'))
         {
-            interactive_action(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, history_save);
+            const char *const specifier_start = get_spec_start(input_buf, false);
+
+            if (specifier_start)
+            {
+                user_input_history_fullname = string_deep_copy(specifier_start);
+            }
+            else
+            {
+                free(user_input_history_fullname);
+                user_input_history_fullname = NULL;
+            }
+
+            interactive_action(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_save, user_input_history_fullname, NULL);
         }
-        // MAJOR_TODO: Read FULLNAME if provided
         else if (INPUT_IS("load", 'l'))
         {
-            interactive_action(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, history_load);
+            const char *const specifier_start = get_spec_start(input_buf, false);
+
+            if (specifier_start)
+            {
+                user_input_history_fullname = string_deep_copy(specifier_start);
+            }
+            else
+            {
+                free(user_input_history_fullname);
+                user_input_history_fullname = NULL;
+            }
+
+            interactive_action(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_load, user_input_history_fullname, NULL);
         }
         else if (INPUT_IS("help", 'h'))
         {
@@ -334,9 +394,9 @@ void interactive_enter()
                 continue;
             }
 
-            interactive_action(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, history_save);
+            interactive_action(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_save, user_input_history_fullname, NULL);
 
-            if (interactive_action(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, action_none))
+            if (interactive_action(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, Einteractive_action_type_none, NULL, NULL, NULL))
             {
                 break;
             }
@@ -357,4 +417,9 @@ void interactive_enter()
     }
 
     free(input_buf);
+    free(user_input_history_fullname);
 }
+
+#ifdef __GNUC__
+    #pragma GCC diagnostic pop
+#endif

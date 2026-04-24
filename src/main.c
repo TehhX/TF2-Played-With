@@ -166,12 +166,14 @@ static void operation_print_help(const char *invocation, TF2PW_ATTR_UNUSED char 
 
 static void operation_set_tf2_filepath(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
 {
-    history_set_tf2_filepath(strcpy(malloc(strlen(arg) + 1), arg));
+    history_set_tf2_filepath(string_deep_copy(arg));
 }
+
+static const char *history_fullname = NULL;
 
 static void operation_set_save_location(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
 {
-    history_init(arg);
+    history_fullname = arg;
 }
 
 static void operation_interactive(TF2PW_ATTR_UNUSED const char *invocation, TF2PW_ATTR_UNUSED char *arg)
@@ -355,12 +357,7 @@ int main(const int argc, char **argv)
 
     parse_option(argc, argv, 1); // Set save location
 
-    if (!history_is_initialized())
-    {
-        history_init(NULL);
-    }
-
-    history_load();
+    history_load(history_fullname);
 
     parse_option(argc, argv, 2); // Set live log location
 
@@ -378,7 +375,7 @@ int main(const int argc, char **argv)
 
     // NEWARGS_TODO
 
-    history_save();
+    history_save(history_fullname);
 
     history_free();
 }
