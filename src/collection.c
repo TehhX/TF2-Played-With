@@ -20,15 +20,14 @@
 #elif defined(_WIN32) || defined(_WIN64)
     #include "windows.h"
 
-    // MAJOR_TODO: Test this on windows
     #define tf2pw_sleep(SECONDS) Sleep((SECONDS) * 1000)
 #endif
 
 // How many players can be in a match (including user)
-#define MAX_PLAYERS 256
+#define MAX_PLAYERS 512
 
 // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
-#define LINE_BUFB 256
+#define LINE_BUFB 512
 
 // Whether archive or live
 #define COLLECTION_LIVE    ((bool) false)
@@ -46,7 +45,8 @@ struct player_info_arr
 // Returns true if line_buf matches STRING
 #define LINE_MATCHES(STRING) STRINGS_MATCH(line_buf, STRING)
 
-static void parse_log(FILE *file_stream, const bool caller, struct player_info_arr *pinfo_arr)
+// @returns True for fail, false for success
+static bool parse_log(FILE *file_stream, const bool caller, struct player_info_arr *pinfo_arr)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT(size_t file_line_index = 1;)
 
@@ -94,11 +94,13 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
             {
                 TF2_PLAYED_WITH_DEBUG_CHOOSE
                 (
-                    fprintf(stderr, ANSI_RED "FATAL: (LI=%zu) Bad current_sid3e read from status output.\n" ANSI_RESET, file_line_index);
-                    abort();
+                    fprintf(stderr, ANSI_RED "(LI=%zu) Bad current_sid3e read from status output.\n" ANSI_RESET, file_line_index);
+
+                    return true;
                     ,
-                    fputs(ANSI_RED "MAJOR: Bad current_sid3e read from status output.\n" ANSI_RESET, stderr);
-                    exit(EXIT_FAILURE);
+                    fputs(ANSI_RED "Bad current_sid3e read from status output.\n" ANSI_RESET, stderr);
+
+                    return true;
                 )
             }
 
@@ -131,9 +133,6 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
             pinfo_arr->arr[pinfo_arr->len - 1].name[player_name_len] = '\0';
             pinfo_arr->arr[pinfo_arr->len - 1].sid3e                 = current_sid3e;
 
-            // A million of these lines will be printed for an average log file, may or may not be commented out for any given commit
-            // TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%llu) Status line of new player #%3d in match #%2zu parsed: (\"%s\", %" PRIu32 ")\n" ANSI_RESET, file_line_index, current_arr_index + 1, match_index, pinfo_arr->arr[current_arr_index].name, pinfo_arr->arr[current_arr_index].sid3e);)
-
             // Add new player to records
             history_add_record(pinfo_arr->arr + pinfo_arr->len - 1);
         }
@@ -144,7 +143,6 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
             #define NEW_MATCH "Client reached server_spawn."
 
             // Detected NEW_MATCH
-            // if (!strncmp(line_buf, NEW_MATCH, NEW_MATCH_SIZE))
             if (LINE_MATCHES(NEW_MATCH))
             {
                 TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Detected \"" NEW_MATCH "\", starting new match.\n" ANSI_RESET);
@@ -199,20 +197,31 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
             }
         }
     }
+
+    return false;
 }
 
-void *collection_read_live_routine(void *_params)
+void *_collection_read_live_routine(struct collection_read_live_routine_params *params)
 {
-    struct collection_read_live_routine_params *params = _params;
-
     struct player_info_arr live_pinfo_arr = { .len = 0 };
+    history_set_date(HISTORY_SET_DATE_TODAY);
 
-    while (params->continue_running)
+    params->running = true;
+
+    while (params->running)
     {
-        parse_log(params->input_file, COLLECTION_LIVE, &live_pinfo_arr);
+        if (parse_log(params->input_file, COLLECTION_LIVE, &live_pinfo_arr))
+        {
+            params->running = false;
+
+            return NULL;
+        }
+
         clearerr(params->input_file);
-        tf2pw_sleep(1);
+        tf2pw_sleep(5);
     }
+
+    params->running = false;
 
     return NULL;
 }
@@ -224,21 +233,29 @@ void collection_read_archived(const char *collection_fullname)
     FILE *const input_file_ptr = fopen(collection_fullname, "r");
     if (!input_file_ptr)
     {
-        fprintf(stderr, ANSI_RED "MAJOR: Failed to open archive-file \"%s\" for reading. Error: ", collection_fullname);
+        fprintf(stderr, ANSI_RED "Failed to open archive-file \"%s\" for reading: ", collection_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+
+        return;
     }
 
     history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
 
-    parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct player_info_arr){ .len = 0 });
+    if (parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct player_info_arr){ .len = 0 }))
+    {
+        fprintf(stderr, ANSI_RED "Failed to parse file \"%s\": ", collection_fullname);
+        perror(NULL);
+        RESET_STDERR_COL();
+
+        return;
+    }
 
     if (fclose(input_file_ptr))
     {
-        fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", collection_fullname);
+        fprintf(stderr, ANSI_RED "Failed to close \"%s\": ", collection_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+        return;
     }
 }

@@ -13,7 +13,7 @@
 
 typedef void (*sigint_action_t)(const char *prompt);
 
-#define sigint_action_dont_catch NULL
+#define sigint_action_dont_catch ((sigint_action_t) NULL)
 
 /*
     @brief Get a line of user input

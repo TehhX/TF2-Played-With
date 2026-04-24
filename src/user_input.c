@@ -200,6 +200,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
     }
 
     fputs(prompt, stdout);
+    fflush(stdout);
 
     while (1)
     {

@@ -111,7 +111,8 @@ void history_free()
     free(tf2_live_log_fullname);
 }
 
-HYPER_MACRO void history_wizard()
+// @returns 1 for fail, 0 for success
+HYPER_MACRO bool history_wizard()
 {
     if (!user_input_confirm("No history file found. Start setup? (Y/N): ", NULL))
     {
@@ -142,18 +143,20 @@ HYPER_MACRO void history_wizard()
             perror(NULL);
             RESET_STDERR_COL();
             free(autoexec_fullname);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+
+            return true;
         }
 
         fprintf(autoexec_handle, "// BEGIN Generated automatically by TF2PW, don't edit.\ncon_logfile " TF2PW_LOG_FILENAME "\n// END   Generated automatically by TF2PW, don't edit.\n");
 
         if (fclose(autoexec_handle))
         {
-            fprintf(stderr, ANSI_RED "MAJOR: Failed to close autoexec file \"%s\": ", autoexec_fullname);
+            fprintf(stderr, ANSI_RED "Failed to close autoexec file \"%s\": ", autoexec_fullname);
             perror(NULL);
             RESET_STDERR_COL();
             free(autoexec_fullname);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+
+            return true;
         }
 
         free(autoexec_fullname);
@@ -169,11 +172,12 @@ HYPER_MACRO void history_wizard()
         FILE *config_handle = fopen(config_fullname, "r");
         if (!config_handle)
         {
-            fprintf(stderr, ANSI_RED "MAJOR: Failed to open config file \"%s\" for appending: ", config_fullname);
+            fprintf(stderr, ANSI_RED "Failed to open config file \"%s\" for appending: ", config_fullname);
             perror(NULL);
             RESET_STDERR_COL();
             free(config_fullname);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+
+            return true;
         }
 
         // Search for `bind "w" "+forward"`. If exists, replace with `bind "w" "+forward ; status"`
@@ -186,9 +190,10 @@ HYPER_MACRO void history_wizard()
         FILE *file_output = fopen(temporary_fullname, "w");
         if (!file_output)
         {
-            fprintf(stderr, ANSI_RED "MAJOR: Failed to open temporary file \"%s\" for writing.\n" ANSI_RESET, temporary_fullname);
+            fprintf(stderr, ANSI_RED "Failed to open temporary file \"%s\" for writing.\n" ANSI_RESET, temporary_fullname);
             free(config_fullname);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+
+            return true;
         }
 
         char *temp_buf = NULL;
@@ -232,10 +237,14 @@ HYPER_MACRO void history_wizard()
 
         if (fclose(file_output))
         {
-            fputs(ANSI_RED "Failed to close write file: ", stderr);
+            fprintf(stderr, ANSI_RED "Failed to close write file \"%s\": ", temporary_fullname);
             perror(NULL);
             RESET_STDERR_COL();
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+
+            free(config_fullname);
+            free(temporary_fullname);
+
+            return true;
         }
 
         if (fclose(config_handle))
@@ -243,15 +252,19 @@ HYPER_MACRO void history_wizard()
             fprintf(stderr, ANSI_RED "MAJOR: Failed to close config file \"%s\": ", config_fullname);
             perror(NULL);
             RESET_STDERR_COL();
+
             free(config_fullname);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+            free(temporary_fullname);
+
+            return true;
         }
 
         // Overwrite original file with temporary file to complete the process
         if (remove(config_fullname) || rename(temporary_fullname, config_fullname))
         {
-            perror(ANSI_RED "MAJOR: Failed to move temporary config file contents to real config location" ANSI_RESET);
-            TF2_PLAYED_WITH_DEBUG_ABEX();
+            perror(ANSI_RED "Failed to move temporary config file contents to real config location, attempt manual move" ANSI_RESET);
+
+            return true;
         }
 
         free(temporary_fullname);
@@ -290,6 +303,8 @@ HYPER_MACRO void history_wizard()
     default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ", NULL);
 
     free(user_input);
+
+    return false;
 }
 
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
@@ -334,19 +349,23 @@ void history_load(const char *const passed_history_fullname)
         {
             errno = 0;
 
-            history_wizard();
+            // Return prematurely if wizard failed
+            if (history_wizard())
+            {
+                return;
+            }
+
             history_free();
             history_save(history_fullname);
-
-            return;
         }
         else
         {
             fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
             RESET_STDERR_COL();
-            TF2_PLAYED_WITH_DEBUG_ABEX();
         }
+
+        return;
     }
 
     history_free();
@@ -356,7 +375,7 @@ void history_load(const char *const passed_history_fullname)
     if (strncmp(header_buf, HEADER, HEADER_SIZE))
     {
         fprintf(stderr, ANSI_RED "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n" ANSI_RESET, history_fullname);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+        return;
     }
 
     fread_one(save_version);
@@ -466,8 +485,8 @@ void history_load(const char *const passed_history_fullname)
                         }
                         break; case EOF:
                         {
-                            fprintf(stderr, ANSI_RED "MAJOR: Reached end of history file before finishing parsing. File corruption likely. Exiting.\n" ANSI_RESET);
-                            TF2_PLAYED_WITH_DEBUG_ABEX();
+                            fprintf(stderr, ANSI_RED "MAJOR: Reached end of history file before finishing parsing, file corruption likely.\n" ANSI_RESET);
+                            return;
                         }
                         break; default:
                         {
@@ -486,7 +505,7 @@ void history_load(const char *const passed_history_fullname)
     if (EOF != fgetc(input_file_ptr))
     {
         fprintf(stderr, ANSI_RED "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n" ANSI_RESET, history_fullname);
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+        return;
     }
 
     if (fclose(input_file_ptr))
@@ -494,7 +513,8 @@ void history_load(const char *const passed_history_fullname)
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+
+        return;
     }
 }
 
@@ -514,7 +534,8 @@ void history_save(const char *const passed_history_fullname)
         fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for writing. Error: ", history_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+
+        return;
     }
 
     fwrite(HEADER, sizeof(char), HEADER_SIZE, output_file_ptr);
@@ -579,7 +600,7 @@ void history_save(const char *const passed_history_fullname)
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        TF2_PLAYED_WITH_DEBUG_ABEX();
+        return;
     }
 }
 
@@ -589,7 +610,6 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
 
     free(tf2_filepath);
     tf2_filepath = new_tf2_filepath;
-    // MAJOR_TODO: Make sure filepath is less than 255 characters
     tf2_filepath_len = (uint8_t) strlen(new_tf2_filepath);
 }
 

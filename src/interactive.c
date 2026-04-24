@@ -19,53 +19,7 @@
 #endif
 
 // Test input against CMP and CHAR. If COFF is -1, no short version
-#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : ccasecmp(input_buf[0], CHAR)))
-
-static void sigint_action_reprint(const char *prompt)
-{
-    printf("\n%s", prompt);
-    fflush(stdout);
-}
-
-enum Einteractive_action_type
-{
-    Einteractive_action_type_none,
-    Einteractive_action_type_int_cchar,
-    Einteractive_action_type_void_cchar,
-};
-
-// @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
-static bool interactive_action(const char *prompt, enum Einteractive_action_type action_type, void *action, void *action_param, void *action_ret)
-{
-    bool retval;
-
-    if (user_input_confirm(prompt, sigint_action_reprint))
-    {
-        switch (action_type)
-        {
-            break; case Einteractive_action_type_none:
-            {
-                // No-op
-            }
-            break; case Einteractive_action_type_int_cchar:
-            {
-                *((int *) action_ret) = ((int (*)(const char *)) action)((const char *) action_param);
-            }
-            break; case Einteractive_action_type_void_cchar:
-            {
-                ((void (*)(const char *)) action)((const char *) action_param);
-            }
-        }
-
-        retval = true;
-    }
-    else
-    {
-        retval = false;
-    }
-
-    return retval;
-}
+#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : (ccasecmp(input_buf[0], CHAR)) && (input_buf[1] == '\0' || input_buf[1] == ' ')))
 
 enum Especifier_status
 {
@@ -198,6 +152,13 @@ static void sigint_action_warn(const char *prompt)
     fputs(ANSI_RED " | Caught SIGINT, use \"(q)uit\" to quit.\n" ANSI_RESET, stderr);
 
     fputs(prompt, stdout);
+    fflush(stdout);
+}
+
+static void sigint_action_reprint(const char *prompt)
+{
+    printf("\n%s", prompt);
+    fflush(stdout);
 }
 
 void interactive_enter()
@@ -207,7 +168,7 @@ void interactive_enter()
     pthread_t thread_collection;
     char *user_input_history_fullname = NULL;
 
-    struct collection_read_live_routine_params live_params = COLLECTION_READ_LIVE_ROUTINE_PARAMS_INIT;
+    struct collection_read_live_routine_params live_params = { .input_file = NULL, .running = false };
 
     char *input_buf = NULL;
 
@@ -242,13 +203,13 @@ void interactive_enter()
         }
         else if (INPUT_IS("collect-live", 'v'))
         {
-            if (live_params.continue_running)
+            if (live_params.running)
             {
                 printf(ANSI_RED "Already live-collecting, can't start.\n" ANSI_RESET);
                 continue;
             }
 
-            printf("Starting live-collecting...\n");
+            puts("Starting live-collecting...");
 
             TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_fullname());
 
@@ -258,44 +219,55 @@ void interactive_enter()
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
                 RESET_STDERR_COL();
 
-                live_params.continue_running = false;
-
                 continue;
             }
 
-            live_params.continue_running = true;
             live_params.input_file = input_file_ptr;
             if (pthread_create(&thread_collection, NULL, collection_read_live_routine, &live_params))
             {
-                fprintf(stderr, ANSI_RED "MAJOR: Failed to create thread_collection.\n" ANSI_RESET);
+                perror(ANSI_RED "MAJOR: Failed to create thread_collection");
+                RESET_STDERR_COL();
             }
             else
             {
-                printf(ANSI_GREEN "Live collection started successfully.\n" ANSI_RESET);
+                puts(ANSI_GREEN "Live collection started successfully." ANSI_RESET);
             }
         }
         else if (INPUT_IS("stop-live", 't'))
         {
-            if (!live_params.continue_running)
+            if (!live_params.running)
             {
-                printf(ANSI_RED "Not currently live-collecting, can't stop.\n" ANSI_RESET);
+                fprintf(stderr, ANSI_RED "Not currently live-collecting, can't stop.\n" ANSI_RESET);
 
                 continue;
             }
 
             printf("Stopping live-collection...\n");
+            live_params.running = false;
 
-            live_params.continue_running = false;
             if (pthread_join(thread_collection, NULL))
             {
-                fprintf(stderr, ANSI_RED "MAJOR: Failed to join thread_collection.\n" ANSI_RESET);
+                perror(ANSI_RED "MAJOR: Failed to join thread_collection");
+                RESET_STDERR_COL();
             }
             else
             {
-                printf(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!\n" ANSI_RESET);
+                puts(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!" ANSI_RESET);
             }
 
-            interactive_action(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, Einteractive_action_type_int_cchar, remove, history_get_live_log_fullname, NULL);
+            if (user_input_confirm(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, sigint_action_reprint))
+            {
+                if (remove(history_get_live_log_fullname()))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to remove log file \"%s\", manual intervention required before next live collection: ", history_get_live_log_fullname());
+                    perror(NULL);
+                    RESET_STDERR_COL();
+                }
+                else
+                {
+                    printf(ANSI_GREEN "Successfully removed log file \"%s\".\n" ANSI_RESET, history_get_live_log_fullname());
+                }
+            }
 
             if (fclose(live_params.input_file))
             {
@@ -328,7 +300,10 @@ void interactive_enter()
                 user_input_history_fullname = NULL;
             }
 
-            interactive_action(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_save, user_input_history_fullname, NULL);
+            if (user_input_confirm(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            {
+                history_save(user_input_history_fullname);
+            }
         }
         else if (INPUT_IS("load", 'l'))
         {
@@ -344,7 +319,10 @@ void interactive_enter()
                 user_input_history_fullname = NULL;
             }
 
-            interactive_action(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_load, user_input_history_fullname, NULL);
+            if (user_input_confirm(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            {
+                history_load(user_input_history_fullname);
+            }
         }
         else if (INPUT_IS("help", 'h'))
         {
@@ -358,8 +336,8 @@ void interactive_enter()
                     LTAB LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n\n"
                     LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n\n"
-                    LTAB LTAB "collect-li(v)e [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Collects live data from FULLNAME. If FULLNAME not provided, collect from saved path.\n\n"
+                    LTAB LTAB "collect-li(v)e\n"
+                    LTAB LTAB LTAB "Collects live data from saved path.\n\n"
                     LTAB LTAB "s(t)op-live\n"
                     LTAB LTAB LTAB "Stops collecting live data.\n\n"
                     LTAB LTAB "collect-(a)rchived [FULLNAME]\n"
@@ -379,16 +357,19 @@ void interactive_enter()
         }
         else if (INPUT_IS("exit", 'e') || INPUT_IS("quit", 'q'))
         {
-            if (live_params.continue_running)
+            if (live_params.running)
             {
                 printf(ANSI_RED "Can't quit while live-collecting.\n" ANSI_RESET);
 
                 continue;
             }
 
-            interactive_action(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, Einteractive_action_type_void_cchar, history_save, user_input_history_fullname, NULL);
+            if (user_input_confirm(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            {
+                history_save(user_input_history_fullname);
+            }
 
-            if (interactive_action(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, Einteractive_action_type_none, NULL, NULL, NULL))
+            if (user_input_confirm(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, sigint_action_reprint))
             {
                 break;
             }
