@@ -61,7 +61,7 @@ HYPER_MACRO uint32_t parse_exp_sid3e(const char *const string_input)
     char *end;
     const uint32_t current_sid3 = strtoul(string_input, &end, 10);
 
-    // MAJOR_TODO: Even if string_input is confirmed SID64, this returns SID3E correctly???
+    // Even if string_input is confirmed SID64, this returns SID3E correctly???
     // Bad input misc
     if (*end != '\0')
     {
@@ -110,7 +110,7 @@ uint32_t sidm_parse_sid3e(const char *const string_input, const enum Esteamid_ty
                 errno = 0;
 
                 char *end;
-                const uint64_t value = strtol(string_input, &end, 10);
+                const uint_fast64_t value = strtol(string_input, &end, 10);
 
                 // Bad input
                 if (*end != '\0' && *end != '\n')
@@ -131,7 +131,7 @@ uint32_t sidm_parse_sid3e(const char *const string_input, const enum Esteamid_ty
                 // STEAMID3E
                 else
                 {
-                    return value;
+                    return (uint32_t) value;
                 }
             }
         }

@@ -20,15 +20,13 @@
 #elif defined(_WIN32) || defined(_WIN64)
     #include "windows.h"
 
-    // MAJOR_TODO: Test this
+    // MAJOR_TODO: Test this on windows
     #define tf2pw_sleep(SECONDS) Sleep((SECONDS) * 1000)
 #endif
 
-// MAJOR_TODO: If new people keep joining a match this will overflow. Switch to heap allocation for pinfo_arr->arr
 // How many players can be in a match (including user)
 #define MAX_PLAYERS 256
 
-// MAJOR_TODO: Read line dynamically into heap instead of using stack char arr
 // Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
 #define LINE_BUFB 256
 
@@ -186,7 +184,7 @@ static void parse_log(FILE *file_stream, const bool caller, struct player_info_a
             // Check who said it
             for (int i = 0; i < pinfo_arr->len; ++i)
             {
-                const int name_len = strlen(pinfo_arr->arr[i].name);
+                const int name_len = (int) strlen(pinfo_arr->arr[i].name);
 
                 // Found them, request to add
                 if (!memcmp(pinfo_arr->arr[i].name, current_name, name_len))

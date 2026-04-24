@@ -129,7 +129,7 @@ static struct arg_option arg_options[] =
 
 #define HELP_INFO(INDEX) arg_options[INDEX].name, NULLABLE(arg_options[INDEX].arg, ""), arg_options[INDEX].doc
 
-static void operation_print_help(const char *invocation, TF2PW_ATTR_UNUSED char *arg)
+static void operation_print_help(const char *invocation, char *arg)
 {
     printf
     (
@@ -164,19 +164,19 @@ static void operation_print_help(const char *invocation, TF2PW_ATTR_UNUSED char 
     exit(EXIT_SUCCESS);
 }
 
-static void operation_set_tf2_filepath(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_set_tf2_filepath(const char *invocation, char *arg)
 {
     history_set_tf2_filepath(string_deep_copy(arg));
 }
 
 static const char *history_fullname = NULL;
 
-static void operation_set_save_location(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_set_save_location(const char *invocation, char *arg)
 {
     history_fullname = arg;
 }
 
-static void operation_interactive(TF2PW_ATTR_UNUSED const char *invocation, TF2PW_ATTR_UNUSED char *arg)
+static void operation_interactive(const char *invocation, char *arg)
 {
     interactive_enter();
 
@@ -185,7 +185,7 @@ static void operation_interactive(TF2PW_ATTR_UNUSED const char *invocation, TF2P
     exit(EXIT_SUCCESS);
 }
 
-static void operation_collect_archived(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_collect_archived(const char *invocation, char *arg)
 {
     collection_read_archived(arg);
 }
@@ -193,7 +193,7 @@ static void operation_collect_archived(TF2PW_ATTR_UNUSED const char *invocation,
 // The type passed via --type. Will stay unknown if none passed
 static enum Esteamid_type passed_type = Esteamid_type_unknown;
 
-static void operation_type(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_type(const char *invocation, char *arg)
 {
     switch (*arg)
     {
@@ -216,7 +216,7 @@ static void operation_type(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
     }
 }
 
-static void operation_set_user_sid3e(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_set_user_sid3e(const char *invocation, char *arg)
 {
     const uint32_t new_user_sid3e = sidm_parse_sid3e(arg, passed_type);
     if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
@@ -233,7 +233,7 @@ static void operation_set_user_sid3e(TF2PW_ATTR_UNUSED const char *invocation, c
     }
 }
 
-static void operation_retrieve_records(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_retrieve_records(const char *invocation, char *arg)
 {
     const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 
@@ -260,7 +260,7 @@ static void operation_retrieve_records(TF2PW_ATTR_UNUSED const char *invocation,
     }
 }
 
-static void operation_edit_notes(TF2PW_ATTR_UNUSED const char *invocation, char *arg)
+static void operation_edit_notes(const char *invocation, char *arg)
 {
     const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 

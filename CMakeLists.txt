@@ -36,12 +36,21 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     # Compiler/linker options
     target_compile_definitions(tf2pw PRIVATE "TF2_PLAYED_WITH_DEBUG=1")
 
-    if (CMAKE_C_COMPILER_ID STREQUAL GNU)
-        target_compile_options(tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined" "-Wall" "-Wextra" "-Wpedantic")
+    if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined" "-Wall" "-Wextra" "-Wno-unused-parameter")
         target_link_options   (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
-    elseif (CMAKE_C_COMPILER_ID STREQUAL MSVC)
-        target_compile_options(tf2pw PRIVATE "/fsanitize=address" "/fsanitize=undefined")
-        target_link_options   (tf2pw PRIVATE "/fsanitize=address" "/fsanitize=undefined")
+    elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+        set(MSVC_DISABLED_WARNINGS
+            "4255" # Warns when using foo() {} instead of foo(void) {}
+            "4100" # Warns when parameters aren't used
+            "5045" # Spectre warnings, some security vulnerability from 2017
+            "4820" # Notifies when struct padding occurs
+            "4152" # Warns if object pointer is converted to function pointer or vice versa
+        )
+
+        list(TRANSFORM SRC PREPEND "/wd")
+
+        target_compile_options(tf2pw PRIVATE "/fsanitize=address" "/W4" ${MSVC_DISABLED_WARNINGS})
     endif ()
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     # Nothing to do
@@ -59,4 +68,4 @@ if (NO_ANSI_COLORING EQUAL 1)
 endif ()
 
 # Installation
-install(TARGETS tf2pw DESTINATION bin)
+install(TARGETS "tf2pw" DESTINATION "bin")

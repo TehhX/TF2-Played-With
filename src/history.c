@@ -373,7 +373,6 @@ void history_load(const char *const passed_history_fullname)
     tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
-    // MAJOR_TODO: Leaks memory here under unknown interactive mode circumstances. Investigate further
     player_records = malloc(player_records_len * sizeof(*player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < player_records_len; ++ player_records_i)
     {
@@ -387,7 +386,7 @@ void history_load(const char *const passed_history_fullname)
         while ((notes_input = fgetc(input_file_ptr)) != '\0')
         {
             prealloc(player_records[player_records_i].notes, sizeof(char), ++notes_len);
-            player_records[player_records_i].notes[notes_len - 1] = notes_input;
+            player_records[player_records_i].notes[notes_len - 1] = (char) notes_input;
         }
 
         prealloc(player_records[player_records_i].notes, sizeof(char), notes_len + 1);
@@ -590,7 +589,8 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
 
     free(tf2_filepath);
     tf2_filepath = new_tf2_filepath;
-    tf2_filepath_len = strlen(new_tf2_filepath);
+    // MAJOR_TODO: Make sure filepath is less than 255 characters
+    tf2_filepath_len = (uint8_t) strlen(new_tf2_filepath);
 }
 
 const char *history_get_live_log_fullname()
@@ -653,7 +653,7 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
     }
 
     ALLOCATE_NAME:;
-    const uint_fast8_t current_name_len = current_date_record.name_len = strlen(name);
+    const uint_fast8_t current_name_len = current_date_record.name_len = (uint8_t) strlen(name);
     current_date_record.name = malloc(sizeof(char) * current_name_len + 1);
     memcpy(current_date_record.name, name, current_name_len + 1);
 
@@ -840,7 +840,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     while ((input = fgetc(read)) != EOF)
     {
         prealloc(player_records[player_index].notes, sizeof(char), (notes_len + 1));
-        player_records[player_index].notes[notes_len++] = input;
+        player_records[player_index].notes[notes_len++] = (char) input;
     }
 
     if (notes_len > 0)

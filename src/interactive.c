@@ -34,13 +34,6 @@ enum Einteractive_action_type
     Einteractive_action_type_void_cchar,
 };
 
-// TODO: Check if MSVC whines too
-// Complains about function pointer casting. Just comment out every commit and make sure that's the only thing it's complaining about, or if something new is wrong
-#ifdef __GNUC__
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
 // @brief Will print OUTPUT and if subsequent user input is positive, perform ACTION
 static bool interactive_action(const char *prompt, enum Einteractive_action_type action_type, void *action, void *action_param, void *action_ret)
 {
@@ -204,8 +197,7 @@ static void sigint_action_warn(const char *prompt)
 {
     fputs(ANSI_RED " | Caught SIGINT, use \"(q)uit\" to quit.\n" ANSI_RESET, stderr);
 
-    printf(prompt);
-    fflush(stdout);
+    putsnnl(prompt);
 }
 
 void interactive_enter()
@@ -419,7 +411,3 @@ void interactive_enter()
     free(input_buf);
     free(user_input_history_fullname);
 }
-
-#ifdef __GNUC__
-    #pragma GCC diagnostic pop
-#endif

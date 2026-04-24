@@ -15,12 +15,10 @@
 // Compiler specific definitions
 #ifdef __GNUC__
     #define TF2PW_ATTR_ALWINL __attribute__((always_inline))
-    #define TF2PW_ATTR_UNUSED __attribute__((unused))
     #define TF2PW_ATTR_NONNULL(INDICES) __attribute__((nonnull (INDICES)))
 #elif defined(_MSC_VER)
     #define TF2PW_ATTR_ALWINL __forceinline
-    #define TF2PW_ATTR_UNUSED // MAJOR_TODO: Figure out what this should be
-    #define TF2PW_ATTR_NONNULL(INDICES) // MAJOR_TODO: Figure out what this should be
+    #define TF2PW_ATTR_NONNULL(INDICES)
 #else
     #error "Unknown compiler."
 #endif
@@ -113,5 +111,8 @@
 
 // Copy string `S` to heap
 #define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
+
+// Print string without newline
+#define putsnnl(S) printf("%s", S); fflush(stdout)
 
 #endif // COMMON_H

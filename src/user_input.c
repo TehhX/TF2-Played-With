@@ -12,14 +12,14 @@ static bool caught_sigint = false;
 #ifdef __linux__
     #include "signal.h"
 
-    void sigint_handler(TF2PW_ATTR_UNUSED const int sig_code)
+    void sigint_handler(const int sig_code)
     {
         caught_sigint = true;
     }
 #elif defined(_WIN32)
     #include "windows.h"
 
-    BOOL WINAPI sigint_handler(TF2PW_ATTR_UNUSED const DWORD sig_code)
+    BOOL WINAPI sigint_handler(const DWORD sig_code)
     {
         caught_sigint = true;
 
@@ -199,8 +199,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         }
     }
 
-    printf(prompt);
-    fflush(stdout);
+    putsnnl(prompt);
 
     while (1)
     {
