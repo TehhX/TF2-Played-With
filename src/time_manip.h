@@ -15,7 +15,7 @@
 #define SECONDS_PER_DAY (24 * 60 * 60)
 
 // Convert UE-seconds to UE-days
-#define time_manip_ues2ued(UES) ((UES) / SECONDS_PER_DAY + 1)
+#define time_manip_ues2ued(UES) ((uint16_t) ((UES) / SECONDS_PER_DAY + 1))
 
 // Convert UE-days to UE-seconds
 #define time_manip_ued2ues(UED) ((UED) * SECONDS_PER_DAY)
