@@ -112,7 +112,4 @@
 // Copy string `S` to heap
 #define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
 
-// Print string without newline
-#define putsnnl(S) printf("%s", S); fflush(stdout)
-
 #endif // COMMON_H

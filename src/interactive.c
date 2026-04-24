@@ -197,7 +197,7 @@ static void sigint_action_warn(const char *prompt)
 {
     fputs(ANSI_RED " | Caught SIGINT, use \"(q)uit\" to quit.\n" ANSI_RESET, stderr);
 
-    putsnnl(prompt);
+    fputs(prompt, stdout);
 }
 
 void interactive_enter()

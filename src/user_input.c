@@ -199,7 +199,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         }
     }
 
-    putsnnl(prompt);
+    fputs(prompt, stdout);
 
     while (1)
     {
