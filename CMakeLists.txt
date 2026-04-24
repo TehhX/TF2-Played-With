@@ -48,7 +48,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             "4152" # Warns if object pointer is converted to function pointer or vice versa
         )
 
-        list(TRANSFORM SRC PREPEND "/wd")
+        list(TRANSFORM MSVC_DISABLED_WARNINGS PREPEND "/wd")
 
         target_compile_options(tf2pw PRIVATE "/fsanitize=address" "/W4" ${MSVC_DISABLED_WARNINGS})
     endif ()
