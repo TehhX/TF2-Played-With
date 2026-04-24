@@ -59,7 +59,7 @@ elseif (CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
 elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     # Nothing to do
 else ()
-    message(FATAL_ERROR "Specify a build type, eg. -DCMAKE_BUILD_TYPE:STRING=Debug.")
+    message(FATAL_ERROR "Specify a build type, eg. -DCMAKE_BUILD_TYPE:STRING=Release.")
 endif ()
 
 # Use -DNO_ANSI_COLORING=1 when configuring to disable ANSI color escapes
