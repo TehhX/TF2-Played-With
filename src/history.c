@@ -611,7 +611,7 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
     const size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
     if (new_tf2_filepath_len > UINT8_MAX)
     {
-        fprintf(stderr, "New TF2 filepath length is too long, is %zu, should be at most %zu.\n", new_tf2_filepath_len, UINT8_MAX);
+        fprintf(stderr, "New TF2 filepath length is too long, is %zu, should be at most %zu.\n", new_tf2_filepath_len, (size_t) UINT8_MAX);
         return;
     }
 
