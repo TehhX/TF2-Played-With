@@ -7,7 +7,14 @@
 #include "pthread.h"
 #include "errno.h"
 
-static bool caught_sigint = false;
+enum bad_input_type
+{
+    bad_input_type_none,
+    bad_input_type_sigint,
+    bad_input_type_break
+};
+
+static enum bad_input_type bad_input_type = bad_input_type_none;
 
 #ifdef __linux__
     #include "signal.h"
@@ -16,14 +23,14 @@ static bool caught_sigint = false;
 
     void sigint_handler(const int sig_code)
     {
-        caught_sigint = true;
+        bad_input_type = bad_input_type_sigint;
     }
 #elif defined(_WIN32)
     #include "windows.h"
 
     BOOL WINAPI sigint_handler(const DWORD sig_code)
     {
-        caught_sigint = true;
+        bad_input_type = bad_input_type_sigint;
 
         return TRUE;
     }
@@ -107,9 +114,14 @@ static void *routine_user_input(struct routine_user_input_params *const params)
 
     #ifdef __linux__
         free(params->input);
-        params->input = readline(params->prompt);
+        if ((params->input = readline(params->prompt)) == NULL)
+        {
+            bad_input_type = bad_input_type_break;
+
+            return NULL;
+        }
     #elif defined(_WIN32)
-        fputs(prompt, stdout);
+        fputs(params->prompt, stdout);
         fflush(stdout);
 
         params->input_len = 0;
@@ -145,10 +157,12 @@ static void *routine_user_input(struct routine_user_input_params *const params)
     return NULL;
 }
 
-char *user_input_getline(char **input, const char *prompt, const sigint_action_t sigint_action)
+char *user_input_getline(char **input, const char *prompt, const char *bad_input_message)
 {
+    const bool catch_sigint = bad_input_message != NULL;
+
     // Change SIGINT behavior
-    if (sigint_action != sigint_action_dont_catch)
+    if (catch_sigint)
     {
         if (
         #ifdef __linux__
@@ -160,7 +174,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
             perror(ANSI_RED "FATAL: Couldn't modify SIGINT handling");
             RESET_STDERR_COL();
 
-            cleanup(NULL, NULL, NULL, sigint_action);
+            cleanup(NULL, NULL, NULL, catch_sigint);
 
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -173,7 +187,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         perror(ANSI_RED "FATAL: Failed to initialize mutex");
         RESET_STDERR_COL();
 
-        cleanup(NULL, NULL, params.input, sigint_action);
+        cleanup(NULL, NULL, params.input, catch_sigint);
 
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
@@ -187,47 +201,56 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         perror(ANSI_RED "FATAL: Failed to spin up thread");
         RESET_STDERR_COL();
 
-        cleanup(NULL, &params.input_lock, params.input, sigint_action);
+        cleanup(NULL, &params.input_lock, params.input, catch_sigint);
 
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
     while (1)
     {
+        if (bad_input_type != bad_input_type_none)
+        {
+            if (bad_input_type == bad_input_type_sigint)
+            {
+                fprintf(stderr, "\n%s\n", bad_input_message);
+            }
+            else if (bad_input_type == bad_input_type_break)
+            {
+                fprintf(stderr, "%s\n", bad_input_message);
+            }
+
+            // Disregard old input if using readline(...)
+            #ifdef __linux__
+                pthread_cancel(user_input_thread);
+
+                // Initialize mutex, pre-lock
+                pthread_mutex_init(&params.input_lock, NULL);
+                pthread_mutex_lock(&params.input_lock);
+
+                params.input = NULL;
+
+                pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params);
+            #elif defined(_WIN32)
+                fputs(prompt, stdout);
+                fflush(stdout);
+            #endif
+
+            bad_input_type = bad_input_type_none;
+        }
+
         switch (pthread_mutex_trylock(&params.input_lock))
         {
             // Already locked
             break; case EBUSY:
             {
-                if (caught_sigint)
-                {
-                    if (sigint_action)
-                    {
-                        sigint_action(prompt);
-
-                        // Disregard old input if using readline(...)
-                        #ifdef __linux__
-                            pthread_cancel(user_input_thread);
-
-                            // Initialize mutex, pre-lock
-                            pthread_mutex_init(&params.input_lock, NULL);
-                            pthread_mutex_lock(&params.input_lock);
-
-                            params.input = NULL;
-
-                            pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params);
-                        #endif
-                    }
-
-                    caught_sigint = false;
-                }
+                // No-op
             }
             // Got the lock successfully
             break; case 0:
             {
                 *input = params.input;
 
-                return (cleanup(&user_input_thread, &params.input_lock, NULL, sigint_action) ? NULL : params.input);
+                return (cleanup(&user_input_thread, &params.input_lock, NULL, catch_sigint) ? NULL : *input);
             }
             // Miscellaneous error
             break; default:
@@ -235,7 +258,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
                 perror(ANSI_RED "FATAL: Misc mutex error");
                 RESET_STDERR_COL();
 
-                cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
+                cleanup(&user_input_thread, &params.input_lock, params.input, catch_sigint);
 
                 TF2_PLAYED_WITH_DEBUG_ABEX();
             }
@@ -246,13 +269,13 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
     TF2_PLAYED_WITH_DEBUG_ABEX();
 }
 
-bool user_input_confirm(const char *prompt, const sigint_action_t sigint_action)
+bool user_input_confirm(const char *prompt, const char *bad_input_message)
 {
     char *input = NULL;
 
     for (bool cont = true; cont; )
     {
-        if (!user_input_getline(&input, prompt, sigint_action))
+        if (!user_input_getline(&input, prompt, bad_input_message))
         {
             perror(ANSI_RED "FATAL: User confirmation input error");
             RESET_STDERR_COL();
