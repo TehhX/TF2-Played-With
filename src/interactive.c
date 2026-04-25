@@ -150,15 +150,11 @@ static void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3
 static void sigint_action_warn(const char *prompt)
 {
     fputs(ANSI_RED " | Caught SIGINT, use \"(q)uit\" to quit.\n" ANSI_RESET, stderr);
-
-    fputs(prompt, stdout);
-    fflush(stdout);
 }
 
-static void sigint_action_reprint(const char *prompt)
+static void sigint_action_newline(const char *prompt)
 {
-    printf("\n%s", prompt);
-    fflush(stdout);
+    putchar('\n');
 }
 
 void interactive_enter()
@@ -255,7 +251,7 @@ void interactive_enter()
                 puts(ANSI_GREEN "Live collection stopped successfully. Don't forget to save!" ANSI_RESET);
             }
 
-            if (user_input_confirm(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, sigint_action_reprint))
+            if (user_input_confirm(ANSI_YELLOW "Delete live log file? (Must do before next live collection) (Y/N): " ANSI_RESET, sigint_action_newline))
             {
                 if (remove(history_get_live_log_fullname()))
                 {
@@ -300,7 +296,7 @@ void interactive_enter()
                 user_input_history_fullname = NULL;
             }
 
-            if (user_input_confirm(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            if (user_input_confirm(ANSI_YELLOW "Overwrite file and save? (Y/N): " ANSI_RESET, sigint_action_newline))
             {
                 history_save(user_input_history_fullname);
             }
@@ -319,7 +315,7 @@ void interactive_enter()
                 user_input_history_fullname = NULL;
             }
 
-            if (user_input_confirm(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            if (user_input_confirm(ANSI_YELLOW "Discard changes in memory and load? (Y/N): " ANSI_RESET, sigint_action_newline))
             {
                 history_load(user_input_history_fullname);
             }
@@ -364,12 +360,12 @@ void interactive_enter()
                 continue;
             }
 
-            if (user_input_confirm(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            if (user_input_confirm(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, sigint_action_newline))
             {
                 history_save(user_input_history_fullname);
             }
 
-            if (user_input_confirm(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, sigint_action_reprint))
+            if (user_input_confirm(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, sigint_action_newline))
             {
                 break;
             }

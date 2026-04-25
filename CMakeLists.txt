@@ -29,6 +29,8 @@ target_link_libraries(tf2pw PRIVATE cider)
 # winpthreads, see /README-technical.md
 if (WIN32)
     target_link_libraries(tf2pw PRIVATE pthreadVC3)
+elseif (LINUX)
+    target_link_libraries(tf2pw PRIVATE readline)
 endif ()
 
 # Enable debugging when variant is "Debug"

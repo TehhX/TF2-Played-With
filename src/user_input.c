@@ -12,6 +12,8 @@ static bool caught_sigint = false;
 #ifdef __linux__
     #include "signal.h"
 
+    #include "readline/readline.h"
+
     void sigint_handler(const int sig_code)
     {
         caught_sigint = true;
@@ -82,41 +84,61 @@ static int cleanup(pthread_t *const thread, pthread_mutex_t *const mutex, char *
 
 struct routine_user_input_params
 {
+    #ifdef _WIN32
+        size_t input_len;
+    #endif
+
+    const char *const prompt;
     char *input;
-    size_t input_len;
     pthread_mutex_t input_lock;
 };
 
 static void *routine_user_input(struct routine_user_input_params *const params)
 {
-    pthread_mutex_lock(&params->input_lock);
-
-    params->input_len = 0;
-
-    for (bool cont = true; cont; )
-    {
-        // BUFF_TODO
-        const int next = fgetc(stdin);
-        switch (next)
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        // Should be pre-locked by user_input_getline(...)
+        if (pthread_mutex_trylock(&params->input_lock) != EBUSY)
         {
-            break; case '\n':
-            {
-                params->input = realloc(params->input, sizeof(char) * ++params->input_len);
-                params->input[params->input_len - 1] = '\0';
+            fputs(ANSI_RED "FATAL: Mutex not pre-locked in routine_user_input.\n" ANSI_RESET, stderr);
+            abort();
+        }
+    )
 
-                cont = false;
-            }
-            break; case EOF:
+    #ifdef __linux__
+        free(params->input);
+        params->input = readline(params->prompt);
+    #elif defined(_WIN32)
+        fputs(prompt, stdout);
+        fflush(stdout);
+
+        params->input_len = 0;
+
+        for (bool cont = true; cont; )
+        {
+            // BUFF_TODO
+            const int next = fgetc(stdin);
+            switch (next)
             {
-                params->input_len = 0;
-            }
-            break; default:
-            {
-                params->input = realloc(params->input, sizeof(char) * (params->input_len + 1));
-                params->input[params->input_len++] = (char) next;
+                break; case '\n':
+                {
+                    params->input = realloc(params->input, sizeof(char) * ++params->input_len);
+                    params->input[params->input_len - 1] = '\0';
+
+                    cont = false;
+                }
+                break; case EOF:
+                {
+                    params->input_len = 0;
+                }
+                break; default:
+                {
+                    params->input = realloc(params->input, sizeof(char) * (params->input_len + 1));
+                    params->input[params->input_len++] = (char) next;
+                }
             }
         }
-    }
+    #endif
 
     pthread_mutex_unlock(&params->input_lock);
 
@@ -144,7 +166,7 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         }
     }
 
-    struct routine_user_input_params params = { .input = *input };
+    struct routine_user_input_params params = { .input = *input, .prompt = prompt };
 
     if (pthread_mutex_init(&params.input_lock, NULL))
     {
@@ -156,6 +178,9 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
 
+    // Pre-lock for routine's sake
+    pthread_mutex_lock(&params.input_lock);
+
     pthread_t user_input_thread;
     if (pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params))
     {
@@ -166,41 +191,6 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
 
         TF2_PLAYED_WITH_DEBUG_ABEX();
     }
-
-    for (bool cont = true; cont; )
-    {
-        switch (pthread_mutex_trylock(&params.input_lock))
-        {
-            break; case EBUSY:
-            {
-                cont = false;
-            }
-            break; case 0:
-            {
-                if (pthread_mutex_unlock(&params.input_lock))
-                {
-                    perror(ANSI_RED "FATAL: Failed to unlock mutex from main");
-                    RESET_STDERR_COL();
-
-                    cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
-
-                    TF2_PLAYED_WITH_DEBUG_ABEX();
-                }
-            }
-            break; default:
-            {
-                perror(ANSI_RED "FATAL: Misc mutex error");
-                RESET_STDERR_COL();
-
-                cleanup(&user_input_thread, &params.input_lock, params.input, sigint_action);
-
-                TF2_PLAYED_WITH_DEBUG_ABEX();
-            }
-        }
-    }
-
-    fputs(prompt, stdout);
-    fflush(stdout);
 
     while (1)
     {
@@ -214,6 +204,19 @@ char *user_input_getline(char **input, const char *prompt, const sigint_action_t
                     if (sigint_action)
                     {
                         sigint_action(prompt);
+
+                        // Disregard old input if using readline(...)
+                        #ifdef __linux__
+                            pthread_cancel(user_input_thread);
+
+                            // Initialize mutex, pre-lock
+                            pthread_mutex_init(&params.input_lock, NULL);
+                            pthread_mutex_lock(&params.input_lock);
+
+                            params.input = NULL;
+
+                            pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params);
+                        #endif
                     }
 
                     caught_sigint = false;

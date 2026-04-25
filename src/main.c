@@ -14,6 +14,9 @@
 #ifdef _WIN32
     // For terminal coloring
     #include "windows.h"
+#elif defined(__linux__)
+    // For readline SIGINT handling removal
+    #include "readline/readline.h"
 #endif
 
 /*
@@ -114,7 +117,7 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--edit-(n)otes",
-        .doc = "Use $EDITOR to edit the notes of the provided player record. If $EDITOR is not set, this will use \"vi\".\n",
+        .doc = "Use $EDITOR to edit the notes of the provided player record. If $EDITOR is not set, this will use \"vi\".",
         .arg = "[STEAMID3|STEAMID3E|STEAMID64|NAME]",
         .opt_long = "edit-notes",
         .opt_short = 'n',
@@ -122,7 +125,7 @@ static struct arg_option arg_options[] =
     }
 };
 
-#define HELP_OUTP LTAB "%s %s\n" LTAB LTAB "%s"
+#define HELP_OUTP LTAB "%s %s\n" LTAB LTAB "%s\n"
 
 // Will be VAL if VAL != 0/NULL/etc, else will be NVAL
 #define NULLABLE(VAL, NVAL) ((VAL) ? (VAL) : (NVAL))
@@ -133,8 +136,8 @@ static void operation_print_help(const char *invocation, char *arg)
 {
     printf
     (
-        "Warning: Only first occurrence of each option is considered.\n"
-        "Usage: %s [OPTION]...\n"
+        ANSI_YELLOW "Warning: Only first occurrence of each option is considered.\n"
+        ANSI_BLUE   "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
         HELP_OUTP "\n" // 0
@@ -146,6 +149,8 @@ static void operation_print_help(const char *invocation, char *arg)
         HELP_OUTP "\n" // 6
         HELP_OUTP "\n" // 7
         HELP_OUTP      // 8
+
+        ANSI_RESET
         ,
         invocation,
 
@@ -354,6 +359,10 @@ int main(const int argc, char **argv)
         fprintf(stderr, ANSI_RED "Need argument(s). Try \"%s --help\" for help.\n" ANSI_RESET, argv[0]);
         return 1;
     }
+
+    #ifdef __linux__
+        rl_catch_signals = 0;
+    #endif
 
     parse_option(argc, argv, 0); // Help
 
