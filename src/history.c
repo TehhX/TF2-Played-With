@@ -626,20 +626,23 @@ const char *history_get_live_log_fullname()
     return (const char *) tf2_live_log_fullname;
 }
 
-// MAJOR_TODO: Dates sometimes errantly set as 0 (epoch) during live-testing
 void history_set_date(const uint16_t new_date)
 {
     if (new_date == HISTORY_SET_DATE_TODAY)
     {
-        current_date = time_manip_ues2ued(time(NULL));
+        current_date = time_manip_current_ued();
     }
     else
     {
         current_date = new_date;
     }
 
-    // TODO: Log human-readable date instead of days
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set current_date to %" PRIu16 ".\n" ANSI_RESET, current_date);
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        fputs(ANSI_LOG "LOG: Set current date to ", stdout);
+        time_manip_print_ued(current_date);
+        puts("\n" ANSI_RESET);
+    )
 }
 
 HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const steam_name_stack name)

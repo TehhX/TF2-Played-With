@@ -301,6 +301,8 @@ static void parse_option(const int argc, char **argv, const int option_i)
         }
     }
     while (++i < argc);
+
+    // Option not found, return
     return;
 
     OPERATE:;
