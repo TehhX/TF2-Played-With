@@ -608,9 +608,17 @@ void history_set_tf2_filepath(char *new_tf2_filepath)
 {
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Setting tf2_filepath to \"%s\"." ANSI_RESET, new_tf2_filepath);
 
+    const size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
+    if (new_tf2_filepath_len > UINT8_MAX)
+    {
+        fprintf(stderr, "New TF2 filepath length is too long, is %zu, should be at most %zu.\n", new_tf2_filepath_len, UINT8_MAX);
+        return;
+    }
+
     free(tf2_filepath);
     tf2_filepath = new_tf2_filepath;
-    tf2_filepath_len = (uint8_t) strlen(new_tf2_filepath);
+
+    tf2_filepath_len = (uint8_t) new_tf2_filepath_len;
 }
 
 const char *history_get_live_log_fullname()
