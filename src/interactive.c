@@ -195,7 +195,7 @@ void interactive_enter()
                 continue;
             }
 
-            puts("Starting live-collecting...");
+            puts(ANSI_YELLOW "Starting live-collecting..." ANSI_RESET);
 
             TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_fullname());
 
@@ -228,7 +228,12 @@ void interactive_enter()
                 continue;
             }
 
-            printf("Stopping live-collection...\n");
+            if (!user_input_confirm(ANSI_YELLOW "Stop live collecting? (Y/N): " ANSI_RESET, "\n"))
+            {
+                continue;
+            }
+
+            printf(ANSI_YELLOW "Stopping live-collection...\n" ANSI_RESET);
             live_params.running = false;
 
             if (pthread_join(thread_collection, NULL))
