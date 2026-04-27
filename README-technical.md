@@ -4,20 +4,21 @@ Contains information for development and related endeavors.
 
 ## Building
 
-TF2PW is best built via CMake. Only the standard CMake commands are required to build/run TF2PW, find CMake tutorials somewhere else. Installing via CMake is not yet implemented.
+TF2PW is best built via CMake. Example:
+
+```bash
+cd TF2-Played-With
+cmake -S . -B build -DCMAKE_BUILD_TYPE:STRING=Release
+cmake --build build --config Release
+```
 
 ## Dependencies
 
 The following are required for building:
 
-* [GNU-C's argp](https://sourceware.org/glibc/)
-  * For argument parsing via `argp.h`
-  * Currently locking TF2PW to Linux, will be phased out
 * [Cider](https://github.com/TehhX/Cider)
-  * For saving/loading
 * pthreads
-  * For multithreading
-  * Comes with most Linux distros, but on windows you'll need [pthread-win32](https://github.com/GerHobbelt/pthread-win32) (I haven't tested it well yet)
+  * Comes with most Linux distros, but on windows you'll need [pthread-win32](https://github.com/GerHobbelt/pthread-win32)
 
 Headers and libraries can be put in /include/ and /lib/ respectively if your include/lib paths don't have any specific dependency.
 
@@ -108,7 +109,7 @@ The master status-report will occur once after each initial join message in the 
 
 ### Format Versions
 
-Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type. Until 1.0.0, the save format is always 0 and is subject to frequent and heavy modifications.
+Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type.
 
 ### Visualization
 
@@ -163,7 +164,6 @@ The following data will be required (Quasi-JSON format here for visualization, b
 
 ### Considerations
 
-* `player_record.name` assumes a player's name won't be changed during individual dates the user encounters them. Maybe an array of their names? Thoughts for another save format version in any case
 * To change a name in TF2, the player must quit the game and relaunch it
 * It is currently assumed that STEAMID3 excerpts will always be in the range [1, UINT32_MAX - 2] (for steamid_manip.h::SIDM_ERR_NONE_MAX reasons). It has held true for now, but it is still only an assumption made for space savings
 
