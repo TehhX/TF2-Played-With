@@ -78,7 +78,7 @@ static bool parse_log(FILE *file_stream, const bool caller, struct player_info_a
                 }
             }
 
-            // This is a bot, skip. More information at /README-technical.md#L38
+            // This is a bot, skip
             if (last_bot_str_i >= last_close_bracket_i)
             {
                 TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: (LI=%zu) Bot found, skipping.\n" ANSI_RESET, file_line_index);)
