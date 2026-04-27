@@ -224,6 +224,7 @@ char *user_input_getline(char **input, const char *prompt, const char *bad_input
                 pthread_cancel(user_input_thread);
 
                 // Initialize mutex, pre-lock
+                pthread_mutex_destroy(&params.input_lock);
                 pthread_mutex_init(&params.input_lock, NULL);
                 pthread_mutex_lock(&params.input_lock);
 
