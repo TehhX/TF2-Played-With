@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project("TF2-Played-With" LANGUAGES C VERSION 1.0.3 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
+project("TF2-Played-With" LANGUAGES C VERSION 1.0.4 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 file(WRITE "${CMAKE_SOURCE_DIR}/version.txt" "${PROJECT_VERSION_MAJOR}-${PROJECT_VERSION_MINOR}-${PROJECT_VERSION_PATCH}")
 
 set(CMAKE_C_STANDARD 17)
