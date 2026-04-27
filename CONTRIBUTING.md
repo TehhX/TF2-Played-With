@@ -6,6 +6,6 @@ Contributions are welcome, just submit issues or PRs. If they're good, I'll add/
 
 If you see an issue you want to solve, request assignment. After receiving assignment of the issue, take a crack at it and submit a PR when finished.
 
-## Artifical Intelligence
+## Artificial Intelligence
 
 AI generated code, issues, PRs, etc. are not welcome in this repository in any form.
