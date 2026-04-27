@@ -21,3 +21,9 @@ Check the [1.0.0 milestone](https://github.com/TehhX/TF2-Played-With/milestone/1
   * A great game that this entire repo is made for
 * [Steam-ID-Converter](https://github.com/ElektroStudios/Steam-ID-Converter/): For STEAMID conversion implementation
 * [cholera²](https://steamcommunity.com/profiles/76561199183240914): For trusting a random TF2 player and, in so doing, paving the way for a solution to [issue #8](https://github.com/TehhX/TF2-Played-With/issues/8)
+
+## FAQ
+
+### The executable doesn't do anything when I start it
+
+As TF2PW is a command-line-interface **only** application, make sure you're running it from a terminal, eg. command prompt on Windows, or any terminal emulator on Linux.
