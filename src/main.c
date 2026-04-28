@@ -22,32 +22,46 @@
 /*
     @brief For parsing purposes
 
-        @param invocation First string in argv
-        @param arg Proceeding argument
+        @param invocation First string in argv (argv[0])
+        @param arg Proceeding argument (argv[n + 1])
 */
-typedef void (*operation_callback)(const char *invocation, char *arg);
+typedef void (*operation_callback)(const char *invocation, const char *arg);
+
+// NEWARGS_TODO
+static void operation_print_help       (const char *invocation, const char *arg);
+static void operation_set_tf2_filepath (const char *invocation, const char *arg);
+static void operation_set_save_location(const char *invocation, const char *arg);
+static void operation_interactive      (const char *invocation, const char *arg);
+static void operation_collect_archived (const char *invocation, const char *arg);
+static void operation_type             (const char *invocation, const char *arg);
+static void operation_set_user_sid3e   (const char *invocation, const char *arg);
+static void operation_retrieve_records (const char *invocation, const char *arg);
+static void operation_edit_notes       (const char *invocation, const char *arg);
+
+// NEWARGS_TODO
+enum Earg_option
+{
+    Earg_option_print_help,
+    Earg_option_set_tf2_filepath,
+    Earg_option_set_save_location,
+    Earg_option_interactive,
+    Earg_option_collect_archived,
+    Earg_option_type,
+    Earg_option_set_user_sid3e,
+    Earg_option_retrieve_records,
+    Earg_option_edit_notes
+};
 
 // @brief Contains information about option
 struct arg_option
 {
-    const char *name;
-    const char *doc;
-    const char *arg; // Set to NULL if no arg required
-    const char *opt_long;
-    const char  opt_short;
-    const operation_callback operation;
+    char *name;
+    char *doc;
+    char *arg; // Set to NULL if no arg required
+    char *opt_long;
+    char  opt_short;
+    operation_callback operation;
 };
-
-// NEWARGS_TODO
-static void operation_print_help       (const char *invocation, char *arg);
-static void operation_set_tf2_filepath (const char *invocation, char *arg);
-static void operation_set_save_location(const char *invocation, char *arg);
-static void operation_interactive      (const char *invocation, char *arg);
-static void operation_collect_archived (const char *invocation, char *arg);
-static void operation_type             (const char *invocation, char *arg);
-static void operation_set_user_sid3e   (const char *invocation, char *arg);
-static void operation_retrieve_records (const char *invocation, char *arg);
-static void operation_edit_notes       (const char *invocation, char *arg);
 
 // NEWARGS_TODO
 static struct arg_option arg_options[] =
@@ -61,20 +75,20 @@ static struct arg_option arg_options[] =
         .operation = operation_print_help
     },
     {
-        .name = "--(s)et-save-location",
-        .doc = "If provided, save and load to that history file, else use default location \"~/.local/share/tf2pw.sav\".",
-        .arg = "[FULLNAME]",
-        .opt_long = "set-save-location",
-        .opt_short = 's',
-        .operation = operation_set_save_location
-    },
-    {
         .name = "--set-tf2-(f)ilepath",
         .doc = "Sets the filepath of the Team Fortress Two folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\" (With trailing slash).",
         .arg = "[FILEPATH]",
         .opt_long = "set-tf2-filepath",
         .opt_short = 'f',
         .operation = operation_set_tf2_filepath
+    },
+    {
+        .name = "--(s)et-save-location",
+        // .doc is filled at runtime
+        .arg = "[FULLNAME]",
+        .opt_long = "set-save-location",
+        .opt_short = 's',
+        .operation = operation_set_save_location
     },
     {
         .name = "--(i)nteractive",
@@ -125,63 +139,77 @@ static struct arg_option arg_options[] =
     }
 };
 
-#define HELP_OUTP LTAB "%s %s\n" LTAB LTAB "%s\n"
+#define HELP_OUTP(INDEX) LTAB "%s %s\n" LTAB LTAB "%s\n"
 
 // Will be VAL if VAL != 0/NULL/etc, else will be NVAL
 #define NULLABLE(VAL, NVAL) ((VAL) ? (VAL) : (NVAL))
 
 #define HELP_INFO(INDEX) arg_options[INDEX].name, NULLABLE(arg_options[INDEX].arg, ""), arg_options[INDEX].doc
 
-static void operation_print_help(const char *invocation, char *arg)
+static void operation_print_help(const char *invocation, const char *arg)
 {
+    static const char
+        message_0[] = "If provided, save and load to that history file, else use default location ",
+        message_1[] = "."
+    ;
+
+    char *default_save_location = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav");
+
+    arg_options[Earg_option_set_save_location].doc = malloc(sizeof(char) * (sizeof(message_0) + sizeof(message_1) - 1 + strlen(default_save_location) + 2));
+    sprintf(arg_options[Earg_option_set_save_location].doc, "%s\"%s\"%s", message_0, default_save_location, message_1);
+
+    free(default_save_location);
+
     printf
     (
         ANSI_YELLOW "Warning: Only first occurrence of each option is considered.\n"
         ANSI_BLUE   "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
-        HELP_OUTP "\n" // 0
-        HELP_OUTP "\n" // 1
-        HELP_OUTP "\n" // 2
-        HELP_OUTP "\n" // 3
-        HELP_OUTP "\n" // 4
-        HELP_OUTP "\n" // 5
-        HELP_OUTP "\n" // 6
-        HELP_OUTP "\n" // 7
-        HELP_OUTP      // 8
+        HELP_OUTP(Earg_option_print_help       ) "\n"
+        HELP_OUTP(Earg_option_set_tf2_filepath ) "\n"
+        HELP_OUTP(Earg_option_set_save_location) "\n"
+        HELP_OUTP(Earg_option_interactive      ) "\n"
+        HELP_OUTP(Earg_option_collect_archived ) "\n"
+        HELP_OUTP(Earg_option_type             ) "\n"
+        HELP_OUTP(Earg_option_set_user_sid3e   ) "\n"
+        HELP_OUTP(Earg_option_retrieve_records ) "\n"
+        HELP_OUTP(Earg_option_edit_notes       )
 
         ANSI_RESET
         ,
         invocation,
 
         // NEWARGS_TODO
-        HELP_INFO(0),
-        HELP_INFO(1),
-        HELP_INFO(2),
-        HELP_INFO(3),
-        HELP_INFO(4),
-        HELP_INFO(5),
-        HELP_INFO(6),
-        HELP_INFO(7),
-        HELP_INFO(8)
+        HELP_INFO(Earg_option_print_help       ),
+        HELP_INFO(Earg_option_set_tf2_filepath ),
+        HELP_INFO(Earg_option_set_save_location),
+        HELP_INFO(Earg_option_interactive      ),
+        HELP_INFO(Earg_option_collect_archived ),
+        HELP_INFO(Earg_option_type             ),
+        HELP_INFO(Earg_option_set_user_sid3e   ),
+        HELP_INFO(Earg_option_retrieve_records ),
+        HELP_INFO(Earg_option_edit_notes       )
     );
+
+    free(arg_options[Earg_option_set_save_location].doc);
 
     exit(EXIT_SUCCESS);
 }
 
-static void operation_set_tf2_filepath(const char *invocation, char *arg)
+static void operation_set_tf2_filepath(const char *invocation, const char *arg)
 {
     history_set_tf2_filepath(string_deep_copy(arg));
 }
 
 static const char *history_fullname = NULL;
 
-static void operation_set_save_location(const char *invocation, char *arg)
+static void operation_set_save_location(const char *invocation, const char *arg)
 {
     history_fullname = arg;
 }
 
-static void operation_interactive(const char *invocation, char *arg)
+static void operation_interactive(const char *invocation, const char *arg)
 {
     interactive_enter();
 
@@ -190,7 +218,7 @@ static void operation_interactive(const char *invocation, char *arg)
     exit(EXIT_SUCCESS);
 }
 
-static void operation_collect_archived(const char *invocation, char *arg)
+static void operation_collect_archived(const char *invocation, const char *arg)
 {
     collection_read_archived(arg);
 }
@@ -198,7 +226,7 @@ static void operation_collect_archived(const char *invocation, char *arg)
 // The type passed via --type. Will stay unknown if none passed
 static enum Esteamid_type passed_type = Esteamid_type_unknown;
 
-static void operation_type(const char *invocation, char *arg)
+static void operation_type(const char *invocation, const char *arg)
 {
     switch (*arg)
     {
@@ -206,11 +234,13 @@ static void operation_type(const char *invocation, char *arg)
         {
             passed_type = Esteamid_type_sid3;
         }
-        break; case 'E': case 'e':
+        break; case 'E':
+               case 'e':
         {
             passed_type = Esteamid_type_sid3e;
         }
-        break; case 'N': case 'n':
+        break; case 'N':
+               case 'n':
         {
             passed_type = Esteamid_type_name;
         }
@@ -221,7 +251,7 @@ static void operation_type(const char *invocation, char *arg)
     }
 }
 
-static void operation_set_user_sid3e(const char *invocation, char *arg)
+static void operation_set_user_sid3e(const char *invocation, const char *arg)
 {
     const uint32_t new_user_sid3e = sidm_parse_sid3e(arg, passed_type);
     if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
@@ -238,7 +268,7 @@ static void operation_set_user_sid3e(const char *invocation, char *arg)
     }
 }
 
-static void operation_retrieve_records(const char *invocation, char *arg)
+static void operation_retrieve_records(const char *invocation, const char *arg)
 {
     const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 
@@ -265,7 +295,7 @@ static void operation_retrieve_records(const char *invocation, char *arg)
     }
 }
 
-static void operation_edit_notes(const char *invocation, char *arg)
+static void operation_edit_notes(const char *invocation, const char *arg)
 {
     const uint32_t sid3e = sidm_parse_sid3e(arg, passed_type);
 
@@ -289,7 +319,7 @@ static void operation_edit_notes(const char *invocation, char *arg)
     }
 }
 
-static void parse_option(const int argc, char **argv, const int option_i)
+static void parse_option(const int argc, const char **argv, const int option_i)
 {
     int i = 1;
     do
@@ -329,9 +359,9 @@ static void parse_option(const int argc, char **argv, const int option_i)
     }
 }
 
-int main(const int argc, char **argv)
+int main(const int argc, const char **argv)
 {
-    // Enable VT100 terminal ANSI escapes if on windows
+    // Enable VT100 terminal ANSI escapes if on windows and not disabled via compiler option
     #if defined(_WIN32) && !defined(NO_ANSI_COLORING)
         const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
         if (stdout_handle == INVALID_HANDLE_VALUE)
@@ -360,29 +390,30 @@ int main(const int argc, char **argv)
         return 1;
     }
 
+    // Set readline.h to not catch SIGINT signals, let TF2PW handle it
     #ifdef __linux__
         rl_catch_signals = 0;
     #endif
 
-    parse_option(argc, argv, 0); // Help
+    parse_option(argc, argv, Earg_option_print_help);
 
-    parse_option(argc, argv, 1); // Set save location
+    parse_option(argc, argv, Earg_option_set_tf2_filepath);
 
     history_load(history_fullname);
 
-    parse_option(argc, argv, 2); // Set live log location
+    parse_option(argc, argv, Earg_option_set_save_location);
 
-    parse_option(argc, argv, 3); // Interactive (Will exit in here if found)
+    parse_option(argc, argv, Earg_option_interactive); // Will exit in here if found
 
-    parse_option(argc, argv, 4); // Collect archived
+    parse_option(argc, argv, Earg_option_collect_archived);
 
-    parse_option(argc, argv, 5); // Type
+    parse_option(argc, argv, Earg_option_type);
 
-    parse_option(argc, argv, 6); // Set user STEAMID3 excerpt
+    parse_option(argc, argv, Earg_option_set_user_sid3e);
 
-    parse_option(argc, argv, 7); // Retrieve records
+    parse_option(argc, argv, Earg_option_retrieve_records);
 
-    parse_option(argc, argv, 8); // Edit notes
+    parse_option(argc, argv, Earg_option_edit_notes);
 
     // NEWARGS_TODO
 

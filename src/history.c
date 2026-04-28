@@ -124,7 +124,6 @@ HYPER_MACRO bool history_wizard()
 
     char *user_input = NULL;
 
-    // TODO: Accept non trailing slash input in both this and CLI argument
     user_input_getline(&user_input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ", NULL);
 
     #define TF2PW_CFG_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S
