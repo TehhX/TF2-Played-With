@@ -4,7 +4,7 @@ A small command-line program to keep track of people you play with in Team Fortr
 
 ## Download
 
-Download pre-compiled binaries from [releases](https://github.com/TehhX/TF2-Played-With/releases/latest), or check the [building instructions](/README.md#building) to build it yourself.
+Download pre-compiled binaries from the [latest release](https://github.com/TehhX/TF2-Played-With/releases/latest), or check the [building instructions](/README.md#building) to build it yourself.
 
 ## Help/FAQ
 
@@ -35,6 +35,10 @@ After making sure to re-read all FAQ items **thoroughly** (even those you don't 
 * Submit a GitHub issue on this repository, making sure to use the `question` label
 * Send me an email at [samuel.tobias@tehx.ca](mailto:samuel.tobias@tehx.ca) with `TF2PW Support` at the start of the subject line, eg. `TF2PW Support | Starting TF2PW`
 * Scream into the wind
+
+## Stability
+
+Any major/minor release (those with versions in the form `TF2PW vX.Y.0`) will be perfectly stable and usable, but major save/functionality-breaking changes are possible from patch to patch. To be completely sure of its stability, simply download one of TF2PW's [official releases](https://github.com/TehhX/TF2-Played-With/releases/).
 
 ## Building
 
@@ -160,8 +164,8 @@ The following data will be required (Quasi-JSON format here for visualization, b
     // The STEAMID3 excerpt of the user
     (u32) USER_SID3E,
 
-    // The path to the live logging file
-    (string) LIVE_LOG_PATH,
+    // The TF2 filepath
+    (string) TF2_FILEPATH,
 
     PLAYER_RECORDS:
     [
@@ -180,7 +184,7 @@ The following data will be required (Quasi-JSON format here for visualization, b
                     // Chat messages
                     (string[]) CHAT_MESSAGES,
 
-                    // Times encountered on this day
+                    // Times encountered on this day (minus one)
                     (u8) ENCOUNTER_COUNT
 
                     // The encountered player's name on this date
@@ -196,25 +200,20 @@ The following data will be required (Quasi-JSON format here for visualization, b
 }
 ```
 
-### Considerations
-
-* To change a name in TF2, the player must quit the game and relaunch it
-* It is currently assumed that STEAMID3 excerpts will always be in the range [1, UINT32_MAX - 2] (for steamid_manip.h::SIDM_ERR_NONE_MAX reasons). It has held true for now, but it is still only an assumption made for space savings
-
 ### Structure
 
 #### Header
 
-|          Name           |                                         Description                                         |     Size (Bytes)      |                            Example                            |
-|:-----------------------:|:-------------------------------------------------------------------------------------------:|:---------------------:|:-------------------------------------------------------------:|
-|         Header          |               Header of the file format. Always "TF2PW", else file is invalid               |           5           |                             TF2PW                             |
-|   Save Format Version   |              The version of history file format used with this particular file              |           1           |                            (u8) 0                             |
-|       User SID3E        |                              The STEAMID3 excerpt of the user                               |           4           |                        (u32) 12345678                         |
-| Default Record Messages |         The default value for Player Record::Record Messages of new player records          |           1           |                             (u8)0                             |
-|    Live Log Path Len    |                            The length in bytes of Live Log Path                             |           1           |                            (u8) 82                            |
-|      Live Log Path      |     The path to the live logging file. Should be the same as set in TF2 via con_logfile     | 1 * Live_Log_Path_Len | (char *) "/Steam/steamapps/common/Team Fortress 2/tf/log.txt" |
-|  Player Records Length  |               How many unique player records there are in the following array               |           4           |                         (u32) 12,000                          |
-|     Player Records      | An array of player records. See [Player Record](#player-record) for its particular contents |          N/A          |                              N/A                              |
+|          Name           |                                         Description                                         | Size (Bytes) |                                  Example                                   |
+|:-----------------------:|:-------------------------------------------------------------------------------------------:|:------------:|:--------------------------------------------------------------------------:|
+|         Header          |               Header of the file format. Always "TF2PW", else file is invalid               |      5       |                                   TF2PW                                    |
+|   Save Format Version   |              The version of history file format used with this particular file              |      1       |                                   (u8) 0                                   |
+|       User SID3E        |                              The STEAMID3 excerpt of the user                               |      4       |                               (u32) 12345678                               |
+| Default Record Messages |         The default value for Player Record::Record Messages of new player records          |      1       |                                   (u8)0                                    |
+|  Player Records Length  |               How many unique player records there are in the following array               |      4       |                                (u32) 12,000                                |
+|   TF2 Filepath Length   |                   How many characters are in the Team Fortress 2 filepath                   |      1       |                                  (u8) 33                                   |
+|      TF2 Filepath       |                                The Team Fortress 2 filepath                                 |     N/A      | (char *) "/home/Timmy/.local/share/Steam/steamapps/common/Team Fortress 2" |
+|     Player Records      | An array of player records. See [Player Record](#player-record) for its particular contents |     N/A      |                                    N/A                                     |
 
 #### Player Record
 
@@ -231,9 +230,9 @@ The following data will be required (Quasi-JSON format here for visualization, b
 |      Name       |                                                  Description                                                   |  Size (Bytes)   |               Example               |
 |:---------------:|:--------------------------------------------------------------------------------------------------------------:|:---------------:|:-----------------------------------:|
 |      Date       |                                  How many days since UNIX epoch this date was                                  |        2        |                20537                |
-| Encounter Count |                            How many times this player was encountered on this date                             |        1        |               (u8) 4                |
+| Encounter Count |                      How many times this player was encountered on this date (minus one)                       |        1        |               (u8) 4                |
 |   Name Length   |                                        The length of the following name                                        |        1        |               (u8) 13               |
-|      Name       |                                      The name of the player on this date                                       | 1 * Name_Length |           (i8 *) "Timmy"            |
+|      Name       |                                      The name of the player on this date                                       | 1 * Name_Length |          (char *) "Timmy"           |
 |    Messages     | Will only exist if Record Messages in Player Record is 1. Contains messages sent from this player on this date |       N/A       | (char *) "Wow!\nCool!\nGood job!\0" |
 
 ## Inline TODO's
@@ -244,6 +243,7 @@ A list of TODO prefixes found in the source code and their meanings:
 * IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
 * IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
 * NEWARGS_TODO: Signifies a function or line(s) which will need modifying on introduction of a new argument. Nothing necessarily needs to be done when present, more serves as a reminder than an actual TODO
+* SAVE_FORMAT_TODO: Signifies something to be changed with the release of a new save format version
 
 ## Helpful Resources and Thanks
 

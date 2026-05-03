@@ -134,7 +134,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
             {
                 break; case '\n':
                 {
-                    params->input = realloc(params->input, sizeof(char) * ++params->input_len);
+                    prealloc(params->input, sizeof(char), ++params->input_len);
                     params->input[params->input_len - 1] = '\0';
 
                     cont = false;
@@ -145,7 +145,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
                 }
                 break; default:
                 {
-                    params->input = realloc(params->input, sizeof(char) * (params->input_len + 1));
+                    prealloc(params->input, sizeof(char), params->input_len + 1);
                     params->input[params->input_len++] = (char) next;
                 }
             }

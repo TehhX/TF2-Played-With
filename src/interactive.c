@@ -177,10 +177,17 @@ void interactive_enter()
             char *const specifier_start = get_spec_start(input_buf, true);
             if (specifier_start)
             {
-                char *const specifier_start_heap = string_deep_copy(specifier_start);
-                history_set_tf2_filepath(specifier_start_heap);
+                char *specifier_start_heap = string_deep_copy(specifier_start);
 
-                printf("Successfully set TF2 filepath to \"%s\".\n", specifier_start);
+                if ((specifier_start_heap = history_set_tf2_filepath(specifier_start_heap)) == NULL)
+                {
+                    fprintf(stderr, ANSI_RED "Failed to set TF2 filepath to \"%s\".\n" ANSI_RESET, specifier_start_heap);
+                    free(specifier_start_heap);
+                }
+                else
+                {
+                    printf(ANSI_GREEN "Successfully set TF2 filepath to \"%s\".\n" ANSI_RESET, specifier_start_heap);
+                }
             }
         }
         else if (INPUT_IS("edit-notes", 'n'))

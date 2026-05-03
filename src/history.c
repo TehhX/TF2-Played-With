@@ -15,11 +15,12 @@
 #include "time.h"
 #include "stdlib.h"
 
-// The header of any given tf2pw file. If not first 5 bytes of TF2PW file, it is invalid
+// The header of any given tf2pw file
 #define HEADER "TF2PW"
 #define HEADER_SIZE (sizeof(HEADER) - 1)
 
-// The latest available save format version. Remember to keep this updated
+// SAVE_FORMAT_TODO
+// The latest available save format version
 #define SAVE_VERSION_LATEST ((uint8_t) 0)
 
 static uint16_t current_date;
@@ -33,7 +34,6 @@ static  uint8_t save_version;
 static uint32_t user_sid3e;
 static  uint8_t default_record_messages;
 
-// TODO: Consider arena allocation
 static uint32_t player_records_len = 0;
 static struct
 {
@@ -54,7 +54,6 @@ static struct
         uint8_t  name_len;
            char *name;
 
-        // NOTE: Add 1 to get actual value, it's 0 indexed
         uint8_t encounter_count;
     }
     *date_records;
@@ -124,7 +123,15 @@ HYPER_MACRO bool history_wizard()
 
     char *user_input = NULL;
 
-    user_input_getline(&user_input, "Enter path to TF2 With Trailing Slash (..." CIDER_PATH_DELIM_S "Team Fortress Two" CIDER_PATH_DELIM_S "): ", NULL);
+    user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL);
+
+    char *proposed_tf2_filepath = string_deep_copy(user_input);
+    if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath)) == NULL)
+    {
+        free(proposed_tf2_filepath);
+        free(user_input);
+        return true;
+    }
 
     #define TF2PW_CFG_SEMINAME "tf" CIDER_PATH_DELIM_S "cfg" CIDER_PATH_DELIM_S
 
@@ -133,7 +140,8 @@ HYPER_MACRO bool history_wizard()
         #define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
         #define TF2PW_LOG_FILENAME "tf2pw_log.txt"
 
-        char *autoexec_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_AUTOEXEC_SEMINAME);
+        char *autoexec_fullname = cider_construct_fullname(string_deep_copy(tf2_filepath), TF2PW_AUTOEXEC_SEMINAME);
+        TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set autoexec_fullname to \"%s\".\n" ANSI_RESET, autoexec_fullname);
 
         FILE *autoexec_handle = fopen(autoexec_fullname, "a");
         if (!autoexec_handle)
@@ -166,7 +174,7 @@ HYPER_MACRO bool history_wizard()
         #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
         #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
 
-        char *config_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_CONFIG_SEMINAME);
+        char *config_fullname = cider_construct_fullname(string_deep_copy(tf2_filepath), TF2PW_CONFIG_SEMINAME);
 
         FILE *config_handle = fopen(config_fullname, "r");
         if (!config_handle)
@@ -185,7 +193,7 @@ HYPER_MACRO bool history_wizard()
             config_replacement[] = "bind \"w\" \"+forward ; status\""
         ;
 
-        char *temporary_fullname = cider_construct_fullname(string_deep_copy(user_input), TF2PW_TEMP_SEMINAME);
+        char *temporary_fullname = cider_construct_fullname(string_deep_copy(tf2_filepath), TF2PW_TEMP_SEMINAME);
         FILE *file_output = fopen(temporary_fullname, "w");
         if (!file_output)
         {
@@ -270,33 +278,29 @@ HYPER_MACRO bool history_wizard()
         free(config_fullname);
     }
 
-    for (tf2_filepath_len = 0; user_input[tf2_filepath_len] != '\0'; ++tf2_filepath_len);
-    tf2_filepath = strncpy(malloc(tf2_filepath_len + 1), user_input, tf2_filepath_len + 1);
-
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\".\n" ANSI_RESET, tf2_filepath);
-
     #define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
 
-    tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), TF2PW_LOG_SEMINAME);
-
+    tf2_live_log_fullname = cider_construct_fullname(string_deep_copy(tf2_filepath), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
-    USER_GET_SID3E:;
-    user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ", NULL);
-    const uint32_t new_user_sid3e = sidm_parse_sid3e(user_input, Esteamid_type_unknown);
-    if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
+    while (true)
     {
-        fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
-        goto USER_GET_SID3E;
-    }
-    else if (new_user_sid3e == SIDM_ERR_RNGE)
-    {
-        fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
-        goto USER_GET_SID3E;
-    }
-    else
-    {
-        user_sid3e = new_user_sid3e;
+        user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ", NULL);
+
+        const uint32_t new_user_sid3e = sidm_parse_sid3e(user_input, Esteamid_type_unknown);
+        if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
+        {
+            fprintf(stderr, ANSI_RED "Bad ID value. Try again.\n" ANSI_RESET);
+        }
+        else if (new_user_sid3e == SIDM_ERR_RNGE)
+        {
+            fprintf(stderr, ANSI_RED "ID value too large. Try again.\n" ANSI_RESET);
+        }
+        else
+        {
+            user_sid3e = new_user_sid3e;
+            break;
+        }
     }
 
     default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ", NULL);
@@ -348,10 +352,10 @@ void history_load(const char *const passed_history_fullname)
         {
             errno = 0;
 
-            // Return prematurely if wizard failed
+            // Exit prematurely if wizard failed
             if (history_wizard())
             {
-                return;
+                exit(EXIT_FAILURE);
             }
 
             history_free();
@@ -359,7 +363,7 @@ void history_load(const char *const passed_history_fullname)
         }
         else
         {
-            fprintf(stderr, ANSI_RED "MAJOR: Failed to open \"%s\" for reading. Error: ", history_fullname);
+            fprintf(stderr, ANSI_RED "Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
             RESET_STDERR_COL();
         }
@@ -383,12 +387,14 @@ void history_load(const char *const passed_history_fullname)
     fread_one(player_records_len);
     fread_one(tf2_filepath_len);
 
-    tf2_filepath = malloc(tf2_filepath_len + 1);
-    fread_arr(tf2_filepath);
-    tf2_filepath[tf2_filepath_len] = '\0';
+    tf2_filepath = malloc(tf2_filepath_len + 2);
+    fread(tf2_filepath, sizeof(char), tf2_filepath_len, input_file_ptr);
+    tf2_filepath[tf2_filepath_len] = CIDER_PATH_DELIM_C;
+    tf2_filepath[tf2_filepath_len + 1] = '\0';
+
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\".\n" ANSI_RESET, tf2_filepath);
 
-    tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 1), tf2_filepath, tf2_filepath_len + 1), TF2PW_LOG_SEMINAME);
+    tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(tf2_filepath_len + 2), tf2_filepath, tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, tf2_live_log_fullname);
 
     player_records = malloc(player_records_len * sizeof(*player_records));
@@ -503,8 +509,8 @@ void history_load(const char *const passed_history_fullname)
 
     if (EOF != fgetc(input_file_ptr))
     {
-        fprintf(stderr, ANSI_RED "MAJOR: EOF not reached for file \"%s\". Memory might be invalid.\n" ANSI_RESET, history_fullname);
-        return;
+        fprintf(stderr, ANSI_RED "MAJOR: EOF not reached for file \"%s\". History file not valid, exiting.\n" ANSI_RESET, history_fullname);
+        exit(EXIT_FAILURE);
     }
 
     if (fclose(input_file_ptr))
@@ -603,21 +609,40 @@ void history_save(const char *const passed_history_fullname)
     }
 }
 
-void history_set_tf2_filepath(char *new_tf2_filepath)
+char *history_set_tf2_filepath(char *new_tf2_filepath)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Setting tf2_filepath to \"%s\"." ANSI_RESET, new_tf2_filepath);
+    // Length of tf2_filepath without trailing slash and/or null-terminator
+    size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
 
-    const size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
+    const bool had_trailing_delim = (new_tf2_filepath[new_tf2_filepath_len - 1] == CIDER_PATH_DELIM_C);
+
+    // Append trailing slash if doesn't exist
+    if (had_trailing_delim)
+    {
+        --new_tf2_filepath_len;
+    }
+
     if (new_tf2_filepath_len > UINT8_MAX)
     {
-        fprintf(stderr, "New TF2 filepath length is too long, is %zu, should be at most %zu.\n", new_tf2_filepath_len, (size_t) UINT8_MAX);
-        return;
+        fprintf(stderr, ANSI_RED "New TF2 filepath length is too long, is %zu, should be at most %zu.\n" ANSI_RESET, new_tf2_filepath_len, (size_t) UINT8_MAX);
+        return NULL;
+    }
+
+    if (!had_trailing_delim)
+    {
+        prealloc(new_tf2_filepath, sizeof(char), new_tf2_filepath_len + 2);
+        new_tf2_filepath[new_tf2_filepath_len] = CIDER_PATH_DELIM_C;
+        new_tf2_filepath[new_tf2_filepath_len + 1] = '\0';
     }
 
     free(tf2_filepath);
     tf2_filepath = new_tf2_filepath;
 
     tf2_filepath_len = (uint8_t) new_tf2_filepath_len;
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Setting tf2_filepath to \"%s\".\n" ANSI_RESET, tf2_filepath);
+
+    return tf2_filepath;
 }
 
 const char *history_get_live_log_fullname()

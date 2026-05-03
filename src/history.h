@@ -57,11 +57,11 @@ extern void history_set_date(uint16_t new_date);
 /*
 	@brief Sets the live_log_location to a new fullname
 
-		@param new_tf2_filepath The new filepath. Should be free-able ie. on the heap
+		@param new_tf2_filepath The new filepath. Should be free-able ie. on the heap. Its length should be at most UINT8_MAX without the trailing slash. If no trailing slash is present, will append one. Should not be used after calling this function unless repointed to return value as with `realloc(...)`
 
-		@warning Triple check parameters for heapness(?)
+		@returns NULL if failed, else potentially realloc'd pointer to `new_tf2_filepath`
 */
-extern void history_set_tf2_filepath(char *new_tf2_filepath);
+extern char *history_set_tf2_filepath(char *new_tf2_filepath);
 
 /*
 	@brief Retrieves the live_log_location fullname

@@ -84,7 +84,7 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--(s)et-save-location",
-        // .doc is filled at runtime
+     // .doc = FILLED AT RUNTIME,
         .arg = "[FULLNAME]",
         .opt_long = "set-save-location",
         .opt_short = 's',
@@ -142,7 +142,7 @@ static struct arg_option arg_options[] =
 #define HELP_OUTP(INDEX) LTAB "%s %s\n" LTAB LTAB "%s\n"
 
 // Will be VAL if VAL != 0/NULL/etc, else will be NVAL
-#define NULLABLE(VAL, NVAL) ((VAL) ? (VAL) : (NVAL))
+#define NULLABLE(VAL, NVAL) ((VAL) == NULL ? (NVAL) : (VAL))
 
 #define HELP_INFO(INDEX) arg_options[INDEX].name, NULLABLE(arg_options[INDEX].arg, ""), arg_options[INDEX].doc
 
@@ -199,7 +199,12 @@ static void operation_print_help(const char *invocation, const char *arg)
 
 static void operation_set_tf2_filepath(const char *invocation, const char *arg)
 {
-    history_set_tf2_filepath(string_deep_copy(arg));
+    char *new_tf2_filepath = string_deep_copy(arg);
+    if ((new_tf2_filepath = history_set_tf2_filepath(new_tf2_filepath)) == NULL)
+    {
+        fprintf(stderr, ANSI_RED "Failed to set TF2 filepath to \"%s\".\n" ANSI_RESET, new_tf2_filepath);
+        free(new_tf2_filepath);
+    }
 }
 
 static const char *history_fullname = NULL;
