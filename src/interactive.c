@@ -57,14 +57,14 @@ static char *get_spec_start(char *input_buf, bool complain_if_no_param)
             }
             break; case Especifier_status_pre_specifier:
             {
-                if (*cursor != ' ')
+                if (*cursor == '\0')
+                {
+                    goto SPEC_FAILURE;
+                }
+                else if (*cursor != ' ')
                 {
                     specifier_start = cursor;
                     curr_status = Especifier_status_specifier;
-                }
-                else if (*cursor == '\0')
-                {
-                    goto SPEC_FAILURE;
                 }
             }
             break; case Especifier_status_specifier:
