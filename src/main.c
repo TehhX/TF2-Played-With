@@ -76,7 +76,7 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--set-tf2-(f)ilepath",
-        .doc = "Sets the filepath of the Team Fortress Two folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\" (With trailing slash).",
+        .doc = "Sets the filepath of the Team Fortress Two folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\".",
         .arg = "[FILEPATH]",
         .opt_long = "set-tf2-filepath",
         .opt_short = 'f',
