@@ -28,6 +28,7 @@
 typedef void (*operation_callback)(const char *invocation, const char *arg);
 
 // NEWARGS_TODO
+static void operation_print_version    (const char *invocation, const char *arg);
 static void operation_print_help       (const char *invocation, const char *arg);
 static void operation_set_tf2_filepath (const char *invocation, const char *arg);
 static void operation_set_save_location(const char *invocation, const char *arg);
@@ -41,6 +42,7 @@ static void operation_edit_notes       (const char *invocation, const char *arg)
 // NEWARGS_TODO
 enum Earg_option
 {
+    Earg_option_print_version,
     Earg_option_print_help,
     Earg_option_set_tf2_filepath,
     Earg_option_set_save_location,
@@ -57,9 +59,12 @@ struct arg_option
 {
     char *name;
     char *doc;
+
     char *arg; // Set to NULL if no arg required
+
     char *opt_long;
     char  opt_short;
+
     operation_callback operation;
 };
 
@@ -67,8 +72,16 @@ struct arg_option
 static struct arg_option arg_options[] =
 {
     {
+        .name = "--(v)ersion",
+        .doc = "Prints the version of TF2PW you have installed. Supersedes all below arguments.",
+        .arg = NULL,
+        .opt_long = "version",
+        .opt_short = 'v',
+        .operation = operation_print_version
+    },
+    {
         .name = "--(h)elp",
-        .doc = "Display this message. Supersedes all other arguments.",
+        .doc = "Display this message. Supersedes all below arguments.",
         .arg = NULL,
         .opt_long = "help",
         .opt_short = 'h',
@@ -146,6 +159,13 @@ static struct arg_option arg_options[] =
 
 #define HELP_INFO(INDEX) arg_options[INDEX].name, NULLABLE(arg_options[INDEX].arg, ""), arg_options[INDEX].doc
 
+static void operation_print_version(const char *invocation, const char *arg)
+{
+    printf("TF2PW v%d.%d.%d\n", TF2PW_VERSION_MAJOR, TF2PW_VERSION_MINOR, TF2PW_VERSION_PATCH);
+
+    exit(EXIT_SUCCESS);
+}
+
 static void operation_print_help(const char *invocation, const char *arg)
 {
     static const char
@@ -166,6 +186,7 @@ static void operation_print_help(const char *invocation, const char *arg)
         ANSI_BLUE   "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
+        HELP_OUTP(Earg_option_print_version    ) "\n"
         HELP_OUTP(Earg_option_print_help       ) "\n"
         HELP_OUTP(Earg_option_set_tf2_filepath ) "\n"
         HELP_OUTP(Earg_option_set_save_location) "\n"
@@ -181,6 +202,7 @@ static void operation_print_help(const char *invocation, const char *arg)
         invocation,
 
         // NEWARGS_TODO
+        HELP_INFO(Earg_option_print_version    ),
         HELP_INFO(Earg_option_print_help       ),
         HELP_INFO(Earg_option_set_tf2_filepath ),
         HELP_INFO(Earg_option_set_save_location),
@@ -399,6 +421,8 @@ int main(const int argc, const char **argv)
     #ifdef __linux__
         rl_catch_signals = 0;
     #endif
+
+    parse_option(argc, argv, Earg_option_print_version);
 
     parse_option(argc, argv, Earg_option_print_help);
 

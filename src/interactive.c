@@ -194,7 +194,7 @@ void interactive_enter()
         {
             perform_on_sid3e(input_buf, history_edit_notes, NULL);
         }
-        else if (INPUT_IS("collect-live", 'v'))
+        else if (INPUT_IS("collect-live", 'i'))
         {
             if (live_params.running)
             {
@@ -322,34 +322,40 @@ void interactive_enter()
                 history_load(user_input_history_fullname);
             }
         }
+        else if (INPUT_IS("version", 'v'))
+        {
+            printf(ANSI_YELLOW "TF2PW v%d.%d.%d\n" ANSI_RESET, TF2PW_VERSION_MAJOR, TF2PW_VERSION_MINOR, TF2PW_VERSION_PATCH);
+        }
         else if (INPUT_IS("help", 'h'))
         {
             printf
             (
                 ANSI_BLUE
-                    LTAB "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
-                    LTAB LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
-                    LTAB LTAB LTAB "Retrieve and print associated record.\n\n"
-                    LTAB LTAB "set-tf2-file(p)ath [FILEPATH]\n"
-                    LTAB LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n\n"
-                    LTAB LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
-                    LTAB LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n\n"
-                    LTAB LTAB "collect-li(v)e\n"
-                    LTAB LTAB LTAB "Collects live data from saved path.\n\n"
-                    LTAB LTAB "s(t)op-live\n"
-                    LTAB LTAB LTAB "Stops collecting live data.\n\n"
-                    LTAB LTAB "collect-(a)rchived [FULLNAME]\n"
-                    LTAB LTAB LTAB "Collects data from an already completed log file located at FULLNAME.\n\n"
-                    LTAB LTAB "(s)ave [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Save records to history file. If no FULLNAME provided, use default.\n\n"
-                    LTAB LTAB "(l)oad [?FULLNAME]\n"
-                    LTAB LTAB LTAB "Load records from history file. If no FULLNAME provided, use default. IMPORTANT: Remember to load before manipulating/reading history.\n\n"
-                    LTAB LTAB "(h)elp\n"
-                    LTAB LTAB LTAB "Display this help message.\n\n"
-                    LTAB LTAB "(e)xit|(q)uit\n"
-                    LTAB LTAB LTAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n\n"
-                    LTAB LTAB "(c)lear\n"
-                    LTAB LTAB LTAB "Clear the terminal (Terminal dependent).\n"
+                    "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
+                    LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
+                    LTAB LTAB "Retrieve and print associated record.\n\n"
+                    LTAB "set-tf2-file(p)ath [FILEPATH]\n"
+                    LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n\n"
+                    LTAB "edit-(n)otes [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
+                    LTAB LTAB "Open your $EDITOR (or vi if none provided) to edit notes for the specified player.\n\n"
+                    LTAB "collect-l(i)ve\n"
+                    LTAB LTAB "Collects live data from saved path.\n\n"
+                    LTAB "s(t)op-live\n"
+                    LTAB LTAB "Stops collecting live data.\n\n"
+                    LTAB "collect-(a)rchived [FULLNAME]\n"
+                    LTAB LTAB "Collects data from an already completed log file located at FULLNAME.\n\n"
+                    LTAB "(s)ave [?FULLNAME]\n"
+                    LTAB LTAB "Save records to history file. If no FULLNAME provided, use default.\n\n"
+                    LTAB "(l)oad [?FULLNAME]\n"
+                    LTAB LTAB "Load records from history file. If no FULLNAME provided, use default. IMPORTANT: Remember to load before manipulating/reading history.\n\n"
+                    LTAB "(v)ersion\n"
+                    LTAB LTAB "Print the current version of TF2PW you are running.\n\n"
+                    LTAB "(h)elp\n"
+                    LTAB LTAB "Display this help message.\n\n"
+                    LTAB "(e)xit|(q)uit\n"
+                    LTAB LTAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n\n"
+                    LTAB "(c)lear\n"
+                    LTAB LTAB "Clear the terminal (Terminal dependent).\n"
                 ANSI_RESET
             );
         }
