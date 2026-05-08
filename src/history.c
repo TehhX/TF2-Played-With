@@ -123,7 +123,7 @@ HYPER_MACRO bool history_wizard()
 
     char *user_input = NULL;
 
-    user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL);
+    while (user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL) == NULL || user_input[0] == '\0');
 
     char *proposed_tf2_filepath = string_deep_copy(user_input);
     if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath)) == NULL)
@@ -285,7 +285,7 @@ HYPER_MACRO bool history_wizard()
 
     while (true)
     {
-        user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ", NULL);
+        while (user_input_getline(&user_input, "Enter your STEAMID as one of [STEAMID3|STEAMID3E|STEAMID64]: ", NULL) == NULL || user_input[0] == '\0');
 
         const uint32_t new_user_sid3e = sidm_parse_sid3e(user_input, Esteamid_type_unknown);
         if (new_user_sid3e == SIDM_ERR_NAME || new_user_sid3e == SIDM_ERR_MISC)
@@ -298,6 +298,7 @@ HYPER_MACRO bool history_wizard()
         }
         else
         {
+            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set user-sid3e to %" PRIu32 ".\n" ANSI_RESET, new_user_sid3e);
             user_sid3e = new_user_sid3e;
             break;
         }
