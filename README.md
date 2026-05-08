@@ -85,6 +85,7 @@ Analyzing console output from entire sessions has produced valuable information.
 * `Client reached server_spawn.` will output when entering a new map/server
 * On quit, seems to always print `CTFGCClientSystem::ShutdownGC`. Doesn't seem to print at other times. If multiple session outputs (launch to quit) are in the same file, it could also be used to differentiate and treat it as a new file
 * Chat output can be captured by the following regex: `(\*DEAD\*){0,1}(\(TEAM\)){0,1}( ){0,1}((.+)) :  (.*)`, where group 5 is the player's name, and group 6 is the message
+* When `retry` is sent as a command, `Commencing connection retry to <SERVER IP>` will always be printed to console, followed by `Client reached server_spawn.`. Therefore, the printing of `Commencing connection retry to <SERVER IP>` can negate the following printing of `Client reached server_spawn.` such that it is treated as the same match
 
 #### Status Formatting
 

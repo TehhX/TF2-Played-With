@@ -665,7 +665,7 @@ void history_set_date(const uint16_t new_date)
     (
         fputs(ANSI_LOG "LOG: Set current date to ", stdout);
         time_manip_print_ued(current_date);
-        puts("\n" ANSI_RESET);
+        puts(ANSI_RESET);
     )
 }
 
