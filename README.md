@@ -8,6 +8,22 @@ Download pre-compiled binaries from the [latest release](https://github.com/Tehh
 
 ## Help/FAQ
 
+### Steam does this already, what's the point?
+
+Steam has a `Recently Played With` tab under friends, making it seem like this is a redundant functionality. However, it is known to be quite flakey, and lacks certain upsides of TF2PW such as:
+
+* Consistent, will never fail to record or retrieve those you've played with
+* Won't only keep a certain number of games before deleting old ones as Steam's does
+* Records more about people such as:
+  * Name
+  * Messages
+  * User-editable notes
+  * Dates played with
+  * Times played with per date
+* Retrieving player records while still in the same match you found them in
+* Offline use, doesn't require an internet connection
+* New features and optimizations being added via updates
+
 ### The executable doesn't do anything when I start it
 
 As TF2PW is a command-line-interface **only** application, make sure you're running it from a terminal, eg. command prompt on Windows, or any terminal emulator on Linux.
