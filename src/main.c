@@ -275,6 +275,11 @@ static void operation_type(const char *invocation, const char *arg)
         {
             passed_type = Esteamid_type_sid64;
         }
+        break;  default:
+        {
+            fprintf(stderr, ANSI_RED "Passed type \"%s\" is invalid.\n" ANSI_RESET, arg);
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
