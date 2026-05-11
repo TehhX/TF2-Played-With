@@ -91,8 +91,8 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--(c)onvert-save",
-        .doc = "Convert a history file from one version to another.",
-        .arg = "[INPUT_TYPE:INPUT_FILE:OUTPUT_TYPE:OUTPUT_FILE]",
+        .doc = "Convert a history file from one save format version to another eg. 0:tf2pw-v0.sav:1:tf2pw-v1.sav.",
+        .arg = " [INPUT_VERSION:INPUT_FILE:OUTPUT_VERSION:OUTPUT_FILE]",
         .opt_long = "convert-save",
         .opt_short = 'c',
         .operation = operation_convert_save
@@ -233,7 +233,56 @@ static void operation_print_help(const char *invocation, const char *arg)
 
 static void operation_convert_save(const char *invocation, const char *arg)
 {
-    // IMPL_TODO
+    // [INPUT_VERSION:INPUT_FILE:OUTPUT_VERSION:OUTPUT_FILE]
+    char *iv_if_ov_of_string = string_deep_copy(arg);
+
+    char *input_type = iv_if_ov_of_string, *input_file, *output_type, *output_file;
+
+    for (input_file = input_type; ; ++input_file)
+    {
+        if (*input_file == ':')
+        {
+            *(input_file++) = '\0';
+            break;
+        }
+        else if (*input_file == '\0')
+        {
+            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (output_type = input_file; ; ++output_type)
+    {
+        if (*output_type == ':')
+        {
+            *(output_type++) = '\0';
+            break;
+        }
+        else if (*output_type == '\0')
+        {
+            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (output_file = output_type; ; ++output_file)
+    {
+        if (*output_file == ':')
+        {
+            *(output_file++) = '\0';
+            break;
+        }
+        else if (*output_file == '\0')
+        {
+            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Converting save: (Input type: %s | Input file: %s | Output type: %s | Output file: %s)\n" ANSI_RESET, input_type, input_file, output_type, output_file);
+
+    free(iv_if_ov_of_string);
 }
 
 static void operation_set_tf2_filepath(const char *invocation, const char *arg)
