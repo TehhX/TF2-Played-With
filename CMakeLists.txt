@@ -18,7 +18,15 @@ set(SRC
 list(TRANSFORM SRC PREPEND "src/")
 list(TRANSFORM SRC  APPEND ".c")
 
-add_executable(tf2pw ${SRC})
+set(SAVE_FORMATS
+    version_0
+)
+
+# Each item "{}" in SAVE_FORMATS becomes "src/save_formats/{}.c".
+list(TRANSFORM SAVE_FORMATS PREPEND "src/save_formats/")
+list(TRANSFORM SAVE_FORMATS  APPEND ".c")
+
+add_executable(tf2pw ${SRC} ${SAVE_FORMATS})
 
 # In case includes aren't in accessible spots, user may put them here
 target_include_directories(tf2pw PRIVATE "include/")

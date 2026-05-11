@@ -15,51 +15,6 @@
 #include "time.h"
 #include "stdlib.h"
 
-// The header of any given tf2pw file
-#define HEADER "TF2PW"
-#define HEADER_SIZE (sizeof(HEADER) - 1)
-
-// SAVE_FORMAT_TODO
-// The latest available save format version
-#define SAVE_VERSION_LATEST ((uint8_t) 0)
-
-static uint16_t current_date;
-
-static uint8_t  tf2_filepath_len;
-static    char *tf2_filepath;
-
-static char *tf2_live_log_fullname;
-
-static  uint8_t save_version;
-static uint32_t user_sid3e;
-static  uint8_t default_record_messages;
-
-static uint32_t player_records_len = 0;
-static struct
-{
-    uint32_t sid3e;
-
-    uint8_t record_messages;
-
-    char *notes;
-
-    uint32_t date_records_len;
-    struct
-    {
-        uint16_t date;
-
-        size_t   messages_len;
-          char **messages;
-
-        uint8_t  name_len;
-           char *name;
-
-        uint8_t encounter_count;
-    }
-    *date_records;
-}
-*player_records;
-
 void history_set_user_sid3e(const uint32_t new_user_sid3e)
 {
     user_sid3e = new_user_sid3e;
