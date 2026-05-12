@@ -73,6 +73,7 @@ void history_free()
     free(history_main_data.data_v0->tf2_live_log_fullname);
 
     free(history_main_data.data_v0);
+    history_main_data.data_v0 = NULL;
 }
 
 // @returns 1 for fail, 0 for success
@@ -343,7 +344,7 @@ void history_load(const char *const passed_history_fullname)
     {
         break;  default:
         {
-            fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n", history_fullname);
+            fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
 
             // IMMED_TODO: Replace with load and save returning booleans
             exit(EXIT_FAILURE);
