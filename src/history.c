@@ -74,7 +74,7 @@ HYPER_MACRO bool history_wizard()
         exit(EXIT_FAILURE);
     }
 
-    save_version = SAVE_VERSION_LATEST;
+    save_version = SAVE_FORMAT_VERSION_LATEST;
 
     char *user_input = NULL;
 
