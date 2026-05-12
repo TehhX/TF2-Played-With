@@ -1,6 +1,6 @@
 # TF2 Played With
 
-A small command-line program to keep track of people you play with in Team Fortress Two.
+A small command-line program to keep track of people you play with in Team Fortress 2.
 
 ## Download
 

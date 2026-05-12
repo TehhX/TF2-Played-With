@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project("TF2-Played-With" LANGUAGES C VERSION 1.1.2 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
+project("TF2-Played-With" LANGUAGES C VERSION 1.1.3 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 file(WRITE "${CMAKE_SOURCE_DIR}/version.txt" "${PROJECT_VERSION_MAJOR}-${PROJECT_VERSION_MINOR}-${PROJECT_VERSION_PATCH}")
 
 set(CMAKE_C_STANDARD 17)
@@ -65,7 +65,7 @@ else ()
 endif ()
 
 # Add version compile definitions
-target_compile_definitions(tf2pw PRIVATE "TF2PW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}" "TF2PW_VERSION_MINOR=${PROJECT_VERSION_MINOR}" "TF2PW_VERSION_PATCH=${PROJECT_VERSION_PATCH}")
+target_compile_definitions(tf2pw PRIVATE "TF2PW_VERSION=\"v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\"")
 
 # Use -DNO_ANSI_COLORING=1 when configuring to disable ANSI color escapes
 if (NO_ANSI_COLORING EQUAL 1)
