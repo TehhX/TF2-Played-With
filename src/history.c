@@ -16,7 +16,7 @@
 #include "time.h"
 #include "stdlib.h"
 
-static struct save_format_data history_main_data;
+static struct save_format_data history_main_data = { .data_v0 = NULL };
 
 void history_set_user_sid3e(const uint32_t new_user_sid3e)
 {
