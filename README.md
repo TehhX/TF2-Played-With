@@ -80,7 +80,6 @@ Headers and libraries can be put in /include/ and /lib/ respectively if your inc
 
 * STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`
 * Various path words are taken from [Cider's glossary](https://github.com/TehhX/Cider/blob/main/include/cider.h#L12)
-* Mastize: Convert a general save file to the master format. Similarly, `demastize` defines the inverse
 
 ## Getting Players From TF2
 

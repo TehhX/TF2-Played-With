@@ -43,6 +43,7 @@
 
 #include "stdint.h"
 #include "stdlib.h"
+#include "stdbool.h"
 
 struct save_format_0
 {
@@ -89,9 +90,5 @@ extern bool save_format_0_wizard(struct save_format_0 *save_data);
 extern bool save_format_0_save(const struct save_format_0 *save_data, const char *file);
 
 extern bool save_format_0_load(struct save_format_0 *save_data, const char *file);
-
-extern bool save_format_0_mastize(const struct save_format_0 *data_input, struct save_format_master *data_output);
-
-extern bool save_format_0_demastize(const struct save_format_master *data_input, struct save_format_0 *data_output);
 
 #endif // SAVE_FORMATS_VERSION_0_H
