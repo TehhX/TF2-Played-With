@@ -13,6 +13,11 @@
 #include "stdlib.h"
 #include "stdbool.h"
 
+// Various defs
+#define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
+#define TF2PW_LOG_FILENAME "tf2pw_log.txt"
+#define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
+
 /*
 	@brief Set user's STEAMID3 excerpt
 

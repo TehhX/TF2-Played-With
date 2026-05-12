@@ -30,7 +30,6 @@ typedef void (*operation_callback)(const char *invocation, const char *arg);
 // NEWARGS_TODO
 static void operation_print_version    (const char *invocation, const char *arg);
 static void operation_print_help       (const char *invocation, const char *arg);
-static void operation_convert_save     (const char *invocation, const char *arg);
 static void operation_set_tf2_filepath (const char *invocation, const char *arg);
 static void operation_set_save_location(const char *invocation, const char *arg);
 static void operation_interactive      (const char *invocation, const char *arg);
@@ -45,7 +44,6 @@ enum Earg_option
 {
     Earg_option_print_version,
     Earg_option_print_help,
-    Earg_option_convert_save,
     Earg_option_set_tf2_filepath,
     Earg_option_set_save_location,
     Earg_option_interactive,
@@ -88,14 +86,6 @@ static struct arg_option arg_options[] =
         .opt_long = "help",
         .opt_short = 'h',
         .operation = operation_print_help
-    },
-    {
-        .name = "--(c)onvert-save",
-        .doc = "Convert a history file from one save format version to another eg. 0:tf2pw-v0.sav:1:tf2pw-v1.sav.",
-        .arg = " [INPUT_VERSION:INPUT_FILE:OUTPUT_VERSION:OUTPUT_FILE]",
-        .opt_long = "convert-save",
-        .opt_short = 'c',
-        .operation = operation_convert_save
     },
     {
         .name = "--set-tf2-(f)ilepath",
@@ -198,7 +188,6 @@ static void operation_print_help(const char *invocation, const char *arg)
         // NEWARGS_TODO
         HELP_OUTP(Earg_option_print_version    ) "\n"
         HELP_OUTP(Earg_option_print_help       ) "\n"
-        HELP_OUTP(Earg_option_convert_save     ) "\n"
         HELP_OUTP(Earg_option_set_tf2_filepath ) "\n"
         HELP_OUTP(Earg_option_set_save_location) "\n"
         HELP_OUTP(Earg_option_interactive      ) "\n"
@@ -215,7 +204,6 @@ static void operation_print_help(const char *invocation, const char *arg)
         // NEWARGS_TODO
         HELP_INFO(Earg_option_print_version    ),
         HELP_INFO(Earg_option_print_help       ),
-        HELP_INFO(Earg_option_convert_save     ),
         HELP_INFO(Earg_option_set_tf2_filepath ),
         HELP_INFO(Earg_option_set_save_location),
         HELP_INFO(Earg_option_interactive      ),
@@ -229,60 +217,6 @@ static void operation_print_help(const char *invocation, const char *arg)
     free(arg_options[Earg_option_set_save_location].doc);
 
     exit(EXIT_SUCCESS);
-}
-
-static void operation_convert_save(const char *invocation, const char *arg)
-{
-    // [INPUT_VERSION:INPUT_FILE:OUTPUT_VERSION:OUTPUT_FILE]
-    char *iv_if_ov_of_string = string_deep_copy(arg);
-
-    char *input_type = iv_if_ov_of_string, *input_file, *output_type, *output_file;
-
-    for (input_file = input_type; ; ++input_file)
-    {
-        if (*input_file == ':')
-        {
-            *(input_file++) = '\0';
-            break;
-        }
-        else if (*input_file == '\0')
-        {
-            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    for (output_type = input_file; ; ++output_type)
-    {
-        if (*output_type == ':')
-        {
-            *(output_type++) = '\0';
-            break;
-        }
-        else if (*output_type == '\0')
-        {
-            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    for (output_file = output_type; ; ++output_file)
-    {
-        if (*output_file == ':')
-        {
-            *(output_file++) = '\0';
-            break;
-        }
-        else if (*output_file == '\0')
-        {
-            fprintf(stderr, ANSI_RED "Failed to parse --convert-save argument \"%s\".\n" ANSI_RESET, arg);
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Converting save: (Input type: %s | Input file: %s | Output type: %s | Output file: %s)\n" ANSI_RESET, input_type, input_file, output_type, output_file);
-
-    free(iv_if_ov_of_string);
 }
 
 static void operation_set_tf2_filepath(const char *invocation, const char *arg)
@@ -496,8 +430,6 @@ int main(const int argc, const char **argv)
     parse_option(argc, argv, Earg_option_print_version); // Will exit in here if found
 
     parse_option(argc, argv, Earg_option_print_help); // Will exit in here if found
-
-    parse_option(argc, argv, Earg_option_convert_save);
 
     parse_option(argc, argv, Earg_option_set_tf2_filepath);
 

@@ -39,11 +39,12 @@
             |    Messages     | Will only exist if Record Messages in Player Record is 1. Contains messages sent from this player on this date |   Variable   | (char *) "Wow!\nCool!\nGood job!\0" |
 */
 
-#include "master.h"
+#include "main.h"
 
 #include "stdint.h"
 #include "stdlib.h"
 #include "stdbool.h"
+#include "stdio.h"
 
 struct save_format_0
 {
@@ -85,10 +86,8 @@ struct save_format_0
     *player_records;
 };
 
-extern bool save_format_0_wizard(struct save_format_0 *save_data);
+extern bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file_pointer);
 
-extern bool save_format_0_save(const struct save_format_0 *save_data, const char *file);
-
-extern bool save_format_0_load(struct save_format_0 *save_data, const char *file);
+extern struct save_format_0 *save_format_0_load(struct save_format_0 *save_data, FILE *input_file_pointer);
 
 #endif // SAVE_FORMATS_VERSION_0_H

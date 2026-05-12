@@ -74,6 +74,7 @@ endif ()
 
 # Add version compile definitions
 target_compile_definitions(tf2pw PRIVATE "TF2PW_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}" "TF2PW_VERSION_MINOR=${PROJECT_VERSION_MINOR}" "TF2PW_VERSION_PATCH=${PROJECT_VERSION_PATCH}")
+target_compile_definitions(tf2pw PRIVATE "TF2PW_HOMEPAGE_URL=\"${PROJECT_HOMEPAGE_URL}\"")
 
 # Use -DNO_ANSI_COLORING=1 when configuring to disable ANSI color escapes
 if (NO_ANSI_COLORING EQUAL 1)
