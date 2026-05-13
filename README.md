@@ -78,7 +78,7 @@ Headers and libraries can be put in /include/ and /lib/ respectively if your inc
 
 ## Glossary
 
-* STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`.
+* STEAMID3 Excerpt (SID3E): If a user's STEAMID3 is `[U:1:{}]`, their STEAMID3 excerpt is `{}`. For example, my STEAMID3 is `[U:1:324394636]`, therefore my STEAMID3 excerpt is `324394636`
 * Various path words are taken from [Cider's glossary](https://github.com/TehhX/Cider/blob/main/include/cider.h#L12)
 
 ## Getting Players From TF2
@@ -118,95 +118,7 @@ Running the `status` command will return a list of players in the server. It is 
 
 ## Save File
 
-### Format Versions
-
-Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type.
-
-### Visualization
-
-The following data will be required (Quasi-JSON format here for visualization, binary format actually used in program as described under [structure](#structure). `{ ... }` means there is an undefined count of the above element in the array).
-
-```txt
-{
-    // File header, always "TF2PW"
-    (string) HEADER,
-
-    // The version of the save format
-    (u8) SAVE_VERSION,
-
-    // The STEAMID3 excerpt of the user
-    (u32) USER_SID3E,
-
-    // The TF2 filepath
-    (string) TF2_FILEPATH,
-
-    PLAYER_RECORDS:
-    [
-        {
-            // STEAMID3 excerpt of the player whose records are in the following array
-            (u32) STEAMID3_EXCERPT,
-
-            (string) NOTES,
-
-            DATE_RECORDS:
-            [
-                {
-                    // Date in days since UNIX epoch
-                    (u16) DATE,
-
-                    // Chat messages
-                    (string[]) CHAT_MESSAGES,
-
-                    // Times encountered on this day (minus one)
-                    (u8) ENCOUNTER_COUNT
-
-                    // The encountered player's name on this date
-                    (string) NAME
-                },
-
-                {...}
-            ]
-        },
-
-        {...}
-    ]
-}
-```
-
-### Structure
-
-#### Header
-
-|          Name           |                                         Description                                         |                 Size (Bytes)                  |                                  Example                                   |
-|:-----------------------:|:-------------------------------------------------------------------------------------------:|:---------------------------------------------:|:--------------------------------------------------------------------------:|
-|         Header          |               Header of the file format. Always "TF2PW", else file is invalid               |                       5                       |                              (char *) "TF2PW"                              |
-|   Save Format Version   |              The version of history file format used with this particular file              |                       1                       |                                   (u8) 0                                   |
-|       User SID3E        |                              The STEAMID3 excerpt of the user                               |                       4                       |                               (u32) 12345678                               |
-| Default Record Messages |         The default value for Player Record::Record Messages of new player records          |                       1                       |                                   (u8) 0                                   |
-|  Player Records Length  |               How many unique player records there are in the following array               |                       4                       |                                (u32) 12,000                                |
-|   TF2 Filepath Length   |                   How many characters are in the Team Fortress 2 filepath                   |                       1                       |                                  (u8) 33                                   |
-|      TF2 Filepath       |                                The Team Fortress 2 filepath                                 |              TF2 Filepath Length              | (char *) "/home/Timmy/.local/share/Steam/steamapps/common/Team Fortress 2" |
-|     Player Records      | An array of player records. See [Player Record](#player-record) for its particular contents | Player Records Length * sizeof(Player Record) |                                    N/A                                     |
-
-#### Player Record
-
-|        Name         |                                                        Description                                                         |               Size (Bytes)                |                 Example                 |
-|:-------------------:|:--------------------------------------------------------------------------------------------------------------------------:|:-----------------------------------------:|:---------------------------------------:|
-|  STEAMID3 Excerpt   |                                                    This player's SID3E                                                     |                     4                     |               (u32) 22202               |
-|   Record Messages   | Flag to check chat messages. 1 for yes, 0 for no. Will inherit value of Header::Record Messages until individually changed |                     1                     |                 (u8) 1                  |
-|        Notes        |                                  Notes taken by the user on this player. Null terminated                                   |                 Variable                  | (char *) "They were very nice to me.\0" |
-| Date Records Length |                                           How many date records this player has                                            |                     4                     |                (u32) 13                 |
-|    Date Records     |                   An array of date records. See [Date Record](#date-record) for its particular contents                    | Date Records Length * sizeof(Date Record) |                   N/A                   |
-
-#### Date Record
-
-|      Name       |                                                  Description                                                   | Size (Bytes) |               Example               |
-|:---------------:|:--------------------------------------------------------------------------------------------------------------:|:------------:|:-----------------------------------:|
-|      Date       |                                  How many days since UNIX epoch this date was                                  |      2       |                20537                |
-| Encounter Count |                      How many times this player was encountered on this date (minus one)                       |      1       |               (u8) 4                |
-|   Name Length   |                                        The length of the following name                                        |      1       |               (u8) 13               |
-|      Name       |                                      The name of the player on this date                                       | Name_Length  |          (char *) "Timmy"           |
-|    Messages     | Will only exist if Record Messages in Player Record is 1. Contains messages sent from this player on this date |   Variable   | (char *) "Wow!\nCool!\nGood job!\0" |
+Each save file will contain a version number of the formatting type and should be saved/loaded in the same way as that type. For more information on each specific save format, check the header files located in [save formats](/src/save_formats/).
 
 ## Inline TODO's
 
@@ -216,7 +128,6 @@ A list of TODO prefixes found in the source code and their meanings:
 * IMMED_TODO: Issue up for immediate remediation, program won't work a large portion of the time or at all if not addressed. Should only commit with one of these if work *must* be stopped
 * IMPL_TODO: A function or similar is simply not implemented. The program won't work as expected in run under circumstance(s) where it is called
 * NEWARGS_TODO: Signifies a function or line(s) which will need modifying on introduction of a new argument. Nothing necessarily needs to be done when present, more serves as a reminder than an actual TODO
-* SAVE_FORMAT_TODO: Signifies something to be changed with the release of a new save format version
 
 ## Helpful Resources and Thanks
 

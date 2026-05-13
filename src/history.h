@@ -13,6 +13,11 @@
 #include "stdlib.h"
 #include "stdbool.h"
 
+// Various defs
+#define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
+#define TF2PW_LOG_FILENAME "tf2pw_log.txt"
+#define TF2PW_LOG_SEMINAME "tf" CIDER_PATH_DELIM_S TF2PW_LOG_FILENAME
+
 /*
 	@brief Set user's STEAMID3 excerpt
 
@@ -34,15 +39,19 @@ extern void history_free();
 	@brief Loads history file ~/.local/share/tf2pwXX.sav into memory
 
 		@param history_fullname The fullname of the history file to load from. Leave NULL to use default location
+
+		@returns True if failure occurred, else false
 */
-extern void history_load(const char *history_fullname);
+extern bool history_load(const char *history_fullname);
 
 /*
 	@brief Saves memory into history file ~/.local/share/tf2pwXX.sav
 
 		@param history_fullname The fullname of the history file to save to. Leave NULL to use default location
+
+		@returns True if failure occurred, else false
 */
-extern void history_save(const char *history_fullname);
+extern bool history_save(const char *history_fullname);
 
 // A sentinel value for use with history_set_date(...)
 #define HISTORY_SET_DATE_TODAY ((uint16_t) 1)

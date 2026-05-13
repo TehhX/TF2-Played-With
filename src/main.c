@@ -425,13 +425,16 @@ int main(const int argc, const char **argv)
         rl_catch_signals = 0;
     #endif
 
-    parse_option(argc, argv, Earg_option_print_version);
+    parse_option(argc, argv, Earg_option_print_version); // Will exit in here if found
 
-    parse_option(argc, argv, Earg_option_print_help);
+    parse_option(argc, argv, Earg_option_print_help); // Will exit in here if found
 
     parse_option(argc, argv, Earg_option_set_tf2_filepath);
 
-    history_load(history_fullname);
+    if (history_load(history_fullname))
+    {
+        return 1;
+    }
 
     parse_option(argc, argv, Earg_option_set_save_location);
 
@@ -449,7 +452,10 @@ int main(const int argc, const char **argv)
 
     // NEWARGS_TODO
 
-    history_save(history_fullname);
+    if (history_save(history_fullname))
+    {
+        return 1;
+    }
 
     history_free();
 }

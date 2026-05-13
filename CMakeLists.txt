@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project("TF2-Played-With" LANGUAGES C VERSION 1.1.4 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
+project("TF2-Played-With" LANGUAGES C VERSION 1.1.5 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 file(WRITE "${CMAKE_SOURCE_DIR}/version.txt" "${PROJECT_VERSION_MAJOR}-${PROJECT_VERSION_MINOR}-${PROJECT_VERSION_PATCH}")
 
 set(CMAKE_C_STANDARD 17)
@@ -18,7 +18,15 @@ set(SRC
 list(TRANSFORM SRC PREPEND "src/")
 list(TRANSFORM SRC  APPEND ".c")
 
-add_executable(tf2pw ${SRC})
+set(SAVE_FORMATS
+    version_0
+)
+
+# Each item "{}" in SAVE_FORMATS becomes "src/save_formats/{}.c".
+list(TRANSFORM SAVE_FORMATS PREPEND "src/save_formats/")
+list(TRANSFORM SAVE_FORMATS  APPEND ".c")
+
+add_executable(tf2pw ${SRC} ${SAVE_FORMATS})
 
 # In case includes aren't in accessible spots, user may put them here
 target_include_directories(tf2pw PRIVATE "include/")
@@ -65,6 +73,7 @@ else ()
 endif ()
 
 # Add version compile definitions
+target_compile_definitions(tf2pw PRIVATE "TF2PW_HOMEPAGE_URL=\"${PROJECT_HOMEPAGE_URL}\"")
 target_compile_definitions(tf2pw PRIVATE "TF2PW_VERSION=\"v${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}\"")
 
 # Use -DNO_ANSI_COLORING=1 when configuring to disable ANSI color escapes
