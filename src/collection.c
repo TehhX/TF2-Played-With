@@ -30,8 +30,8 @@
 #define LINE_BUFB 512
 
 // Whether archive or live
-#define COLLECTION_LIVE    ((bool) false)
-#define COLLECTION_ARCHIVE ((bool) true)
+#define COLLECTION_LIVE    false
+#define COLLECTION_ARCHIVE true
 
 struct parse_info
 {
@@ -43,7 +43,7 @@ struct parse_info
 // Returns true if S1 matches S2. Will use length of S2
 #define STRINGS_MATCH(S1, S2) (!memcmp(S1, S2, sizeof(S2) - 1))
 
-static void scan_status(const char *line, struct parse_info *const parse_info)
+static bool scan_status(const char *line, struct parse_info *const parse_info)
 {
     // All status lines containing a name-sid3e have 2 spaces after the octothorpe
     static const char status_prefix[] = "#  ";
@@ -51,7 +51,7 @@ static void scan_status(const char *line, struct parse_info *const parse_info)
     // If not status output, skip
     if (!STRINGS_MATCH(line, status_prefix))
     {
-        return;
+        return false;
     }
 
     int line_i = sizeof(status_prefix) - 1;
@@ -78,7 +78,7 @@ static void scan_status(const char *line, struct parse_info *const parse_info)
     if (last_bot_str_i >= last_close_bracket_i)
     {
         TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: Bot found, skipping.\n" ANSI_RESET);)
-        return;
+        return true;
     }
 
     // Set line_i to index of start of SID3E
@@ -89,13 +89,13 @@ static void scan_status(const char *line, struct parse_info *const parse_info)
     if (current_sid3e >= SIDM_ERR_NONE_MAX)
     {
         fputs(ANSI_RED "Bad current_sid3e read from status output.\n" ANSI_RESET, stderr);
-        return;
+        return false;
     }
 
     // If equals user SID3E, skip
     if (current_sid3e == history_get_user_sid3e())
     {
-        return;
+        return true;
     }
 
     // BSEARCH_TODO
@@ -105,7 +105,7 @@ static void scan_status(const char *line, struct parse_info *const parse_info)
         // Player found in array, skip
         if (parse_info->arr[i].sid3e == current_sid3e)
         {
-            return;
+            return true;
         }
     }
 
@@ -124,9 +124,11 @@ static void scan_status(const char *line, struct parse_info *const parse_info)
 
     // Add new player to records
     history_add_record(parse_info->arr + parse_info->len - 1);
+
+    return true;
 }
 
-static void scan_new_match(const char *line, struct parse_info *const parse_info, const bool caller)
+static bool scan_new_match(const char *line, struct parse_info *const parse_info, const bool caller)
 {
     // Check for `Client reached server_spawn.`
     if (STRINGS_MATCH(line, "Client reached server_spawn."))
@@ -149,10 +151,16 @@ static void scan_new_match(const char *line, struct parse_info *const parse_info
 
             parse_info->len = 0;
         }
+
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
-static void scan_message(const char *line, const struct parse_info *const parse_info)
+static bool scan_message(const char *line, const struct parse_info *const parse_info)
 {
     // Get name beginning
     static const char
@@ -186,19 +194,27 @@ static void scan_message(const char *line, const struct parse_info *const parse_
             if (!memcmp(line + name_len, message_mid, sizeof(message_mid) - 1))
             {
                 history_add_message(parse_info->arr[i].sid3e, line + name_len + sizeof(message_mid) - 1);
-                return;
+                return true;
             }
         }
     }
+
+    return false;
 }
 
-static void scan_retry(const char *line, struct parse_info *const parse_info)
+static bool scan_retry(const char *line, struct parse_info *const parse_info)
 {
     if (STRINGS_MATCH(line, "Commencing connection retry to "))
     {
         TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Found retry statement, setting treat_next_match_as_current.\n");
 
         parse_info->treat_next_match_as_current = true;
+
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 
@@ -207,13 +223,14 @@ static void parse_log(FILE *file_stream, const bool caller, struct parse_info *p
 {
     for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); )
     {
-        scan_status(line_buf, parse_info);
-
-        scan_new_match(line_buf, parse_info, caller);
-
-        scan_message(line_buf, parse_info);
-
-        scan_retry(line_buf, parse_info);
+        // Check from most common output type to least, stopping once one is found via logical OR (||) operator while discarding final result to suppress compiler warning
+        (void)
+        (
+            scan_status   (line_buf, parse_info)         ||
+            scan_message  (line_buf, parse_info)         ||
+            scan_new_match(line_buf, parse_info, caller) ||
+            scan_retry    (line_buf, parse_info)
+        );
     }
 }
 
@@ -227,7 +244,9 @@ void *_collection_read_live_routine(struct collection_read_live_routine_params *
     {
         parse_log(params->input_file, COLLECTION_LIVE, &live_parse_info);
 
+        // Will be EOF at this point, must be cleared
         clearerr(params->input_file);
+
         tf2pw_sleep(5);
     }
 

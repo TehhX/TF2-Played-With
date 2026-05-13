@@ -324,13 +324,12 @@ void interactive_enter()
         }
         else if (INPUT_IS("version", 'v'))
         {
-            printf(ANSI_YELLOW "TF2PW v%d.%d.%d\n" ANSI_RESET, TF2PW_VERSION_MAJOR, TF2PW_VERSION_MINOR, TF2PW_VERSION_PATCH);
+            puts(ANSI_YELLOW "TF2PW " TF2PW_VERSION ANSI_RESET);
         }
         else if (INPUT_IS("help", 'h'))
         {
             printf
             (
-                ANSI_BLUE
                     "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
                     LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB "Retrieve and print associated record.\n\n"
@@ -356,7 +355,6 @@ void interactive_enter()
                     LTAB LTAB "Exit interactive mode. Will ask if you want to save first, then confirm.\n\n"
                     LTAB "(c)lear\n"
                     LTAB LTAB "Clear the terminal (Terminal dependent).\n"
-                ANSI_RESET
             );
         }
         else if (INPUT_IS("exit", 'e') || INPUT_IS("quit", 'q'))

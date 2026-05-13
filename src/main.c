@@ -89,7 +89,7 @@ static struct arg_option arg_options[] =
     },
     {
         .name = "--set-tf2-(f)ilepath",
-        .doc = "Sets the filepath of the Team Fortress Two folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\".",
+        .doc = "Sets the filepath of the Team Fortress 2 folder. Should be \"..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "\".",
         .arg = "[FILEPATH]",
         .opt_long = "set-tf2-filepath",
         .opt_short = 'f',
@@ -161,8 +161,7 @@ static struct arg_option arg_options[] =
 
 static void operation_print_version(const char *invocation, const char *arg)
 {
-    printf("TF2PW v%d.%d.%d\n", TF2PW_VERSION_MAJOR, TF2PW_VERSION_MINOR, TF2PW_VERSION_PATCH);
-
+    puts("TF2PW " TF2PW_VERSION);
     exit(EXIT_SUCCESS);
 }
 
@@ -182,8 +181,9 @@ static void operation_print_help(const char *invocation, const char *arg)
 
     printf
     (
+                    "Team Fortress 2 Played With - " TF2PW_VERSION "\n"
         ANSI_YELLOW "Warning: Only first occurrence of each option is considered.\n"
-        ANSI_BLUE   "Usage: %s [OPTION]...\n"
+        ANSI_RESET  "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
         HELP_OUTP(Earg_option_print_version    ) "\n"
@@ -196,8 +196,6 @@ static void operation_print_help(const char *invocation, const char *arg)
         HELP_OUTP(Earg_option_set_user_sid3e   ) "\n"
         HELP_OUTP(Earg_option_retrieve_records ) "\n"
         HELP_OUTP(Earg_option_edit_notes       )
-
-        ANSI_RESET
         ,
         invocation,
 
