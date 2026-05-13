@@ -29,13 +29,13 @@
         * Add new .[hc] files for the new version, add load and save functions
 
     Example prototypes for each functionality:
-        * Load: bool load(struct save_format_data *save_data, FILE *load_stream);
+        * Load: bool load(struct save_format_<V> *save_data, FILE *load_stream);
             Accepts a save data pointer to write to, a file stream to load from, returns pointer to save_data if succeeded, else NULL
 
-        * Save: bool save(const struct save_format_data *save_data, FILE *save_stream);
+        * Save: bool save(const struct save_format_<V> *save_data, FILE *save_stream);
             Accepts a save data pointer to read from, a file stream to save to, returns true if failure occurred
 
-        * Conversion: bool modernize(struct save_format_data *data_input_output)
+        * Conversion: bool modernize(struct save_format_<V> *data_input_output)
             Accepts a save data pointer to both read the current data from and write new data to, returns true if failure occurred
 
     The current format structure only allows for 256 [0, 255] unique format versions because it is only one unsigned byte. While it's likely the total amount of formats will not even come close to 256, it should be kept in mind if it does. Likely, another byte will be allocated, with a save format first byte value of 255 signifying a second byte should be checked eg. version 255 == 0xFF00, version 256 == 0xFF01, and so on
