@@ -433,7 +433,10 @@ int main(const int argc, const char **argv)
 
     parse_option(argc, argv, Earg_option_set_tf2_filepath);
 
-    history_load(history_fullname);
+    if (history_load(history_fullname))
+    {
+        return 1;
+    }
 
     parse_option(argc, argv, Earg_option_set_save_location);
 
@@ -451,7 +454,10 @@ int main(const int argc, const char **argv)
 
     // NEWARGS_TODO
 
-    history_save(history_fullname);
+    if (history_save(history_fullname))
+    {
+        return 1;
+    }
 
     history_free();
 }

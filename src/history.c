@@ -288,7 +288,7 @@ static const char *_history_get_default_fullname_pre()
     return (_default_history_fullname = cider_construct_fullname(cider_data_filepath(), "tf2pw.sav"));
 }
 
-void history_load(const char *const passed_history_fullname)
+bool history_load(const char *const passed_history_fullname)
 {
     const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
@@ -303,23 +303,26 @@ void history_load(const char *const passed_history_fullname)
             // Exit prematurely if wizard failed
             if (history_wizard())
             {
-                exit(EXIT_FAILURE);
+                return true;
             }
 
             history_free();
-            history_save(history_fullname);
+
+            return history_save(history_fullname);
         }
         else
         {
             fprintf(stderr, ANSI_RED "Failed to open \"%s\" for reading. Error: ", history_fullname);
             perror(NULL);
             RESET_STDERR_COL();
-        }
 
-        return;
+            return true;
+        }
     }
 
     history_free();
+
+    bool retval = false;
 
     char header_buf[sizeof(HEADER) - 1];
     fread(header_buf, 1, sizeof(HEADER) - 1, input_file_ptr);
@@ -327,6 +330,7 @@ void history_load(const char *const passed_history_fullname)
     {
         fprintf(stderr, ANSI_RED "MAJOR: Requested file \"%s\" is not a valid tf2pw history file.\n" ANSI_RESET, history_fullname);
 
+        retval = true;
         goto CLOSE_HISTORY_FILE;
     }
 
@@ -337,14 +341,17 @@ void history_load(const char *const passed_history_fullname)
         {
             fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
 
-            // IMMED_TODO: Replace with load and save returning booleans
-            exit(EXIT_FAILURE);
+            retval = true;
+            goto CLOSE_HISTORY_FILE;
         }
         break;   case 0:
         {
             if (save_format_0_load(&history_main_data.data_v0, input_file_ptr))
             {
                 fprintf(stderr, ANSI_RED "Failed to load file \"%s\".\n", history_fullname);
+
+                retval = true;
+                goto CLOSE_HISTORY_FILE;
             }
         }
     }
@@ -352,7 +359,8 @@ void history_load(const char *const passed_history_fullname)
     if (EOF != fgetc(input_file_ptr))
     {
         fprintf(stderr, ANSI_RED "EOF not reached for file \"%s\". History file not valid, exiting.\n" ANSI_RESET, history_fullname);
-        exit(EXIT_FAILURE);
+
+        retval = true;
     }
 
     CLOSE_HISTORY_FILE:;
@@ -362,11 +370,13 @@ void history_load(const char *const passed_history_fullname)
         perror(NULL);
         RESET_STDERR_COL();
 
-        return;
+        return true;
     }
+
+    return retval;
 }
 
-void history_save(const char *const passed_history_fullname)
+bool history_save(const char *const passed_history_fullname)
 {
     const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
@@ -377,20 +387,27 @@ void history_save(const char *const passed_history_fullname)
         perror(NULL);
         RESET_STDERR_COL();
 
-        return;
+        return true;
     }
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER) - 1, output_file_ptr);
 
-    save_format_0_save(&history_main_data.data_v0, output_file_ptr);
+    const bool retval = save_format_0_save(&history_main_data.data_v0, output_file_ptr);
+    if (retval)
+    {
+        fprintf(stderr, ANSI_RED "Failed to save file \"%s\".\n", history_fullname);
+    }
 
     if (fclose(output_file_ptr))
     {
         fprintf(stderr, ANSI_RED "MAJOR: Failed to close \"%s\". Error: ", history_fullname);
         perror(NULL);
         RESET_STDERR_COL();
-        return;
+
+        return true;
     }
+
+    return retval;
 }
 
 char *history_set_tf2_filepath(char *new_tf2_filepath)

@@ -370,7 +370,10 @@ void interactive_enter()
 
             if (user_input_confirm(ANSI_YELLOW "Save before quitting? (Y/N): " ANSI_RESET, "\n"))
             {
-                history_save(user_input_history_fullname);
+                if (history_save(user_input_history_fullname))
+                {
+                    break;
+                }
             }
 
             if (user_input_confirm(ANSI_YELLOW "Really quit? (Y/N): " ANSI_RESET, "\n"))
