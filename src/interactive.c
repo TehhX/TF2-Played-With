@@ -168,7 +168,7 @@ void interactive_enter()
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
 
-        if (INPUT_IS("retrieve", 'r'))
+        if (INPUT_IS("retrieve-records", 'r'))
         {
             perform_on_sid3e(input_buf, history_print_record, history_print_records);
         }
@@ -330,8 +330,8 @@ void interactive_enter()
         {
             printf
             (
-                    "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve = r) (case insensitive)\n"
-                    LTAB "(r)etrieve [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
+                    "TF2PW Interactive Mode Help | Try any below phrase or the enclosed character (eg. retrieve-records = r) (case insensitive)\n"
+                    LTAB "(r)etrieve-records [STEAMID3|STEAMID3E|STEAMID64|NAME]\n"
                     LTAB LTAB "Retrieve and print associated record.\n\n"
                     LTAB "set-tf2-file(p)ath [FILEPATH]\n"
                     LTAB LTAB "Sets the filepath of your TF2 directory. Should follow the form \".../Team Fortress 2/\".\n\n"

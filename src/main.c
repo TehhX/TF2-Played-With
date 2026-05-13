@@ -182,7 +182,6 @@ static void operation_print_help(const char *invocation, const char *arg)
     printf
     (
                     "Team Fortress 2 Played With - " TF2PW_VERSION "\n"
-        ANSI_YELLOW "Warning: Only first occurrence of each option is considered.\n"
         ANSI_RESET  "Usage: %s [OPTION]...\n"
 
         // NEWARGS_TODO
@@ -351,41 +350,33 @@ static void operation_edit_notes(const char *invocation, const char *arg)
 
 static void parse_option(const int argc, const char **argv, const int option_i)
 {
-    int i = 1;
-    do
+    for (int i = 1; i < argc; ++i)
     {
-        // Long
-        if (!strncmp(argv[i], "--", 2) && !strcmp(argv[i] + 2, arg_options[option_i].opt_long))
+        // Not an option, skip argument
+        if (argv[i][0] != '-')
         {
-            goto OPERATE;
+            continue;
         }
-        // Short
-        else if (argv[i][0] == '-' && argv[i][1] == arg_options[option_i].opt_short)
-        {
-            goto OPERATE;
-        }
-    }
-    while (++i < argc);
 
-    // Option not found, return
-    return;
-
-    OPERATE:;
-    if (arg_options[option_i].arg)
-    {
-        if (i + 1 >= argc || !strncmp(argv[i + 1], "--", 2) || argv[i + 1][0] == '-')
+        if ((argv[i][1] == '-' && !strcmp(argv[i] + 2, arg_options[option_i].opt_long)) || (argv[i][1] == arg_options[option_i].opt_short && argv[i][2] == '\0'))
         {
-            fprintf(stderr, "%s requires an argument.\n", arg_options[option_i].name);
-            exit(EXIT_FAILURE);
+            if (arg_options[option_i].arg)
+            {
+                if (i + 1 >= argc || argv[i + 1][0] == '-')
+                {
+                    fprintf(stderr, "%s requires an argument.\n", arg_options[option_i].name);
+                    exit(EXIT_FAILURE);
+                }
+                else
+                {
+                    arg_options[option_i].operation(argv[0], argv[i + 1]);
+                }
+            }
+            else
+            {
+                arg_options[option_i].operation(argv[0], NULL);
+            }
         }
-        else
-        {
-            arg_options[option_i].operation(argv[0], argv[i + 1]);
-        }
-    }
-    else
-    {
-        arg_options[option_i].operation(argv[0], NULL);
     }
 }
 

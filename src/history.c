@@ -675,7 +675,6 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    // MAJOR_TODO: Test on windows
     const char *const editor = getenv("EDITOR");
 
     char cmd_buff[128];
