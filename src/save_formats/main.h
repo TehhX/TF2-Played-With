@@ -76,7 +76,7 @@ struct save_format_data
 
     union
     {
-        struct save_format_0 *data_v0;
+        struct save_format_0 data_v0;
     };
 };
 

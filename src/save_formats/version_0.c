@@ -1,5 +1,7 @@
 #include "version_0.h"
 
+#include "main.h"
+
 #include "cider.h"
 
 #include "string.h"
@@ -64,10 +66,8 @@ bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file
     return false;
 }
 
-struct save_format_0 *save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
+bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
 {
-    save_data = malloc(sizeof(*save_data));
-
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
     fread_one(save_data->player_records_len);
@@ -177,7 +177,7 @@ struct save_format_0 *save_format_0_load(struct save_format_0 *save_data, FILE *
                         break; case EOF:
                         {
                             fprintf(stderr, ANSI_RED "MAJOR: Reached end of history file before finishing parsing, file corruption likely.\n" ANSI_RESET);
-                            return NULL;
+                            return true;
                         }
                         break; default:
                         {
@@ -193,5 +193,5 @@ struct save_format_0 *save_format_0_load(struct save_format_0 *save_data, FILE *
         }
     }
 
-    return save_data;
+    return false;
 }
