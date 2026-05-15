@@ -5,6 +5,7 @@
 #include "player_info.h"
 #include "steamid_manip.h"
 #include "time_manip.h"
+#include "file_io.h"
 
 #include "cider.h"
 
@@ -23,19 +24,13 @@
     #define tf2pw_sleep(SECONDS) Sleep((SECONDS) * 1000)
 #endif
 
-// How many players can be in a match (including user)
-#define MAX_PLAYERS 512
-
-// Size of the line buffer in bytes. Should be a couple bytes larger than the largest expected line length. Keep in mind that values via pow(2, (int) exp) eg. 512 make it seem up to 8 times more professional
-#define LINE_BUFB 512
-
 // Whether archive or live
 #define COLLECTION_LIVE    false
 #define COLLECTION_ARCHIVE true
 
 struct parse_info
 {
-    struct player_info arr[MAX_PLAYERS];
+    struct player_info *player_info_arr;
     int len;
     bool treat_next_match_as_current; // Will negate next new match scan one time, mainly `retry` command related https://github.com/TehhX/TF2-Played-With/issues/10
 };
@@ -43,13 +38,13 @@ struct parse_info
 // Returns true if S1 matches S2. Will use length of S2
 #define STRINGS_MATCH(S1, S2) (!memcmp(S1, S2, sizeof(S2) - 1))
 
-static bool scan_status(const char *line, struct parse_info *const parse_info)
+static bool scan_status(const char *line, const size_t line_len, struct parse_info *const parse_info)
 {
     // All status lines containing a name-sid3e have 2 spaces after the octothorpe
     static const char status_prefix[] = "#  ";
 
     // If not status output, skip
-    if (!STRINGS_MATCH(line, status_prefix))
+    if ((line_len < sizeof(status_prefix) - 1) || !STRINGS_MATCH(line, status_prefix))
     {
         return false;
     }
@@ -62,7 +57,7 @@ static bool scan_status(const char *line, struct parse_info *const parse_info)
 
     // Get index of last closing bracket and last occurrence of "BOT"
     int last_close_bracket_i = 0, last_bot_str_i = 0;
-    while (line[++line_i] != '\n')
+    while (++line_i < (((int) line_len) - (int) sizeof("BOT") - 1))
     {
         if (line[line_i] == ']')
         {
@@ -77,7 +72,7 @@ static bool scan_status(const char *line, struct parse_info *const parse_info)
     // This is a bot, skip
     if (last_bot_str_i >= last_close_bracket_i)
     {
-        TF2_PLAYED_WITH_DEBUG_INSERT(printf(ANSI_LOG "LOG: Bot found, skipping.\n" ANSI_RESET);)
+        TF2_PLAYED_WITH_DEBUG_LOGS("Bot found, skipping.\n");
         return true;
     }
 
@@ -103,64 +98,77 @@ static bool scan_status(const char *line, struct parse_info *const parse_info)
     for (int i = 0; i < parse_info->len; ++i)
     {
         // Player found in array, skip
-        if (parse_info->arr[i].sid3e == current_sid3e)
+        if (parse_info->player_info_arr[i].sid3e == current_sid3e)
         {
             return true;
         }
     }
 
     // Player not in status array, add them
-    ++parse_info->len;
+    prealloc(parse_info->player_info_arr, ++parse_info->len);
 
     // Get player name end index
     while (line[--line_i] != '"');
     const int player_name_len = line_i - player_name_begin;
 
-    // Set name and SID3E in parse_info->arr
-    memcpy(parse_info->arr[parse_info->len - 1].name, line + player_name_begin, player_name_len);
+    parse_info->player_info_arr[parse_info->len - 1].name = malloc(sizeof(char) * (player_name_len + 1));
+    memcpy(parse_info->player_info_arr[parse_info->len - 1].name, line + player_name_begin, player_name_len);
+    parse_info->player_info_arr[parse_info->len - 1].name[player_name_len] = '\0';
 
-    parse_info->arr[parse_info->len - 1].name[player_name_len] = '\0';
-    parse_info->arr[parse_info->len - 1].sid3e                 = current_sid3e;
+    parse_info->player_info_arr[parse_info->len - 1].sid3e                 = current_sid3e;
 
     // Add new player to records
-    history_add_record(parse_info->arr + parse_info->len - 1);
+    history_add_record((parse_info->player_info_arr) + parse_info->len - 1);
 
     return true;
 }
 
-static bool scan_new_match(const char *line, struct parse_info *const parse_info, const bool caller)
+HYPER_MACRO void names_free(struct parse_info *const parse_info)
 {
-    // Check for `Client reached server_spawn.`
-    if (STRINGS_MATCH(line, "Client reached server_spawn."))
+    for (int i = 0; i < parse_info->len; ++i)
     {
-        // Clear `treat_next_match_as_current` and skip if `treat_next_match_as_current` set
-        if (parse_info->treat_next_match_as_current)
-        {
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Resetting treat_next_match_as_current and skipping new match.\n" ANSI_RESET);
-
-            parse_info->treat_next_match_as_current = false;
-        }
-        else
-        {
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Starting new match.\n" ANSI_RESET);
-
-            if (caller == COLLECTION_LIVE)
-            {
-                history_set_date(HISTORY_SET_DATE_TODAY);
-            }
-
-            parse_info->len = 0;
-        }
-
-        return true;
-    }
-    else
-    {
-        return false;
+        free(parse_info->player_info_arr[i].name);
     }
 }
 
-static bool scan_message(const char *line, const struct parse_info *const parse_info)
+static bool scan_new_match(const char *line, const size_t line_len, struct parse_info *const parse_info, const bool collection_type)
+{
+    static const char new_match_line[] = "Client reached server_spawn.";
+
+    if (line_len < sizeof(new_match_line) - 1)
+    {
+        return false;
+    }
+    else if (!STRINGS_MATCH(line, new_match_line))
+    {
+        return false;
+    }
+
+    // Clear `treat_next_match_as_current` and skip if `treat_next_match_as_current` set
+    if (parse_info->treat_next_match_as_current)
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGS("Resetting treat_next_match_as_current and skipping new match.\n");
+
+        parse_info->treat_next_match_as_current = false;
+    }
+    else
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGS("Starting new match.\n");
+
+        if (collection_type == COLLECTION_LIVE)
+        {
+            history_set_date(HISTORY_SET_DATE_TODAY);
+        }
+
+        names_free(parse_info);
+
+        parse_info->len = 0;
+    }
+
+    return true;
+}
+
+static bool scan_message(const char *line, const size_t line_len, const struct parse_info *const parse_info)
 {
     // Get name beginning
     static const char
@@ -169,7 +177,11 @@ static bool scan_message(const char *line, const struct parse_info *const parse_
         message_mid[] = " :  "
     ;
 
-    if (STRINGS_MATCH(line, prefix_dead))
+    if (line_len < sizeof(message_mid) + 2)
+    {
+        return false;
+    }
+    else if (STRINGS_MATCH(line, prefix_dead))
     {
         line += sizeof(prefix_dead);
 
@@ -185,15 +197,15 @@ static bool scan_message(const char *line, const struct parse_info *const parse_
 
     for (int i = 0; i < parse_info->len; ++i)
     {
-        const int name_len = (int) strlen(parse_info->arr[i].name);
+        const int name_len = (int) strlen(parse_info->player_info_arr[i].name);
 
         // Check for a name match after preamble
-        if (!memcmp(parse_info->arr[i].name, line, name_len))
+        if (!strncmp(parse_info->player_info_arr[i].name, line, name_len))
         {
             // Check that MESSAGE_MID follows name
-            if (!memcmp(line + name_len, message_mid, sizeof(message_mid) - 1))
+            if (!strncmp(line + name_len, message_mid, sizeof(message_mid) - 1))
             {
-                history_add_message(parse_info->arr[i].sid3e, line + name_len + sizeof(message_mid) - 1);
+                history_add_message(parse_info->player_info_arr[i].sid3e, line + name_len + sizeof(message_mid) - 1);
                 return true;
             }
         }
@@ -202,11 +214,17 @@ static bool scan_message(const char *line, const struct parse_info *const parse_
     return false;
 }
 
-static bool scan_retry(const char *line, struct parse_info *const parse_info)
+static bool scan_retry(const char *line, const size_t line_len, struct parse_info *const parse_info)
 {
-    if (STRINGS_MATCH(line, "Commencing connection retry to "))
+    static const char retry_line[] = "Commencing connection retry to ";
+
+    if (line_len < sizeof(retry_line))
     {
-        TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Found retry statement, setting treat_next_match_as_current.\n");
+        return false;
+    }
+    else if (STRINGS_MATCH(line, retry_line))
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGS("Found retry statement, setting treat_next_match_as_current.\n");
 
         parse_info->treat_next_match_as_current = true;
 
@@ -218,20 +236,25 @@ static bool scan_retry(const char *line, struct parse_info *const parse_info)
     }
 }
 
-// @returns True for fail, false for success
-static void parse_log(FILE *file_stream, const bool caller, struct parse_info *parse_info)
+static void parse_log(FILE *file_stream, const bool collection_type, struct parse_info *parse_info)
 {
-    for (char line_buf[LINE_BUFB]; fgets(line_buf, LINE_BUFB, file_stream); )
+    char *line_buf = NULL;
+    size_t line_buf_len;
+
+    while (!feof(file_stream))
     {
-        // Check from most common output type to least, stopping once one is found via logical OR (||) operator while discarding final result to suppress compiler warning
-        (void)
-        (
-            scan_status   (line_buf, parse_info)         ||
-            scan_message  (line_buf, parse_info)         ||
-            scan_new_match(line_buf, parse_info, caller) ||
-            scan_retry    (line_buf, parse_info)
-        );
+        line_buf_len = file_io_buffered_input(file_stream, &line_buf);
+
+        // Check from most common output type to least, stopping once one is found
+             if (scan_status   (line_buf, line_buf_len, parse_info                 )) { ; }
+        else if (scan_message  (line_buf, line_buf_len, parse_info                 )) { ; }
+        else if (scan_new_match(line_buf, line_buf_len, parse_info, collection_type)) { ; }
+        else if (scan_retry    (line_buf, line_buf_len, parse_info                 )) { ; }
     }
+
+    free(line_buf);
+    names_free(parse_info);
+    free(parse_info->player_info_arr);
 }
 
 void *_collection_read_live_routine(struct collection_read_live_routine_params *params)
@@ -240,7 +263,7 @@ void *_collection_read_live_routine(struct collection_read_live_routine_params *
 
     params->running = true;
 
-    for (struct parse_info live_parse_info = { .len = 0, .treat_next_match_as_current = false }; params->running; )
+    for (struct parse_info live_parse_info = { .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL }; params->running; )
     {
         parse_log(params->input_file, COLLECTION_LIVE, &live_parse_info);
 
@@ -257,27 +280,27 @@ void *_collection_read_live_routine(struct collection_read_live_routine_params *
 
 void collection_read_archived(const char *collection_fullname)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening archived log \"%s\".\n", collection_fullname);
+    TF2_PLAYED_WITH_DEBUG_LOGF("Opening archived log \"%s\".\n", collection_fullname);
 
     FILE *const input_file_ptr = fopen(collection_fullname, "r");
     if (!input_file_ptr)
     {
         fprintf(stderr, ANSI_RED "Failed to open archive-file \"%s\" for reading: ", collection_fullname);
         perror(NULL);
-        RESET_STDERR_COL();
+        ANSI_RESET_STDERR();
 
         return;
     }
 
     history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
 
-    parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct parse_info){ .len = 0, .treat_next_match_as_current = false });
+    parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct parse_info){ .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL });
 
     if (fclose(input_file_ptr))
     {
         fprintf(stderr, ANSI_RED "Failed to close \"%s\": ", collection_fullname);
         perror(NULL);
-        RESET_STDERR_COL();
+        ANSI_RESET_STDERR();
         return;
     }
 }

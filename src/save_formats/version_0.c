@@ -1,6 +1,7 @@
 #include "version_0.h"
 
 #include "main.h"
+#include "../file_io.h"
 
 #include "cider.h"
 
@@ -78,10 +79,10 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     save_data->tf2_filepath[save_data->tf2_filepath_len] = CIDER_PATH_DELIM_C;
     save_data->tf2_filepath[save_data->tf2_filepath_len + 1] = '\0';
 
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_filepath to \"%s\".\n" ANSI_RESET, save_data->tf2_filepath);
+    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_filepath to \"%s\".\n", save_data->tf2_filepath);
 
     save_data->tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(save_data->tf2_filepath_len + 2), save_data->tf2_filepath, save_data->tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
-    TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "LOG: Set tf2_live_log_fullname to \"%s\".\n" ANSI_RESET, save_data->tf2_live_log_fullname);
+    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);
 
     save_data->player_records = malloc(save_data->player_records_len * sizeof(*save_data->player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < save_data->player_records_len; ++ player_records_i)
@@ -89,21 +90,8 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_records_i].sid3e);
         fread_one(save_data->player_records[player_records_i].record_messages);
 
-        // BUFF_TODO
         save_data->player_records[player_records_i].notes = NULL;
-        int notes_input;
-        size_t notes_len = 0;
-        while ((notes_input = fgetc(input_file_ptr)) != '\0')
-        {
-            prealloc(save_data->player_records[player_records_i].notes, sizeof(char), ++notes_len);
-            save_data->player_records[player_records_i].notes[notes_len - 1] = (char) notes_input;
-        }
-
-        prealloc(save_data->player_records[player_records_i].notes, sizeof(char), notes_len + 1);
-        save_data->player_records[player_records_i].notes[notes_len] = '\0';
-
-        // If just '\0', set to NULL
-        if (notes_len == 0)
+        if (!file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes))
         {
             free(save_data->player_records[player_records_i].notes);
             save_data->player_records[player_records_i].notes = NULL;
@@ -160,28 +148,28 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
                     {
                         break; case '\0':
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), msg_len + 1);
+                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
                             save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
                             goto STOP_READING_MESSAGES;
                         }
                         break; case '\n':
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), msg_len + 1);
+                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
                             save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages, sizeof(char *), ++save_data->player_records[player_records_i].date_records[date_records_i].messages_len);
+                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages, ++save_data->player_records[player_records_i].date_records[date_records_i].messages_len);
                             save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1] = NULL;
                             msg_len = 0;
                         }
                         break; case EOF:
                         {
-                            fprintf(stderr, ANSI_RED "MAJOR: Reached end of history file before finishing parsing, file corruption likely.\n" ANSI_RESET);
+                            fprintf(stderr, ANSI_RED "Reached end of history file before finishing parsing, file corruption likely.\n" ANSI_RESET);
                             return true;
                         }
                         break; default:
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], sizeof(char), ++msg_len);
+                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], ++msg_len);
                             save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len - 1] = (char) messages_input;
                         }
                     }

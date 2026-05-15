@@ -129,7 +129,7 @@ static void perform_on_sid3e(char *input_buf, void (*sid3e_action)(uint32_t sid3
         }
         else
         {
-            fputs(ANSI_RED "MAJOR: Parsed name for option without associated action.\n" ANSI_RESET, stderr);
+            fputs(ANSI_RED "Parsed name for option without associated action.\n" ANSI_RESET, stderr);
             return;
         }
     }
@@ -162,8 +162,8 @@ void interactive_enter()
     {
         if (!user_input_getline(&input_buf, "TF2PW > ", ANSI_RED "Bad input/attempted interrupt. Try \"(h)elp\" for help, or \"(q)uit\" to quit." ANSI_RESET))
         {
-            perror(ANSI_RED "FATAL: Couldn't get user input");
-            RESET_STDERR_COL();
+            perror(ANSI_RED "Couldn't get user input");
+            ANSI_RESET_STDERR();
 
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }
@@ -204,13 +204,13 @@ void interactive_enter()
 
             puts(ANSI_YELLOW "Starting live-collecting..." ANSI_RESET);
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(ANSI_LOG "Opening live-log \"%s\".\n" ANSI_RESET, history_get_live_log_fullname());
+            TF2_PLAYED_WITH_DEBUG_LOGF("Opening live-log \"%s\".\n", history_get_live_log_fullname());
 
             FILE *const input_file_ptr = fopen(history_get_live_log_fullname(), "r");
             if (!input_file_ptr)
             {
                 perror(ANSI_RED "Failed to open live-file for reading. Error");
-                RESET_STDERR_COL();
+                ANSI_RESET_STDERR();
 
                 continue;
             }
@@ -218,8 +218,8 @@ void interactive_enter()
             live_params.input_file = input_file_ptr;
             if (pthread_create(&thread_collection, NULL, collection_read_live_routine, &live_params))
             {
-                perror(ANSI_RED "MAJOR: Failed to create thread_collection");
-                RESET_STDERR_COL();
+                perror(ANSI_RED "Failed to create thread_collection");
+                ANSI_RESET_STDERR();
             }
             else
             {
@@ -245,8 +245,8 @@ void interactive_enter()
 
             if (pthread_join(thread_collection, NULL))
             {
-                perror(ANSI_RED "MAJOR: Failed to join thread_collection");
-                RESET_STDERR_COL();
+                perror(ANSI_RED "Failed to join thread_collection");
+                ANSI_RESET_STDERR();
             }
             else
             {
@@ -259,7 +259,7 @@ void interactive_enter()
                 {
                     fprintf(stderr, ANSI_RED "Failed to remove log file \"%s\", manual intervention required before next live collection: ", history_get_live_log_fullname());
                     perror(NULL);
-                    RESET_STDERR_COL();
+                    ANSI_RESET_STDERR();
                 }
                 else
                 {
@@ -270,7 +270,7 @@ void interactive_enter()
             if (fclose(live_params.input_file))
             {
                 perror(ANSI_RED "Failed to close live-file. Error");
-                RESET_STDERR_COL();
+                ANSI_RESET_STDERR();
 
                 continue;
             }

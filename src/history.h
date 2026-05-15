@@ -116,7 +116,7 @@ extern void history_edit_notes(uint32_t requested_sid3e);
 	@brief Adds a message to the current date record of player `requested_sid3e`
 
 		@param requested_sid3e The STEAMID3 excerpt of the player for which to add the message
-		@param message The message to add. Should be newline-terminated for the sake of collection.c
+		@param message The message to add
 */
 extern void history_add_message(uint32_t requested_sid3e, const char *message);
 

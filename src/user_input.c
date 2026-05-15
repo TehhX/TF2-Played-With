@@ -107,7 +107,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
         // Should be pre-locked by user_input_getline(...)
         if (pthread_mutex_trylock(&params->input_lock) != EBUSY)
         {
-            fputs(ANSI_RED "FATAL: Mutex not pre-locked in routine_user_input.\n" ANSI_RESET, stderr);
+            fputs(ANSI_RED "Mutex not pre-locked in routine_user_input.\n" ANSI_RESET, stderr);
             abort();
         }
     )
@@ -134,7 +134,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
             {
                 break; case '\n':
                 {
-                    prealloc(params->input, sizeof(char), ++params->input_len);
+                    prealloc(params->input, ++params->input_len);
                     params->input[params->input_len - 1] = '\0';
 
                     cont = false;
@@ -145,7 +145,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
                 }
                 break; default:
                 {
-                    prealloc(params->input, sizeof(char), params->input_len + 1);
+                    prealloc(params->input, params->input_len + 1);
                     params->input[params->input_len++] = (char) next;
                 }
             }
@@ -171,8 +171,8 @@ char *user_input_getline(char **input, const char *prompt, const char *bad_input
             !SetConsoleCtrlHandler(sigint_handler, TRUE)
         #endif
         ){
-            perror(ANSI_RED "FATAL: Couldn't modify SIGINT handling");
-            RESET_STDERR_COL();
+            perror(ANSI_RED "Couldn't modify SIGINT handling");
+            ANSI_RESET_STDERR();
 
             cleanup(NULL, NULL, NULL, catch_sigint);
 
@@ -184,8 +184,8 @@ char *user_input_getline(char **input, const char *prompt, const char *bad_input
 
     if (pthread_mutex_init(&params.input_lock, NULL))
     {
-        perror(ANSI_RED "FATAL: Failed to initialize mutex");
-        RESET_STDERR_COL();
+        perror(ANSI_RED "Failed to initialize mutex");
+        ANSI_RESET_STDERR();
 
         cleanup(NULL, NULL, params.input, catch_sigint);
 
@@ -198,8 +198,8 @@ char *user_input_getline(char **input, const char *prompt, const char *bad_input
     pthread_t user_input_thread;
     if (pthread_create(&user_input_thread, NULL, (void *(*)(void *)) routine_user_input, &params))
     {
-        perror(ANSI_RED "FATAL: Failed to spin up thread");
-        RESET_STDERR_COL();
+        perror(ANSI_RED "Failed to spin up thread");
+        ANSI_RESET_STDERR();
 
         cleanup(NULL, &params.input_lock, params.input, catch_sigint);
 
@@ -256,8 +256,8 @@ char *user_input_getline(char **input, const char *prompt, const char *bad_input
             // Miscellaneous error
             break; default:
             {
-                perror(ANSI_RED "FATAL: Misc mutex error");
-                RESET_STDERR_COL();
+                perror(ANSI_RED "Misc mutex error");
+                ANSI_RESET_STDERR();
 
                 cleanup(&user_input_thread, &params.input_lock, params.input, catch_sigint);
 
@@ -278,8 +278,8 @@ bool user_input_confirm(const char *prompt, const char *bad_input_message)
     {
         if (!user_input_getline(&input, prompt, bad_input_message))
         {
-            perror(ANSI_RED "FATAL: User confirmation input error");
-            RESET_STDERR_COL();
+            perror(ANSI_RED "User confirmation input error");
+            ANSI_RESET_STDERR();
 
             TF2_PLAYED_WITH_DEBUG_ABEX();
         }

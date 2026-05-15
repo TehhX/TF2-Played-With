@@ -29,12 +29,12 @@
 #define time_manip_current_ued() (time_manip_ues2ued(time_manip_current_ues()))
 
 // Internally used by `time_manip_print_ued` and `time_manip_print_ued`
-#define _time_manip_print_tm printf("%4d-%02d-%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday)
+#define _time_manip_print_tm(STREAM) fprintf(STREAM, "%4d-%02d-%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday)
 
 // Print date of UED
-#define time_manip_print_ued(UED) { const struct tm *const tm = localtime(&(time_t){ time_manip_ued2ues(UED) }); _time_manip_print_tm; }
+#define time_manip_print_ued(STREAM, UED) { const struct tm *const tm = localtime(&(time_t){ time_manip_ued2ues(UED) }); _time_manip_print_tm(STREAM); }
 
 // Print date of UES
-#define time_manip_print_ues(UES) { const struct tm *const tm = localtime(&(time_t){ UES }); _time_manip_print_tm; }
+#define time_manip_print_ues(STREAM, UES) { const struct tm *const tm = localtime(&(time_t){ UES }); _time_manip_print_tm(STREAM); }
 
 #endif // TIME_MANIP_H
