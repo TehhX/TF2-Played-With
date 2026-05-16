@@ -336,23 +336,48 @@ bool history_load(const char *const passed_history_fullname)
     }
 
     fread_one(history_main_data.save_version);
-    switch (history_main_data.save_version)
+    for (bool continue_modernizing = true; continue_modernizing; )
     {
-        break;  default:
+        switch (history_main_data.save_version)
         {
-            fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
-
-            retval = true;
-            goto CLOSE_HISTORY_FILE;
-        }
-        break;   case 0:
-        {
-            if (save_format_0_load(&history_main_data.data_v0, input_file_ptr))
+            break; default:
             {
-                fprintf(stderr, ANSI_RED "Failed to load file \"%s\".\n", history_fullname);
+                fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
 
                 retval = true;
                 goto CLOSE_HISTORY_FILE;
+            }
+            break; case 0:
+            {
+                if (save_format_0_load(&history_main_data.data_v0, input_file_ptr))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to load file v0:\"%s\".\n", history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+                else if (save_format_0_modernize(&history_main_data.data_v0))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to modernize file v0:\"%s\".\n", history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+            }
+            // Fallthrough
+            case 1:
+            {
+                if (save_format_1_load(&history_main_data.data_v1, input_file_ptr))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to load file v1:\"%s\".\n", history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+                else
+                {
+                    history_main_data.save_version = 1;
+                }
             }
         }
     }
@@ -393,7 +418,7 @@ bool history_save(const char *const passed_history_fullname)
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER) - 1, output_file_ptr);
 
-    const bool retval = save_format_0_save(&history_main_data.data_v0, output_file_ptr);
+    const bool retval = save_format_1_save(&history_main_data.data_v1, output_file_ptr);
     if (retval)
     {
         fprintf(stderr, ANSI_RED "Failed to save file \"%s\".\n", history_fullname);
@@ -411,6 +436,7 @@ bool history_save(const char *const passed_history_fullname)
     return retval;
 }
 
+// IMMED_TODO: Omit Team Fortress 2 from end in accordance with #67
 char *history_set_tf2_filepath(char *new_tf2_filepath)
 {
     // Length of tf2_filepath without trailing slash and/or null-terminator

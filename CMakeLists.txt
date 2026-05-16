@@ -21,6 +21,7 @@ list(TRANSFORM SRC  APPEND ".c")
 
 set(SAVE_FORMATS
     version_0
+    version_1
 )
 
 # Each item "{}" in SAVE_FORMATS becomes "src/save_formats/{}.c".

@@ -1,24 +1,24 @@
-#ifndef SAVE_FORMATS_VERSION_0_H
-#define SAVE_FORMATS_VERSION_0_H
+#ifndef SAVE_FORMATS_VERSION_1_H
+#define SAVE_FORMATS_VERSION_1_H
 
 /*
-    save_formats/version_0.h
+    save_formats/version_1.h
     --------------------------
 
-    Contains functionality for version 0 of saving.
+    Contains functionality for version 1 of saving.
 
-    Format Version 0 Structure
+    Format Version 1 Structure
         Header
-            |          Name           |                                         Description                                         |                 Size (Bytes)                  |                                  Example                                   |
-            |:-----------------------:|:-------------------------------------------------------------------------------------------:|:---------------------------------------------:|:--------------------------------------------------------------------------:|
-            |         Header          |               Header of the file format. Always "TF2PW", else file is invalid               |                       5                       |                              (char *) "TF2PW"                              |
-            |   Save Format Version   |              The version of history file format used with this particular file              |                       1                       |                                   (u8) 0                                   |
-            |       User SID3E        |                              The STEAMID3 excerpt of the user                               |                       4                       |                               (u32) 12345678                               |
-            | Default Record Messages |         The default value for Player Record::Record Messages of new player records          |                       1                       |                                   (u8) 0                                   |
-            |  Player Records Length  |               How many unique player records there are in the following array               |                       4                       |                                (u32) 12,000                                |
-            |   TF2 Filepath Length   |                   How many characters are in the Team Fortress 2 filepath                   |                       1                       |                                  (u8) 33                                   |
-            |      TF2 Filepath       |                                The Team Fortress 2 filepath                                 |              TF2 Filepath Length              | (char *) "/home/Timmy/.local/share/Steam/steamapps/common/Team Fortress 2" |
-            |     Player Records      | An array of player records. See [Player Record](#player-record) for its particular contents | Player Records Length * sizeof(Player Record) |                                    N/A                                     |
+            |          Name           |                                                               Description                                                                |                 Size (Bytes)                  |                          Example                           |
+            |:-----------------------:|:----------------------------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------:|:----------------------------------------------------------:|
+            |         Header          |                                     Header of the file format. Always "TF2PW", else file is invalid                                      |                       5                       |                      (char *) "TF2PW"                      |
+            |   Save Format Version   |                                    The version of history file format used with this particular file                                     |                       1                       |                           (u8) 0                           |
+            |       User SID3E        |                                                     The STEAMID3 excerpt of the user                                                     |                       4                       |                       (u32) 12345678                       |
+            | Default Record Messages |                                The default value for Player Record::Record Messages of new player records                                |                       1                       |                           (u8) 0                           |
+            |   TF2 Filepath Length   |                                         How many characters are in the Team Fortress 2 filepath                                          |                       1                       |                          (u8) 47                           |
+            |      TF2 Filepath       |                                           The Team Fortress 2 filepath sans /Team Fortress 2/                                            |              TF2 Filepath Length              | (char *) "/home/Timmy/.local/share/Steam/steamapps/common" |
+            |  Player Records Length  |                                     How many unique player records there are in the following array                                      |                       4                       |                        (u32) 12,000                        |
+            |     Player Records      | An array of player records. Sorted by (Player Record::STEAMID3 Excerpt). See [Player Record](#player-record) for its particular contents | Player Records Length * sizeof(Player Record) |                            N/A                             |
 
         Player Record
             |        Name         |                                                        Description                                                         |               Size (Bytes)                |                 Example                 |
@@ -44,18 +44,17 @@
 #include "stdbool.h"
 #include "stdio.h"
 
-struct save_format_0
+struct save_format_1
 {
     uint16_t current_date;
-
-    uint8_t  tf2_filepath_len;
-       char *tf2_filepath;
-
     char *tf2_live_log_fullname;
 
     uint32_t user_sid3e;
 
     uint8_t default_record_messages;
+
+    uint8_t  tf2_filepath_len;
+       char *tf2_filepath;
 
     uint32_t player_records_len;
     struct
@@ -84,13 +83,8 @@ struct save_format_0
     *player_records;
 };
 
-/*
-No longer required
-extern bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file_pointer);
-*/
+extern bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file_pointer);
 
-extern bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_pointer);
-
-extern bool save_format_0_modernize(void *save_data);
+extern bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_pointer);
 
 #endif // SAVE_FORMATS_VERSION_0_H

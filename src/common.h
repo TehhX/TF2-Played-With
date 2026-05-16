@@ -62,7 +62,7 @@
     #define TF2_PLAYED_WITH_DEBUG_LOGF(MSG, ...) (void)
 
     // `OFF` When debugging, puts's MSG. Else, no-op
-    #define TF2_PLAYED_WITH_DEBUG_LOGS(MSG) fputs(MSG "\n", stderr)
+    #define TF2_PLAYED_WITH_DEBUG_LOGS(MSG) (void)
 
     // `OFF` When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
     #define TF2_PLAYED_WITH_DEBUG_ABEX() exit(EXIT_FAILURE)

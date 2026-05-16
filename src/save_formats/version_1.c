@@ -1,23 +1,20 @@
-#include "version_0.h"
+#include "version_1.h"
 
 #include "main.h"
 #include "../file_io.h"
-#include "version_1.h"
 
 #include "cider.h"
 
 #include "string.h"
 
-/*
-No longer required
-bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file_ptr)
+bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file_ptr)
 {
-    fwrite_one((uint8_t){ 0 });
+    fwrite_one((uint8_t){ 1 });
     fwrite_one(save_data->user_sid3e);
     fwrite_one(save_data->default_record_messages);
-    fwrite_one(save_data->player_records_len);
     fwrite_one(save_data->tf2_filepath_len);
     fwrite_arr(save_data->tf2_filepath);
+    fwrite_one(save_data->player_records_len);
 
     for (uint_fast32_t player_records_i = 0; player_records_i < save_data->player_records_len; ++player_records_i)
     {
@@ -69,15 +66,13 @@ bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file
 
     return false;
 }
-*/
 
-bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
+bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 {
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
-    fread_one(save_data->player_records_len);
-    fread_one(save_data->tf2_filepath_len);
 
+    fread_one(save_data->tf2_filepath_len);
     save_data->tf2_filepath = malloc(save_data->tf2_filepath_len + 2);
     fread(save_data->tf2_filepath, sizeof(char), save_data->tf2_filepath_len, input_file_ptr);
     save_data->tf2_filepath[save_data->tf2_filepath_len] = CIDER_PATH_DELIM_C;
@@ -88,10 +83,23 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     save_data->tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(save_data->tf2_filepath_len + 2), save_data->tf2_filepath, save_data->tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);
 
+    fread_one(save_data->player_records_len);
+
+    uint_fast32_t last_sid3e = 0;
     save_data->player_records = malloc(save_data->player_records_len * sizeof(*save_data->player_records));
     for (uint_fast32_t player_records_i = 0; player_records_i < save_data->player_records_len; ++ player_records_i)
     {
         fread_one(save_data->player_records[player_records_i].sid3e);
+        if (save_data->player_records[player_records_i].sid3e < last_sid3e)
+        {
+            fprintf(stderr, ANSI_RED "Invalid history file (SID3E's not in ascending order).\n" ANSI_RESET);
+            return true;
+        }
+        else
+        {
+            last_sid3e = save_data->player_records[player_records_i].sid3e;
+        }
+
         fread_one(save_data->player_records[player_records_i].record_messages);
 
         save_data->player_records[player_records_i].notes = NULL;
@@ -105,10 +113,21 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
 
         char *last_real_name;
 
+        uint_fast16_t last_date = 0;
         save_data->player_records[player_records_i].date_records = malloc(sizeof(*save_data->player_records[player_records_i].date_records) * save_data->player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
         {
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].date);
+            if (save_data->player_records[player_records_i].date_records[date_records_i].date < last_date)
+            {
+                fprintf(stderr, ANSI_RED "Invalid history file (Dates not in ascending order).\n" ANSI_RESET);
+                return true;
+            }
+            else
+            {
+                last_date = save_data->player_records[player_records_i].date_records[date_records_i].date;
+            }
+
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].encounter_count);
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].name_len);
 
@@ -186,9 +205,4 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     }
 
     return false;
-}
-
-bool save_format_0_modernize(void *save_data)
-{
-
 }
