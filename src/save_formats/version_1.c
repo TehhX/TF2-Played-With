@@ -6,6 +6,7 @@
 #include "cider.h"
 
 #include "string.h"
+#include "inttypes.h"
 
 bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file_ptr)
 {
@@ -71,10 +72,10 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 {
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
-
     fread_one(save_data->tf2_filepath_len);
+
     save_data->tf2_filepath = malloc(save_data->tf2_filepath_len + 2);
-    fread(save_data->tf2_filepath, sizeof(char), save_data->tf2_filepath_len, input_file_ptr);
+    fread_arr(save_data->tf2_filepath);
     save_data->tf2_filepath[save_data->tf2_filepath_len] = CIDER_PATH_DELIM_C;
     save_data->tf2_filepath[save_data->tf2_filepath_len + 1] = '\0';
 
@@ -102,11 +103,16 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_records_i].record_messages);
 
-        save_data->player_records[player_records_i].notes = NULL;
-        if (!file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes))
+        const int notes_first = fgetc(input_file_ptr);
+        if (notes_first == '\0')
         {
-            free(save_data->player_records[player_records_i].notes);
+            ungetc(notes_first, input_file_ptr);
+        }
+        else
+        {
+            fprintf(stderr, "thing here\n"); // REMOVE
             save_data->player_records[player_records_i].notes = NULL;
+            file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes);
         }
 
         fread_one(save_data->player_records[player_records_i].date_records_len);
@@ -120,7 +126,7 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].date);
             if (save_data->player_records[player_records_i].date_records[date_records_i].date < last_date)
             {
-                fprintf(stderr, ANSI_RED "Invalid history file (Dates not in ascending order).\n" ANSI_RESET);
+                fprintf(stderr, ANSI_RED "Invalid history file (Dates not in ascending order, %" PRIu16 " < %" PRIuFAST16 ").\n" ANSI_RESET, save_data->player_records[player_records_i].date_records[date_records_i].date, last_date);
                 return true;
             }
             else
@@ -203,6 +209,45 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
             }
         }
     }
+
+    return false;
+}
+
+bool save_format_1_free(struct save_format_1 *save_data)
+{
+    if (!save_data->player_records_len)
+    {
+        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted history_free(...) while player_records_len == 0, ignoring.\n");
+        return false;
+    }
+
+    for (uint32_t player_i = 0; player_i < save_data->player_records_len; ++player_i)
+    {
+        for (uint32_t date_i = 0; date_i < save_data->player_records[player_i].date_records_len; ++date_i)
+        {
+            if (save_data->player_records[player_i].date_records[date_i].name_len)
+            {
+                free(save_data->player_records[player_i].date_records[date_i].name);
+            }
+
+            if (save_data->player_records[player_i].record_messages && save_data->player_records[player_i].date_records[date_i].messages)
+            {
+                for (size_t msg_i = 0; msg_i < save_data->player_records[player_i].date_records[date_i].messages_len; ++msg_i)
+                {
+                    free(save_data->player_records[player_i].date_records[date_i].messages[msg_i]);
+                }
+
+                free(save_data->player_records[player_i].date_records[date_i].messages);
+            }
+        }
+
+        free(save_data->player_records[player_i].date_records);
+        free(save_data->player_records[player_i].notes);
+    }
+
+    free(save_data->player_records);
+    free(save_data->tf2_filepath);
+    free(save_data->tf2_live_log_fullname);
 
     return false;
 }

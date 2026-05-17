@@ -38,6 +38,9 @@
         * Conversion: bool modernize(void *data_input_output)
             Converts save_format_<N> to save_format_<N + 1> in place. Accepts a save data pointer to both read the current data from and write new data to, returns true if failure occurred
 
+        * Free: bool free(struct save_format_<V> *save_data)
+            Frees memory associated with save_data.
+
     The current format structure only allows for 256 [0, 255] unique format versions because it is only one unsigned byte. While it's likely the total amount of formats will not even come close to 256, it should be kept in mind if it does. Likely, another byte will be allocated, with a save format first byte value of 255 signifying a second byte should be checked eg. version 255 == 0xFF00, version 256 == 0xFF01, and so on
 
     Only the latest save version will be usable in the program, older version specifications will only exist to modernize old files. Only the latest version will have a wizard under history.[hc]

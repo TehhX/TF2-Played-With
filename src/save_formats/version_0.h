@@ -39,6 +39,8 @@
             |    Messages     | Will only exist if Record Messages in Player Record is 1. Contains messages sent from this player on this date |   Variable   | (char *) "Wow!\nCool!\nGood job!\0" |
 */
 
+#include "player_record_0.h"
+
 #include "stdint.h"
 #include "stdlib.h"
 #include "stdbool.h"
@@ -58,39 +60,13 @@ struct save_format_0
     uint8_t default_record_messages;
 
     uint32_t player_records_len;
-    struct
-    {
-        uint32_t sid3e;
-
-        uint8_t record_messages;
-
-        char *notes;
-
-        uint32_t date_records_len;
-        struct
-        {
-            uint16_t date;
-
-            size_t   messages_len;
-              char **messages;
-
-            uint8_t  name_len;
-               char *name;
-
-            uint8_t encounter_count;
-        }
-        *date_records;
-    }
-    *player_records;
+    struct player_record_0 *player_records;
 };
-
-/*
-No longer required
-extern bool save_format_0_save(const struct save_format_0 *save_data, FILE *output_file_pointer);
-*/
 
 extern bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_pointer);
 
 extern bool save_format_0_modernize(void *save_data);
+
+extern bool save_format_0_free(struct save_format_0 *save_data);
 
 #endif // SAVE_FORMATS_VERSION_0_H

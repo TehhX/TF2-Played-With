@@ -22,11 +22,11 @@ size_t file_io_buffered_input(FILE *stream, char **const string)
         {
             const size_t last_char_index = total_bytes - current_bytes + last_offset;
 
-            if ((*string)[last_char_index] == '\n')
+            if ((*string)[last_char_index] == '\n' || (*string)[last_char_index] == '\0')
             {
                 // Might need to clearerr here in case it parses EOF while not on last line
 
-                // Reset back to newline
+                // Reset back to newline/nullterm
                 fseek(stream, last_offset - current_bytes + 1, SEEK_CUR);
 
                 prealloc(*string, last_char_index + 1);

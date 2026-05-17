@@ -422,12 +422,12 @@ int main(const int argc, const char **argv)
 
     parse_option(argc, argv, Earg_option_set_tf2_filepath);
 
+    parse_option(argc, argv, Earg_option_set_save_location);
+
     if (history_load(history_fullname))
     {
         return 1;
     }
-
-    parse_option(argc, argv, Earg_option_set_save_location);
 
     parse_option(argc, argv, Earg_option_interactive); // Will exit in here if found
 
