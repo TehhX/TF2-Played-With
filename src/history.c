@@ -336,27 +336,32 @@ bool history_load(const char *const passed_history_fullname)
             {
                 if (!loaded && save_format_0_load(&history_main_data.data_v0, input_file_ptr))
                 {
-                    fprintf(stderr, ANSI_RED "Failed to load file v0:\"%s\".\n" ANSI_RESET, history_fullname);
+                    fprintf(stderr, ANSI_RED "Failed to load file v0: \"%s\".\n" ANSI_RESET, history_fullname);
 
                     retval = true;
                     goto CLOSE_HISTORY_FILE;
                 }
                 else if (save_format_0_modernize(&history_main_data.data_v0))
                 {
-                    fprintf(stderr, ANSI_RED "Failed to modernize file v0:\"%s\".\n" ANSI_RESET, history_fullname);
+                    fprintf(stderr, ANSI_RED "Failed to modernize file v0: \"%s\".\n" ANSI_RESET, history_fullname);
 
                     retval = true;
                     goto CLOSE_HISTORY_FILE;
                 }
 
-                loaded = true;
+                if (!retval)
+                {
+                    loaded = true;
+
+                    TF2_PLAYED_WITH_DEBUG_LOGS("Successfully modernized v0 -> v1.\n");
+                }
             }
             // Fallthrough
             case 1:
             {
                 if (!loaded && save_format_1_load(&history_main_data.data_v1, input_file_ptr))
                 {
-                    fprintf(stderr, ANSI_RED "Failed to load file v1:\"%s\".\n" ANSI_RESET, history_fullname);
+                    fprintf(stderr, ANSI_RED "Failed to load file v1: \"%s\".\n" ANSI_RESET, history_fullname);
 
                     retval = true;
                     goto CLOSE_HISTORY_FILE;
@@ -394,6 +399,8 @@ bool history_load(const char *const passed_history_fullname)
 bool history_save(const char *const passed_history_fullname)
 {
     const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
+
+    TF2_PLAYED_WITH_DEBUG_LOGF("Saving history file \"%s\"\n", history_fullname);
 
     FILE *const output_file_ptr = fopen(history_fullname, "w");
     if (!output_file_ptr)

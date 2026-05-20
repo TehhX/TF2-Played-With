@@ -1,5 +1,6 @@
 #include "version_0.h"
 
+#include "../common.h"
 #include "main.h"
 #include "../file_io.h"
 #include "version_1.h"
@@ -7,6 +8,10 @@
 #include "cider.h"
 
 #include "string.h"
+
+#ifdef TF2_PLAYED_WITH_DEBUG
+    #include "inttypes.h"
+#endif
 
 bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
 {
@@ -31,7 +36,7 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_records_i].sid3e);
         fread_one(save_data->player_records[player_records_i].record_messages);
 
-        // BUFF_TODO
+        // IMMED_TODO: Reset back to buffering solution, seems to have had an error which impedes my current work
         save_data->player_records[player_records_i].notes = NULL;
         if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes, "", 1))
         {
@@ -40,9 +45,7 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
         }
 
         fread_one(save_data->player_records[player_records_i].date_records_len);
-        fprintf(stderr, "len: %d\n", save_data->player_records[player_records_i].date_records_len); // REMOVE
-
-        char *last_real_name;
+        // fprintf(stderr, "len: %d\n", save_data->player_records[player_records_i].date_records_len); // REMOVE
 
         save_data->player_records[player_records_i].date_records = malloc(sizeof(*save_data->player_records[player_records_i].date_records) * save_data->player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
@@ -52,6 +55,7 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].name_len);
 
             // Only read real names, else set ptr to original
+            char *last_real_name;
             if (save_data->player_records[player_records_i].date_records[date_records_i].name_len > 0)
             {
                 save_data->player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(char) * (save_data->player_records[player_records_i].date_records[date_records_i].name_len + 1));
@@ -65,7 +69,7 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
                 save_data->player_records[player_records_i].date_records[date_records_i].name = last_real_name;
             }
 
-            // Only read messages if they exist aka. record_messages == 1
+            // Only read messages if they exist aka. record_messages == true
             if (save_data->player_records[player_records_i].record_messages)
             {
                 size_t msg_len = 0;
@@ -129,7 +133,6 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
 
 bool save_format_0_modernize(void *save_data)
 {
-    fprintf(stderr, "yeag\n"); // REMOVE
     const struct save_format_0 *const old_data = save_data;
 
     struct save_format_1 new_data =
@@ -145,46 +148,7 @@ bool save_format_0_modernize(void *save_data)
     };
 
     // Sort player and date records
-    uint_fast32_t last_sid3e = 0;
-    for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
-    {
-        uint_fast16_t last_date = 0;
-        for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
-        {
-            const uint_fast16_t current_date = new_data.player_records[player_i].date_records[date_i].date;
-
-            if (current_date < last_date)
-            {
-                fprintf(stderr, "SWAPPING %ld AND %ld\n", date_i, date_i - 1); // REMOVE
-                // Swap previous and current records
-                struct date_record_0 temp_dr;
-                memcpy(&temp_dr, new_data.player_records[player_i].date_records + date_i - 1, sizeof(struct date_record_0));
-                memcpy(new_data.player_records[player_i].date_records + date_i - 1, new_data.player_records[player_i].date_records + date_i, sizeof(struct date_record_0));
-                memcpy(new_data.player_records[player_i].date_records + date_i, &temp_dr, sizeof(struct date_record_0));
-
-                // Move back to previous record (accounting for subsequent increment)
-                date_i -= 2;
-            }
-
-            last_date = current_date;
-        }
-
-        const uint_fast32_t current_sid3e = new_data.player_records[player_i].sid3e;
-
-        if (current_sid3e < last_sid3e)
-        {
-            // Swap previous and current records
-            struct player_record_0 temp_pr;
-            memcpy(&temp_pr, new_data.player_records + player_i, sizeof(struct player_record_0));
-            memcpy(new_data.player_records + player_i - 1, new_data.player_records + player_i, sizeof(struct player_record_0));
-            memcpy(new_data.player_records + player_i, &temp_pr, sizeof(struct player_record_0));
-
-            // Move back to previous record (accounting for subsequent increment)
-            player_i -= 2;
-        }
-
-        last_sid3e = current_sid3e;
-    }
+    // IMMED_TODO: Implement sorting
 
     if (save_data == memcpy(save_data, &new_data, sizeof(struct save_format_1)))
     {

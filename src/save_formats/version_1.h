@@ -18,7 +18,7 @@
             |   TF2 Filepath Length   |                                         How many characters are in the Team Fortress 2 filepath                                          |                       1                       |                          (u8) 47                           |
             |      TF2 Filepath       |                                           The Team Fortress 2 filepath sans /Team Fortress 2/                                            |              TF2 Filepath Length              | (char *) "/home/Timmy/.local/share/Steam/steamapps/common" |
             |  Player Records Length  |                                     How many unique player records there are in the following array                                      |                       4                       |                        (u32) 12,000                        |
-            |     Player Records      | An array of player records. Sorted by (Player Record::STEAMID3 Excerpt). See [Player Record](#player-record) for its particular contents | Player Records Length * sizeof(Player Record) |                            N/A                             |
+            |     Player Records      | An array of player records, sorted by (Player Record::STEAMID3 Excerpt). See [Player Record](#player-record) for its particular contents | Player Records Length * sizeof(Player Record) |                            N/A                             |
 
         Player Record
             |        Name         |                                                        Description                                                         |               Size (Bytes)                |                 Example                 |
@@ -27,7 +27,7 @@
             |   Record Messages   | Flag to check chat messages. 1 for yes, 0 for no. Will inherit value of Header::Record Messages until individually changed |                     1                     |                 (u8) 1                  |
             |        Notes        |                                  Notes taken by the user on this player. Null terminated                                   |                 Variable                  | (char *) "They were very nice to me.\0" |
             | Date Records Length |                                           How many date records this player has                                            |                     4                     |                (u32) 13                 |
-            |    Date Records     |                   An array of date records. See [Date Record](#date-record) for its particular contents                    | Date Records Length * sizeof(Date Record) |                   N/A                   |
+            |    Date Records     |    An array of date records, sorted by (Date Record::Date). See [Date Record](#date-record) for its particular contents    | Date Records Length * sizeof(Date Record) |                   N/A                   |
 
         Date Record
             |      Name       |                                                  Description                                                   | Size (Bytes) |               Example               |
