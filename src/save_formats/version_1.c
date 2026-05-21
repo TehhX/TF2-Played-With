@@ -90,7 +90,6 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
     for (uint_fast32_t player_records_i = 0; player_records_i < save_data->player_records_len; ++ player_records_i)
     {
         fread_one(save_data->player_records[player_records_i].sid3e);
-        TF2_PLAYED_WITH_DEBUG_LOGF("SID3E Order: +%" PRIuFAST32 "={ %" PRIuFAST32 " , %" PRIu32 " }\n", player_records_i, last_sid3e, save_data->player_records[player_records_i].sid3e);
         if (save_data->player_records[player_records_i].sid3e < last_sid3e)
         {
             fprintf(stderr, ANSI_RED "Invalid history file: Improper SID3E order.\n" ANSI_RESET);
@@ -119,7 +118,6 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
         {
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].date);
-            TF2_PLAYED_WITH_DEBUG_LOGF(LTAB "Date Order: +%" PRIuFAST32 "={ %" PRIuFAST16 " , %" PRIu16 " }\n", date_records_i, last_date, save_data->player_records[player_records_i].date_records[date_records_i].date);
             if (save_data->player_records[player_records_i].date_records[date_records_i].date < last_date)
             {
                 fputs(ANSI_RED "Invalid history file: Improper date order.\n" ANSI_RESET, stderr);

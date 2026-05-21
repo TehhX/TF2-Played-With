@@ -147,18 +147,46 @@ bool save_format_0_modernize(void *save_data)
         .user_sid3e = old_data->user_sid3e
     };
 
-    // Sort player and date records
-    // IMMED_TODO: Implement sorting
-
-    if (save_data == memcpy(save_data, &new_data, sizeof(struct save_format_1)))
+    // IMMED_TODO: Sorting technically works, but unusably slow, even for debugging. Use a proper sorting algorithm
+    uint_fast32_t last_sid3e = new_data.player_records[0].sid3e;
+    for (uint_fast32_t player_i = 1; player_i < new_data.player_records_len; ++player_i)
     {
-        return false;
+        if (last_sid3e > new_data.player_records[player_i].sid3e)
+        {
+            struct player_record_0 temp_pr;
+            memcpy(&temp_pr, new_data.player_records + player_i - 1, sizeof(temp_pr));
+            memcpy(new_data.player_records + player_i - 1, new_data.player_records + player_i, sizeof(temp_pr));
+            memcpy(new_data.player_records + player_i, &temp_pr, sizeof(temp_pr));
+
+            player_i = 0;
+        }
+
+        last_sid3e = new_data.player_records[player_i].sid3e;
+
+        uint_fast16_t last_date = new_data.player_records[player_i].date_records[0].date;
+        for (uint_fast32_t date_i = 1; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
+        {
+            if (last_date > new_data.player_records[player_i].date_records[date_i].date)
+            {
+                struct date_record_0 temp_dr;
+                memcpy(&temp_dr, new_data.player_records[player_i].date_records + date_i - 1, sizeof(temp_dr));
+                memcpy(new_data.player_records[player_i].date_records + date_i - 1, new_data.player_records[player_i].date_records + date_i, sizeof(temp_dr));
+                memcpy(new_data.player_records[player_i].date_records + date_i, &temp_dr, sizeof(temp_dr));
+
+                date_i = 0;
+            }
+
+            last_date = new_data.player_records[player_i].date_records[date_i].date;
+        }
     }
-    else
+
+    if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))
     {
         fputs(ANSI_RED "Failed to modernize save data v0 -> v1.\n" ANSI_RESET, stderr);
         return true;
     }
+
+    return false;
 }
 
 bool save_format_0_free(struct save_format_0 *save_data)
