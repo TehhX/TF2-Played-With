@@ -25,7 +25,7 @@ bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file
         // Only write notes if they exist, else just '\0'
         if (save_data->player_records[player_records_i].notes)
         {
-            // IMMED_TODO: Segfaults here due to read on unknown address
+            // IMMED_TODO: Why is this fprintf instead of fputs? Once all else is working, swap out and see if it breaks something
             fprintf(output_file_ptr, "%s", save_data->player_records[player_records_i].notes);
         }
         fputc('\0', output_file_ptr);
@@ -103,18 +103,31 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_records_i].record_messages);
 
-        const int notes_first = fgetc(input_file_ptr);
-        if (notes_first != '\0')
+        // IMMED_TODO START: Reset back to buffering solution, seems to have had an error which impedes my current work
+        save_data->player_records[player_records_i].notes = NULL;
+        int notes_input;
+        size_t notes_len = 0;
+        while ((notes_input = fgetc(input_file_ptr)) != '\0')
         {
-            save_data->player_records[player_records_i].notes = NULL;
-            file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes);
+            prealloc(save_data->player_records[player_records_i].notes, ++notes_len);
+            save_data->player_records[player_records_i].notes[notes_len - 1] = (char) notes_input;
         }
+
+        prealloc(save_data->player_records[player_records_i].notes, notes_len + 1);
+        save_data->player_records[player_records_i].notes[notes_len] = '\0';
+
+        // If just '\0', set to NULL
+        if (notes_len == 0)
+        {
+            free(save_data->player_records[player_records_i].notes);
+            save_data->player_records[player_records_i].notes = NULL;
+        }
+        // IMMED_TODO END
 
         fread_one(save_data->player_records[player_records_i].date_records_len);
 
-        char *last_real_name;
-
         uint_fast16_t last_date = 0;
+        char *last_real_name TF2_PLAYED_WITH_DEBUG_INSERT(= STRING_ERR_VAL);
         save_data->player_records[player_records_i].date_records = malloc(sizeof(*save_data->player_records[player_records_i].date_records) * save_data->player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
         {

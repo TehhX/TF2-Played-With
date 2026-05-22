@@ -116,4 +116,7 @@
 // Copy string `S` to heap
 #define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
 
+// A string value to denote an error
+#define STRING_ERR_VAL (char []){ "BAD_STRING_CONTENTS" }
+
 #endif // COMMON_H

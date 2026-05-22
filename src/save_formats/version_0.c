@@ -36,17 +36,18 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_records_i].sid3e);
         fread_one(save_data->player_records[player_records_i].record_messages);
 
-        // IMMED_TODO: Reset back to buffering solution, seems to have had an error which impedes my current work
+        // IMMED_TODO START: Reset back to buffering solution, seems to have had an error which impedes my current work
         save_data->player_records[player_records_i].notes = NULL;
         if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes, "", 1))
         {
             free(save_data->player_records[player_records_i].notes);
             save_data->player_records[player_records_i].notes = NULL;
         }
+        // IMMED_TODO END
 
         fread_one(save_data->player_records[player_records_i].date_records_len);
-        // fprintf(stderr, "len: %d\n", save_data->player_records[player_records_i].date_records_len); // REMOVE
 
+        char *last_real_name TF2_PLAYED_WITH_DEBUG_INSERT(= STRING_ERR_VAL);
         save_data->player_records[player_records_i].date_records = malloc(sizeof(*save_data->player_records[player_records_i].date_records) * save_data->player_records[player_records_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
         {
@@ -55,7 +56,6 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
             fread_one(save_data->player_records[player_records_i].date_records[date_records_i].name_len);
 
             // Only read real names, else set ptr to original
-            char *last_real_name;
             if (save_data->player_records[player_records_i].date_records[date_records_i].name_len > 0)
             {
                 save_data->player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(char) * (save_data->player_records[player_records_i].date_records[date_records_i].name_len + 1));
@@ -66,7 +66,6 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
             }
             else
             {
-                // IMMED_TODO: This behavior is confirmed to be why the below modernization messes up names, attributing wrong names to wrong people. Unsure why as of yet
                 save_data->player_records[player_records_i].date_records[date_records_i].name = last_real_name;
             }
 
@@ -158,11 +157,73 @@ bool save_format_0_modernize(void *const save_data)
         .user_sid3e = old_data->user_sid3e
     };
 
+    // REMOVE START: Printing all names in order
+    for (size_t pi = 0; pi < new_data.player_records_len; ++pi)
+    {
+        for (size_t di = 0; di < new_data.player_records[pi].date_records_len; ++di)
+        {
+            fprintf(stderr, "BNAME[%zu][%zu]= { .date = %" PRIu16 ", .name_len = %d, .name = \"%s\" }\n", pi, di, new_data.player_records[pi].date_records[di].date, new_data.player_records[pi].date_records[di].name_len, new_data.player_records[pi].date_records[di].name);
+        }
+    }
+    // REMOVE END
+
     qsort(new_data.player_records, new_data.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) player_record_0_compare);
     for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
     {
         qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
+
+        /*
+            IMMED_TODO: Date sorting is confirmed to be why names get messed up, attributing the wrong names to the wrong people. When date records are sorted, it swaps around the name orders
+
+            General flow:
+
+            * If no real name recorded yet
+              * Set last name to current name
+              * Set name len to strlen current name
+            * Else check if they're the same names. If true:
+              * Set current name_len to 0
+            * If false:
+              * If name len > 0:
+                * Set last_real to current name
+              * Else:
+                * Set name_len to length of name
+        */
+
+        // IMMED_TODO: The last date record of any given
+        char *last_real_name = NULL;
+        for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
+        {
+            // fprintf(stderr, "THIS_NAME: \"%s\"\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
+
+            if (last_real_name == NULL)
+            {
+                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
+                new_data.player_records[player_i].date_records[date_i].name_len = (uint8_t) strlen(last_real_name);
+            }
+            else if (!strcmp(new_data.player_records[player_i].date_records[date_i].name, last_real_name))
+            {
+                new_data.player_records[player_i].date_records[date_i].name_len = 0;
+            }
+            else if (new_data.player_records[player_i].date_records[date_i].name_len > 0)
+            {
+                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
+            }
+            else
+            {
+                new_data.player_records[player_i].date_records[date_i].name_len = (uint8_t) strlen(new_data.player_records[player_i].date_records[date_i].name);
+            }
+        }
     }
+
+    // REMOVE START: Printing all names in order post-sort
+    for (size_t pi = 0; pi < new_data.player_records_len; ++pi)
+    {
+        for (size_t di = 0; di < new_data.player_records[pi].date_records_len; ++di)
+        {
+            fprintf(stderr, "ANAME(%" PRIu16 ")[%zu][%zu]= { %d, \"%s\" }\n", new_data.player_records[pi].date_records[di].date, pi, di, new_data.player_records[pi].date_records[di].name_len, new_data.player_records[pi].date_records[di].name);
+        }
+    }
+    // REMOVE END
 
     if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))
     {

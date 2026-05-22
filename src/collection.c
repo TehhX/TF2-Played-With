@@ -72,7 +72,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     // This is a bot, skip
     if (last_bot_str_i >= last_close_bracket_i)
     {
-        TF2_PLAYED_WITH_DEBUG_LOGS("Bot found, skipping.\n");
+        // TF2_PLAYED_WITH_DEBUG_LOGS("Bot found, skipping.\n");
         return true;
     }
 
@@ -115,7 +115,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     memcpy(parse_info->player_info_arr[parse_info->len - 1].name, line + player_name_begin, player_name_len);
     parse_info->player_info_arr[parse_info->len - 1].name[player_name_len] = '\0';
 
-    parse_info->player_info_arr[parse_info->len - 1].sid3e                 = current_sid3e;
+    parse_info->player_info_arr[parse_info->len - 1].sid3e = current_sid3e;
 
     // Add new player to records
     history_add_record((parse_info->player_info_arr) + parse_info->len - 1);
