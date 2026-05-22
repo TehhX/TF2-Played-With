@@ -223,9 +223,6 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
 bool save_format_1_free(struct save_format_1 *save_data)
 {
-    // IMMED_TODO: Fix use-after-free error, just leaking for now to fix other issue(s) as this is lesser priority
-    return false;
-
     if (!save_data->player_records_len)
     {
         TF2_PLAYED_WITH_DEBUG_LOGS("Attempted save_format_1_free(...) while player_records_len == 0, ignoring.\n");
@@ -236,11 +233,16 @@ bool save_format_1_free(struct save_format_1 *save_data)
     {
         for (uint_fast32_t date_i = 0; date_i < save_data->player_records[player_i].date_records_len; ++date_i)
         {
-            fprintf(stderr, "READING (%lu, %lu) (%p)\n", player_i, date_i, save_data->player_records[player_i].date_records); // REMOVE
             if (save_data->player_records[player_i].date_records[date_i].name_len)
             {
                 free(save_data->player_records[player_i].date_records[date_i].name);
             }
+            // REMOVE START
+            else
+            {
+                // fprintf(stderr, "NOT FREEING \"%s\"\n", save_data->player_records[player_i].date_records[date_i].name);
+            }
+            // REMOVE END
 
             if (save_data->player_records[player_i].record_messages && save_data->player_records[player_i].date_records[date_i].messages)
             {
@@ -253,7 +255,6 @@ bool save_format_1_free(struct save_format_1 *save_data)
             }
         }
 
-        fprintf(stderr, "FREEING (%lu) (%p)\n", player_i, save_data->player_records[player_i].date_records); // REMOVE
         free(save_data->player_records[player_i].date_records);
         free(save_data->player_records[player_i].notes);
     }

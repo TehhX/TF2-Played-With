@@ -157,78 +157,52 @@ bool save_format_0_modernize(void *const save_data)
         .user_sid3e = old_data->user_sid3e
     };
 
-    // REMOVE START: Printing all names in order
-    for (size_t pi = 0; pi < new_data.player_records_len; ++pi)
+    if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))
     {
-        for (size_t di = 0; di < new_data.player_records[pi].date_records_len; ++di)
-        {
-            fprintf(stderr, "BNAME[%zu][%zu]= { .date = %" PRIu16 ", .name_len = %d, .name = \"%s\" }\n", pi, di, new_data.player_records[pi].date_records[di].date, new_data.player_records[pi].date_records[di].name_len, new_data.player_records[pi].date_records[di].name);
-        }
+        fputs(ANSI_RED "Failed to modernize save data v0 -> v1.\n" ANSI_RESET, stderr);
+        return true;
     }
-    // REMOVE END
 
     qsort(new_data.player_records, new_data.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) player_record_0_compare);
     for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
     {
         qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
 
-        /*
-            IMMED_TODO: Date sorting is confirmed to be why names get messed up, attributing the wrong names to the wrong people. When date records are sorted, it swaps around the name orders
+        fprintf(stderr, "ANEW: %s\n", new_data.player_records[player_i].date_records[0].name); // REMOVE
+        char *last_real_name = new_data.player_records[player_i].date_records[0].name;
 
-            General flow:
-
-            * If no real name recorded yet
-              * Set last name to current name
-              * Set name len to strlen current name
-            * Else check if they're the same names. If true:
-              * Set current name_len to 0
-            * If false:
-              * If name len > 0:
-                * Set last_real to current name
-              * Else:
-                * Set name_len to length of name
-        */
-
-        // IMMED_TODO: The last date record of any given
-        char *last_real_name = NULL;
-        for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
+        if (new_data.player_records[player_i].date_records[0].name_len == 0)
         {
-            // fprintf(stderr, "THIS_NAME: \"%s\"\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
+            new_data.player_records[player_i].date_records[0].name_len = (uint8_t) strlen(last_real_name);
+            new_data.player_records[player_i].date_records[0].name = string_deep_copy(last_real_name);
+        }
 
-            if (last_real_name == NULL)
+        for (uint_fast32_t date_i = 1; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
+        {
+            fprintf(stderr, LTAB "CYCLICAL | "); // REMOVE
+            // IMMED_TODO: last_real_name is free'd before this somehow?
+            if (!strcmp(new_data.player_records[player_i].date_records[date_i].name, last_real_name))
             {
-                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
-                new_data.player_records[player_i].date_records[date_i].name_len = (uint8_t) strlen(last_real_name);
-            }
-            else if (!strcmp(new_data.player_records[player_i].date_records[date_i].name, last_real_name))
-            {
-                new_data.player_records[player_i].date_records[date_i].name_len = 0;
-            }
-            else if (new_data.player_records[player_i].date_records[date_i].name_len > 0)
-            {
-                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
+                if (new_data.player_records[player_i].date_records[date_i].name_len > 0)
+                {
+                    fprintf(stderr, "EXULTATION: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
+                    new_data.player_records[player_i].date_records[date_i].name_len = 0;
+                    free(new_data.player_records[player_i].date_records[date_i].name);
+                }
+                else
+                {
+                    fprintf(stderr, "GERIATRIC: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
+                    last_real_name = new_data.player_records[player_i].date_records[date_i].name;
+                }
             }
             else
             {
+                fprintf(stderr, "RECTIFY: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
                 new_data.player_records[player_i].date_records[date_i].name_len = (uint8_t) strlen(new_data.player_records[player_i].date_records[date_i].name);
+                new_data.player_records[player_i].date_records[date_i].name = string_deep_copy(new_data.player_records[player_i].date_records[date_i].name);
+                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
             }
         }
-    }
-
-    // REMOVE START: Printing all names in order post-sort
-    for (size_t pi = 0; pi < new_data.player_records_len; ++pi)
-    {
-        for (size_t di = 0; di < new_data.player_records[pi].date_records_len; ++di)
-        {
-            fprintf(stderr, "ANAME(%" PRIu16 ")[%zu][%zu]= { %d, \"%s\" }\n", new_data.player_records[pi].date_records[di].date, pi, di, new_data.player_records[pi].date_records[di].name_len, new_data.player_records[pi].date_records[di].name);
-        }
-    }
-    // REMOVE END
-
-    if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))
-    {
-        fputs(ANSI_RED "Failed to modernize save data v0 -> v1.\n" ANSI_RESET, stderr);
-        return true;
     }
 
     return false;
