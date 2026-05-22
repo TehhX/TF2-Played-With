@@ -25,6 +25,7 @@ bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file
         // Only write notes if they exist, else just '\0'
         if (save_data->player_records[player_records_i].notes)
         {
+            // IMMED_TODO: Segfaults here due to read on unknown address
             fprintf(output_file_ptr, "%s", save_data->player_records[player_records_i].notes);
         }
         fputc('\0', output_file_ptr);
