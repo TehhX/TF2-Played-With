@@ -66,6 +66,7 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
             }
             else
             {
+                // IMMED_TODO: This behavior is confirmed to be why the below modernization messes up names, attributing wrong names to wrong people. Unsure why as of yet
                 save_data->player_records[player_records_i].date_records[date_records_i].name = last_real_name;
             }
 
@@ -131,7 +132,17 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     return false;
 }
 
-bool save_format_0_modernize(void *save_data)
+static int date_record_0_compare(const struct date_record_0 *date_record_a, const struct date_record_0 *date_record_b)
+{
+    return (date_record_a->date - date_record_b->date);
+}
+
+static int player_record_0_compare(const struct player_record_0 *player_record_a, const struct player_record_0 *player_record_b)
+{
+    return (player_record_a->sid3e - player_record_b->sid3e);
+}
+
+bool save_format_0_modernize(void *const save_data)
 {
     const struct save_format_0 *const old_data = save_data;
 
@@ -147,37 +158,10 @@ bool save_format_0_modernize(void *save_data)
         .user_sid3e = old_data->user_sid3e
     };
 
-    // IMMED_TODO: Sorting technically works, but unusably slow, even for debugging. Use a proper sorting algorithm
-    uint_fast32_t last_sid3e = new_data.player_records[0].sid3e;
-    for (uint_fast32_t player_i = 1; player_i < new_data.player_records_len; ++player_i)
+    qsort(new_data.player_records, new_data.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) player_record_0_compare);
+    for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
     {
-        if (last_sid3e > new_data.player_records[player_i].sid3e)
-        {
-            struct player_record_0 temp_pr;
-            memcpy(&temp_pr, new_data.player_records + player_i - 1, sizeof(temp_pr));
-            memcpy(new_data.player_records + player_i - 1, new_data.player_records + player_i, sizeof(temp_pr));
-            memcpy(new_data.player_records + player_i, &temp_pr, sizeof(temp_pr));
-
-            player_i = 0;
-        }
-
-        last_sid3e = new_data.player_records[player_i].sid3e;
-
-        uint_fast16_t last_date = new_data.player_records[player_i].date_records[0].date;
-        for (uint_fast32_t date_i = 1; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
-        {
-            if (last_date > new_data.player_records[player_i].date_records[date_i].date)
-            {
-                struct date_record_0 temp_dr;
-                memcpy(&temp_dr, new_data.player_records[player_i].date_records + date_i - 1, sizeof(temp_dr));
-                memcpy(new_data.player_records[player_i].date_records + date_i - 1, new_data.player_records[player_i].date_records + date_i, sizeof(temp_dr));
-                memcpy(new_data.player_records[player_i].date_records + date_i, &temp_dr, sizeof(temp_dr));
-
-                date_i = 0;
-            }
-
-            last_date = new_data.player_records[player_i].date_records[date_i].date;
-        }
+        qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
     }
 
     if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))

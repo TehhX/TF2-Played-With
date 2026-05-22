@@ -37,8 +37,4 @@ struct player_record_0
     struct date_record_0 *date_records;
 };
 
-extern bool date_record_0_move(struct date_record_0 *dest, const struct date_record_0 *source);
-
-extern bool player_record_0_move(struct player_record_0 *dest, const struct player_record_0 *source);
-
 #endif // SAVE_FORMATS_PLAYER_RECORD_0_H
