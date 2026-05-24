@@ -31,62 +31,62 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);
 
     save_data->player_records = malloc(save_data->player_records_len * sizeof(*save_data->player_records));
-    for (uint_fast32_t player_records_i = 0; player_records_i < save_data->player_records_len; ++ player_records_i)
+    for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++ player_i)
     {
-        fread_one(save_data->player_records[player_records_i].sid3e);
-        fread_one(save_data->player_records[player_records_i].record_messages);
+        fread_one(save_data->player_records[player_i].sid3e);
+        fread_one(save_data->player_records[player_i].record_messages);
 
         // IMMED_TODO START: Reset back to buffering solution, seems to have had an error which impedes my current work
         save_data->player_records[player_records_i].notes = NULL;
         if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes, "", 1))
         {
-            free(save_data->player_records[player_records_i].notes);
-            save_data->player_records[player_records_i].notes = NULL;
+            free(save_data->player_records[player_i].notes);
+            save_data->player_records[player_i].notes = NULL;
         }
         // IMMED_TODO END
 
-        fread_one(save_data->player_records[player_records_i].date_records_len);
+        fread_one(save_data->player_records[player_i].date_records_len);
 
-        char *last_real_name TF2_PLAYED_WITH_DEBUG_INSERT(= STRING_ERR_VAL);
-        save_data->player_records[player_records_i].date_records = malloc(sizeof(*save_data->player_records[player_records_i].date_records) * save_data->player_records[player_records_i].date_records_len);
-        for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_records_i].date_records_len; ++date_records_i)
+        char *last_real_name;
+        save_data->player_records[player_i].date_records = malloc(sizeof(*save_data->player_records[player_i].date_records) * save_data->player_records[player_i].date_records_len);
+        for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
         {
-            fread_one(save_data->player_records[player_records_i].date_records[date_records_i].date);
-            fread_one(save_data->player_records[player_records_i].date_records[date_records_i].encounter_count);
-            fread_one(save_data->player_records[player_records_i].date_records[date_records_i].name_len);
+            fread_one(save_data->player_records[player_i].date_records[date_records_i].date);
+            fread_one(save_data->player_records[player_i].date_records[date_records_i].encounter_count);
+            fread_one(save_data->player_records[player_i].date_records[date_records_i].name_len);
 
             // Only read real names, else set ptr to original
-            if (save_data->player_records[player_records_i].date_records[date_records_i].name_len > 0)
+            if (save_data->player_records[player_i].date_records[date_records_i].name_len > 0)
             {
-                save_data->player_records[player_records_i].date_records[date_records_i].name = malloc(sizeof(char) * (save_data->player_records[player_records_i].date_records[date_records_i].name_len + 1));
-                fread_arr(save_data->player_records[player_records_i].date_records[date_records_i].name);
-                save_data->player_records[player_records_i].date_records[date_records_i].name[save_data->player_records[player_records_i].date_records[date_records_i].name_len] = '\0';
+                save_data->player_records[player_i].date_records[date_records_i].name = malloc(sizeof(char) * (save_data->player_records[player_i].date_records[date_records_i].name_len + 1));
+                fread_arr(save_data->player_records[player_i].date_records[date_records_i].name);
+                save_data->player_records[player_i].date_records[date_records_i].name[save_data->player_records[player_i].date_records[date_records_i].name_len] = '\0';
 
-                last_real_name = save_data->player_records[player_records_i].date_records[date_records_i].name;
+                last_real_name = save_data->player_records[player_i].date_records[date_records_i].name;
             }
             else
             {
-                save_data->player_records[player_records_i].date_records[date_records_i].name = last_real_name;
+                save_data->player_records[player_i].date_records[date_records_i].name = last_real_name;
             }
 
             // Only read messages if they exist aka. record_messages == true
-            if (save_data->player_records[player_records_i].record_messages)
+            if (save_data->player_records[player_i].record_messages)
             {
                 size_t msg_len = 0;
-                save_data->player_records[player_records_i].date_records[date_records_i].messages_len = 0;
+                save_data->player_records[player_i].date_records[date_records_i].messages_len = 0;
 
                 int messages_input = fgetc(input_file_ptr);
 
                 // If no messages, store nothing for consistency with live log behavior
                 if ((char) messages_input == '\0')
                 {
-                    save_data->player_records[player_records_i].date_records[date_records_i].messages = NULL;
+                    save_data->player_records[player_i].date_records[date_records_i].messages = NULL;
                     goto STOP_READING_MESSAGES;
                 }
                 else
                 {
-                    save_data->player_records[player_records_i].date_records[date_records_i].messages = malloc(sizeof(char *) * ++save_data->player_records[player_records_i].date_records[date_records_i].messages_len);
-                    save_data->player_records[player_records_i].date_records[date_records_i].messages[0] = NULL;
+                    save_data->player_records[player_i].date_records[date_records_i].messages = malloc(sizeof(char *) * ++save_data->player_records[player_i].date_records[date_records_i].messages_len);
+                    save_data->player_records[player_i].date_records[date_records_i].messages[0] = NULL;
                 }
 
                 while (1)
@@ -95,18 +95,18 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
                     {
                         break; case '\0':
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
-                            save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
+                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
+                            save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
                             goto STOP_READING_MESSAGES;
                         }
                         break; case '\n':
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
-                            save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
+                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
+                            save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages, ++save_data->player_records[player_records_i].date_records[date_records_i].messages_len);
-                            save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1] = NULL;
+                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages, ++save_data->player_records[player_i].date_records[date_records_i].messages_len);
+                            save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1] = NULL;
                             msg_len = 0;
                         }
                         break; case EOF:
@@ -116,8 +116,8 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
                         }
                         break; default:
                         {
-                            prealloc(save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1], ++msg_len);
-                            save_data->player_records[player_records_i].date_records[date_records_i].messages[save_data->player_records[player_records_i].date_records[date_records_i].messages_len - 1][msg_len - 1] = (char) messages_input;
+                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], ++msg_len);
+                            save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len - 1] = (char) messages_input;
                         }
                     }
 
@@ -168,38 +168,27 @@ bool save_format_0_modernize(void *const save_data)
     {
         qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
 
-        fprintf(stderr, "ANEW: %s\n", new_data.player_records[player_i].date_records[0].name); // REMOVE
-        char *last_real_name = new_data.player_records[player_i].date_records[0].name;
-
-        if (new_data.player_records[player_i].date_records[0].name_len == 0)
+        // IMMED_TODO: Uses a ton of extra space to set names straight, not smart at all. However, it works, and that'll do for now
+        for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
         {
-            new_data.player_records[player_i].date_records[0].name_len = (uint8_t) strlen(last_real_name);
-            new_data.player_records[player_i].date_records[0].name = string_deep_copy(last_real_name);
+            if (new_data.player_records[player_i].date_records[date_i].name_len == 0)
+            {
+                new_data.player_records[player_i].date_records[date_i].name_len = (uint_fast8_t) strlen(new_data.player_records[player_i].date_records[date_i].name);
+                new_data.player_records[player_i].date_records[date_i].name = strcpy(malloc(new_data.player_records[player_i].date_records[date_i].name_len + 1), new_data.player_records[player_i].date_records[date_i].name);
+            }
         }
 
+        char *last_real_name = new_data.player_records[player_i].date_records[0].name;
         for (uint_fast32_t date_i = 1; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
         {
-            fprintf(stderr, LTAB "CYCLICAL | "); // REMOVE
-            // IMMED_TODO: last_real_name is free'd before this somehow?
-            if (!strcmp(new_data.player_records[player_i].date_records[date_i].name, last_real_name))
+            if (!strcmp(last_real_name, new_data.player_records[player_i].date_records[date_i].name))
             {
-                if (new_data.player_records[player_i].date_records[date_i].name_len > 0)
-                {
-                    fprintf(stderr, "EXULTATION: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
-                    new_data.player_records[player_i].date_records[date_i].name_len = 0;
-                    free(new_data.player_records[player_i].date_records[date_i].name);
-                }
-                else
-                {
-                    fprintf(stderr, "GERIATRIC: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
-                    last_real_name = new_data.player_records[player_i].date_records[date_i].name;
-                }
+                free(new_data.player_records[player_i].date_records[date_i].name);
+                new_data.player_records[player_i].date_records[date_i].name_len = 0;
+                new_data.player_records[player_i].date_records[date_i].name = last_real_name;
             }
             else
             {
-                fprintf(stderr, "RECTIFY: %s\n", new_data.player_records[player_i].date_records[date_i].name); // REMOVE
-                new_data.player_records[player_i].date_records[date_i].name_len = (uint8_t) strlen(new_data.player_records[player_i].date_records[date_i].name);
-                new_data.player_records[player_i].date_records[date_i].name = string_deep_copy(new_data.player_records[player_i].date_records[date_i].name);
                 last_real_name = new_data.player_records[player_i].date_records[date_i].name;
             }
         }
@@ -212,7 +201,7 @@ bool save_format_0_free(struct save_format_0 *save_data)
 {
     if (!save_data->player_records_len)
     {
-        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted history_free(...) while player_records_len == 0, ignoring.\n");
+        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted save_format_0_free(...) while player_records_len == 0, ignoring.\n");
         return false;
     }
 
@@ -220,7 +209,7 @@ bool save_format_0_free(struct save_format_0 *save_data)
     {
         for (uint32_t date_i = 0; date_i < save_data->player_records[player_i].date_records_len; ++date_i)
         {
-            if (save_data->player_records[player_i].date_records[date_i].name_len)
+            if (save_data->player_records[player_i].date_records[date_i].name_len > 0)
             {
                 free(save_data->player_records[player_i].date_records[date_i].name);
             }

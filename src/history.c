@@ -493,12 +493,13 @@ void history_set_date(const uint16_t new_date)
     )
 }
 
-HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const char *name)
+// BSEARCH_TODO
+HYPER_MACRO void history_add_date_record(const uint32_t player_i, const char *name)
 {
-    const uint_fast32_t date_records_i = history_main_data.data_v1.player_records[player_records_i].date_records_len;
-    #define current_date_record history_main_data.data_v1.player_records[player_records_i].date_records[date_records_i]
+    const uint_fast32_t date_records_i = history_main_data.data_v1.player_records[player_i].date_records_len;
+    #define current_date_record history_main_data.data_v1.player_records[player_i].date_records[date_records_i]
 
-    prealloc(history_main_data.data_v1.player_records[player_records_i].date_records, ++history_main_data.data_v1.player_records[player_records_i].date_records_len);
+    prealloc(history_main_data.data_v1.player_records[player_i].date_records, ++history_main_data.data_v1.player_records[player_i].date_records_len);
 
     current_date_record.date = history_main_data.data_v1.current_date;
     current_date_record.messages_len = 0;
@@ -512,12 +513,12 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
         for (uint_fast32_t date_name_search_i = date_records_i - 1; date_records_i != UINT_FAST32_MAX; --date_name_search_i)
         {
             // Previous date record is real
-            if (history_main_data.data_v1.player_records[player_records_i].date_records[date_name_search_i].name_len)
+            if (history_main_data.data_v1.player_records[player_i].date_records[date_name_search_i].name_len)
             {
                 // If are the same, point this name to same place as last name
-                if (!strcmp(history_main_data.data_v1.player_records[player_records_i].date_records[date_name_search_i].name, name))
+                if (!strcmp(history_main_data.data_v1.player_records[player_i].date_records[date_name_search_i].name, name))
                 {
-                    current_date_record.name = history_main_data.data_v1.player_records[player_records_i].date_records[date_name_search_i].name;
+                    current_date_record.name = history_main_data.data_v1.player_records[player_i].date_records[date_name_search_i].name;
                     current_date_record.name_len = 0;
 
                     return;
@@ -546,11 +547,11 @@ HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const 
 // Returns index of `requested_sid3e`
 HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
 {
-    for (uint_fast32_t player_records_i = 0; player_records_i < history_main_data.data_v1.player_records_len; ++player_records_i)
+    for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
     {
-        if (history_main_data.data_v1.player_records[player_records_i].sid3e == requested_sid3e)
+        if (history_main_data.data_v1.player_records[player_i].sid3e == requested_sid3e)
         {
-            return player_records_i;
+            return player_i;
         }
     }
 
@@ -558,6 +559,7 @@ HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
     return PLAYER_INDEX_ENOENT;
 }
 
+// BSEARCH_TODO
 void history_add_record(const struct player_info *const pinfo)
 {
     TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
