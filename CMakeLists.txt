@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED true)
 
 set(SRC
+    array_manip
     collection
     file_io
     history
