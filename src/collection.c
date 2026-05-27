@@ -292,7 +292,7 @@ void collection_read_archived(const char *collection_fullname)
         return;
     }
 
-    history_set_date(time_manip_ues2ued(cider_creation_date_file(collection_fullname)));
+    history_set_date(time_manip_ues2ued(cider_modification_date_file(collection_fullname)));
 
     parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct parse_info){ .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL });
 
