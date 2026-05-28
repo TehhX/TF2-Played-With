@@ -101,21 +101,8 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_i].record_messages);
 
-        // BUFF_TODO
         save_data->player_records[player_i].notes = NULL;
-        int notes_input;
-        size_t notes_len = 0;
-        while ((notes_input = fgetc(input_file_ptr)) != '\0')
-        {
-            prealloc(save_data->player_records[player_i].notes, ++notes_len);
-            save_data->player_records[player_i].notes[notes_len - 1] = (char) notes_input;
-        }
-
-        prealloc(save_data->player_records[player_i].notes, notes_len + 1);
-        save_data->player_records[player_i].notes[notes_len] = '\0';
-
-        // If just '\0', set to NULL
-        if (notes_len == 0)
+        if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_i].notes, "", 1))
         {
             free(save_data->player_records[player_i].notes);
             save_data->player_records[player_i].notes = NULL;
