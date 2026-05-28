@@ -538,13 +538,11 @@ HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
 
 void history_add_record(const struct player_info *const pinfo)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 "). Requested", pinfo->name, pinfo->sid3e);
+    TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
 
     const uint_fast32_t player_index = get_player_index(pinfo->sid3e);
     if (player_index != PLAYER_INDEX_ENOENT)
     {
-        // Found requested player
-        TF2_PLAYED_WITH_DEBUG_LOGS(" is in records");
         for (uint_fast32_t date_records_i = 0; date_records_i < history_main_data.data_v0.player_records[player_index].date_records_len; ++date_records_i)
         {
             if (history_main_data.data_v0.player_records[player_index].date_records[date_records_i].date != history_main_data.data_v0.current_date)
@@ -552,24 +550,16 @@ void history_add_record(const struct player_info *const pinfo)
                 continue;
             }
 
-            TF2_PLAYED_WITH_DEBUG_LOGF(" on current_date %" PRIu16 ". Incrementing encounter count.\n", history_main_data.data_v0.current_date);
-
             ++history_main_data.data_v0.player_records[player_index].date_records[date_records_i].encounter_count;
 
             return;
         }
-
-        // No record found for current_date
-        TF2_PLAYED_WITH_DEBUG_LOGF(", but not on current_date %" PRIu16 ". Adding new date record.\n", history_main_data.data_v0.current_date);
         history_add_date_record(player_index, pinfo->name);
 
         return;
     }
     else
     {
-        // Couldn't find requested player
-        TF2_PLAYED_WITH_DEBUG_LOGS(" is not in records. Adding new player and date records.\n");
-
         prealloc(history_main_data.data_v0.player_records, ++history_main_data.data_v0.player_records_len);
         history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].sid3e = pinfo->sid3e;
         history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].record_messages = history_main_data.data_v0.default_record_messages;
@@ -690,7 +680,7 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    const size_t notes_len = file_io_buffered_input(read, &history_main_data.data_v0.player_records[player_index].notes);
+    const size_t notes_len = file_io_buffered_input(read, &history_main_data.data_v0.player_records[player_index].notes, NULL, 0);
 
     // If user entered nothing/deleted all notes, free and set to NULL
     if (notes_len == 0)

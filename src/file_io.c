@@ -8,7 +8,7 @@
 // How many bytes to read per cycle
 #define READ_BYTES ((size_t) 64)
 
-size_t file_io_buffered_input(FILE *stream, char **const string)
+size_t file_io_buffered_input(FILE *stream, char **const string, const char *const stops, const size_t stops_len)
 {
     for (size_t total_bytes = 0; 1; )
     {
@@ -22,18 +22,21 @@ size_t file_io_buffered_input(FILE *stream, char **const string)
         {
             const size_t last_char_index = total_bytes - current_bytes + last_offset;
 
-            if ((*string)[last_char_index] == '\n')
+            for (size_t stops_i = 0; stops_i < stops_len; ++stops_i)
             {
-                // Might need to clearerr here in case it parses EOF while not on last line
+                if ((*string)[last_char_index] == stops[stops_i])
+                {
+                    // Might need to clearerr here in case it parses EOF while not on last line
 
-                // Reset back to newline
-                fseek(stream, last_offset - current_bytes + 1, SEEK_CUR);
+                    // Reset back to newline
+                    fseek(stream, last_offset - current_bytes + 1, SEEK_CUR);
 
-                prealloc(*string, last_char_index + 1);
+                    prealloc(*string, last_char_index + 1);
 
-                (*string)[last_char_index] = '\0';
+                    (*string)[last_char_index] = '\0';
 
-                return last_char_index;
+                    return last_char_index;
+                }
             }
         }
 

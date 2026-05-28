@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project("TF2-Played-With" LANGUAGES C VERSION 1.1.7 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
+project("TF2-Played-With" LANGUAGES C VERSION 1.1.8 DESCRIPTION "A program to keep track of who you've played with in Valve's Team Fortress 2." HOMEPAGE_URL "https://github.com/TehhX/TF2-Played-With")
 file(WRITE "${CMAKE_SOURCE_DIR}/version.txt" "${PROJECT_VERSION_MAJOR}-${PROJECT_VERSION_MINOR}-${PROJECT_VERSION_PATCH}")
 
 set(CMAKE_C_STANDARD 17)
@@ -48,7 +48,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_definitions(tf2pw PRIVATE "TF2_PLAYED_WITH_DEBUG=1")
 
     if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined" "-Wall" "-Wextra" "-Wno-unused-parameter")
+        target_compile_options(tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined" "-Wall" "-Wextra" "-Wno-unused-parameter" "-Wno-unterminated-string-initialization")
         target_link_options   (tf2pw PRIVATE "-fsanitize=address" "-fsanitize=undefined")
     elseif (CMAKE_C_COMPILER_ID STREQUAL "MSVC")
         set(MSVC_DISABLED_WARNINGS

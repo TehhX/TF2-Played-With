@@ -243,7 +243,7 @@ static void parse_log(FILE *file_stream, const bool collection_type, struct pars
 
     while (!feof(file_stream))
     {
-        line_buf_len = file_io_buffered_input(file_stream, &line_buf);
+        line_buf_len = file_io_buffered_input(file_stream, &line_buf, &(char){ '\n' }, 1);
 
         // Check from most common output type to least, stopping once one is found
              if (scan_status   (line_buf, line_buf_len, parse_info                 )) { ; }
