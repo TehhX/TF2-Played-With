@@ -111,7 +111,7 @@
 #define ccasecmp(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
 
 // Proper realloc without repeated code
-#define prealloc(PTR, LEN) PTR = realloc(PTR, (sizeof(*(PTR))) * (LEN))
+#define prealloc(PTR, LEN) PTR = realloc(PTR, sizeof(*(PTR)) * (LEN))
 
 // Copy string `S` to heap
 #define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)

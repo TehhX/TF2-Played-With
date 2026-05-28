@@ -31,7 +31,7 @@ struct array_manip_find_return array_manip_find(const void *const needle, void *
 
         if (difference == 0)
         {
-            return (struct array_manip_find_return){ .index = size * mid, .status = array_manip_find_status_found };
+            return (struct array_manip_find_return){ .index = mid, .status = array_manip_find_status_found };
         }
         else if (difference < 0)
         {
@@ -43,5 +43,5 @@ struct array_manip_find_return array_manip_find(const void *const needle, void *
         }
     }
 
-    return (struct array_manip_find_return){ .index = size * mid, .status = array_manip_find_status_prospective };
+    return (struct array_manip_find_return){ .index = mid, .status = array_manip_find_status_prospective };
 }

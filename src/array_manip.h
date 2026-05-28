@@ -52,6 +52,8 @@ typedef int (*array_manip_find_compare_t)(const void *needle, const void *haysta
         @param data_compare The function to compare elements with. See comments on `array_manip_find_compare_t` for further clarification
 
         @returns A struct describing its findings. See comments on `array_manip_find_return` for further clarification
+
+        @warning `haystack` must be sorted in ascending order wrt `data_compare`
 */
 extern struct array_manip_find_return array_manip_find(const void *const needle, void *const haystack, const size_t size, const size_t count, array_manip_find_compare_t data_compare);
 
