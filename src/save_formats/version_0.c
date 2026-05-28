@@ -43,7 +43,6 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
             free(save_data->player_records[player_i].notes);
             save_data->player_records[player_i].notes = NULL;
         }
-        // IMMED_TODO END
 
         fread_one(save_data->player_records[player_i].date_records_len);
 

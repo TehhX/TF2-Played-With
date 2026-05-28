@@ -9,7 +9,11 @@
 
 struct array_manip_find_return array_manip_find(const void *const needle, void *const haystack, const size_t size, const size_t count, array_manip_find_compare_t data_compare)
 {
-    if (data_compare(needle, PTR_ARITH(haystack) + size * (count - 1)) > 0)
+    if (count == 0)
+    {
+        return (struct array_manip_find_return){ .index = 0, .status = array_manip_find_status_start };
+    }
+    else if (data_compare(needle, PTR_ARITH(haystack) + size * (count - 1)) > 0)
     {
         return (struct array_manip_find_return){ .index = count, .status = array_manip_find_status_prospective };
     }

@@ -22,7 +22,6 @@ bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file
         fwrite_one(save_data->player_records[player_i].sid3e);
         fwrite_one(save_data->player_records[player_i].record_messages);
 
-        // Only write notes if they exist, else just '\0'
         if (save_data->player_records[player_i].notes)
         {
             fputs(save_data->player_records[player_i].notes, output_file_ptr);
@@ -102,7 +101,7 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_i].record_messages);
 
-        // IMMED_TODO START: Reset back to buffering solution, seems to have had an error which impedes my current work
+        // BUFF_TODO
         save_data->player_records[player_i].notes = NULL;
         int notes_input;
         size_t notes_len = 0;
@@ -121,7 +120,6 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
             free(save_data->player_records[player_i].notes);
             save_data->player_records[player_i].notes = NULL;
         }
-        // IMMED_TODO END
 
         fread_one(save_data->player_records[player_i].date_records_len);
 

@@ -293,6 +293,7 @@ bool history_load(const char *const passed_history_fullname)
                 return true;
             }
 
+            // IMMED_TODO: Shouldn't this go inside wizard function, after setting save version to latest?
             history_free();
 
             return history_save(history_fullname);
@@ -307,8 +308,6 @@ bool history_load(const char *const passed_history_fullname)
         }
     }
 
-    history_free();
-
     bool retval = false;
 
     char header_buf[sizeof(HEADER) - 1];
@@ -322,6 +321,9 @@ bool history_load(const char *const passed_history_fullname)
     }
 
     fread_one(history_main_data.save_version);
+
+    history_free();
+
     for (bool continue_modernizing = true, loaded = false; continue_modernizing; )
     {
         switch (history_main_data.save_version)
@@ -433,7 +435,6 @@ bool history_save(const char *const passed_history_fullname)
     return retval;
 }
 
-// IMMED_TODO: Omit Team Fortress 2 from end in accordance with #67
 char *history_set_tf2_filepath(char *new_tf2_filepath)
 {
     // Length of tf2_filepath without trailing slash and/or null-terminator
@@ -472,7 +473,7 @@ char *history_set_tf2_filepath(char *new_tf2_filepath)
 
 const char *history_get_live_log_fullname()
 {
-    return (const char *) history_main_data.data_v1.tf2_live_log_fullname;
+    return history_main_data.data_v1.tf2_live_log_fullname;
 }
 
 void history_set_date(const uint16_t new_date)
@@ -494,12 +495,13 @@ void history_set_date(const uint16_t new_date)
     )
 }
 
-static int compare_sid3e_player_sid3e(const struct player_record_0 *const player_record, const uint32_t *const current_sid3e)
+static int compare_sid3e_player_sid3e(const uint32_t *const current_sid3e, const struct player_record_0 *const player_record)
 {
+    TF2_PLAYED_WITH_DEBUG_LOGF("RECORD SID3E: %" PRIu32 "\n", player_record->sid3e); // REMOVE
     return (player_record->sid3e >= *current_sid3e ? (player_record->sid3e > *current_sid3e) : -1);
 }
 
-static int compare_date_player_date(const struct date_record_0 *const date_record, const uint64_t *const current_date)
+static int compare_date_player_date(const uint64_t *const current_date, const struct date_record_0 *const date_record)
 {
     return (date_record->date >= *current_date ? (date_record->date > *current_date) : -1);
 }
@@ -734,7 +736,14 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    const size_t notes_len = file_io_buffered_input(read, &history_main_data.data_v1.player_records[find_return.index].notes);
+    // BUFF_TODO
+    int input;
+    size_t notes_len = 0;
+    while ((input = fgetc(read)) != EOF)
+    {
+        prealloc(history_main_data.data_v0.player_records[find_return.index].notes, notes_len + 1);
+        history_main_data.data_v0.player_records[find_return.index].notes[notes_len++] = (char) input;
+    }
 
     // If user entered nothing/deleted all notes, free and set to NULL
     if (notes_len == 0)
@@ -771,7 +780,7 @@ void history_edit_notes(uint32_t requested_sid3e)
 void history_add_message(const uint32_t requested_sid3e, const char *const message)
 {
     const struct array_manip_find_return find_return = array_manip_find(&requested_sid3e, history_main_data.data_v1.player_records, sizeof(struct player_record_0), history_main_data.data_v1.player_records_len, (array_manip_find_compare_t) compare_sid3e_player_sid3e);
-    if (find_return.status == array_manip_find_status_found)
+    if (find_return.status != array_manip_find_status_found)
     {
         fprintf(stderr, ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
         return;

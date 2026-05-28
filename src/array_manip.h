@@ -16,6 +16,7 @@
 // @brief Returns the index of `ELEMENT` within `ARRRAY`. Element size is determined via `ARRAY`
 #define ARRAY_MANIP_INDEX_OF(ARRAY, ELEMENT) ARRAY_MANIP_INDEX_OF_SIZED(ARRAY, ELEMENT, sizeof(*(ARRAY)))
 
+// IMMED_TODO: Might only need found, and not found. If not found, prospective/start. Else, found. Index will portray the remaining information
 // @brief An enum describing different possible statuses of `array_manip_find(...)`
 enum array_manip_find_status
 {
