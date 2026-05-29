@@ -105,7 +105,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     }
 
     // Player not in status array, add them
-    prealloc(parse_info->player_info_arr, ++parse_info->len);
+    PREALLOC(parse_info->player_info_arr, ++parse_info->len);
 
     // Get player name end index
     while (line[--line_i] != '"');

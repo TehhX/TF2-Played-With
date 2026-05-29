@@ -218,7 +218,7 @@ static void operation_print_help(const char *invocation, const char *arg)
 
 static void operation_set_tf2_filepath(const char *invocation, const char *arg)
 {
-    char *new_tf2_filepath = string_deep_copy(arg);
+    char *new_tf2_filepath = STRING_DEEP_COPY(arg);
     if ((new_tf2_filepath = history_set_tf2_filepath(new_tf2_filepath)) == NULL)
     {
         fprintf(stderr, ANSI_RED "Failed to set TF2 filepath to \"%s\".\n" ANSI_RESET, new_tf2_filepath);

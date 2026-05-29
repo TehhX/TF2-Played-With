@@ -19,7 +19,7 @@
 #endif
 
 // Test input against CMP and CHAR. If COFF is -1, no short version
-#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : (ccasecmp(input_buf[0], CHAR)) && (input_buf[1] == '\0' || input_buf[1] == ' ')))
+#define INPUT_IS(CMP, CHAR) (!strncasecmp(input_buf, CMP, sizeof(CMP) - 1) || (((char) (CHAR)) == ((char) (-1)) ? 0 : (CCASECOMP(input_buf[0], CHAR)) && (input_buf[1] == '\0' || input_buf[1] == ' ')))
 
 enum Especifier_status
 {
@@ -177,7 +177,7 @@ void interactive_enter()
             char *const specifier_start = get_spec_start(input_buf, true);
             if (specifier_start)
             {
-                char *specifier_start_heap = string_deep_copy(specifier_start);
+                char *specifier_start_heap = STRING_DEEP_COPY(specifier_start);
 
                 if ((specifier_start_heap = history_set_tf2_filepath(specifier_start_heap)) == NULL)
                 {
@@ -290,7 +290,7 @@ void interactive_enter()
 
             if (specifier_start)
             {
-                user_input_history_fullname = string_deep_copy(specifier_start);
+                user_input_history_fullname = STRING_DEEP_COPY(specifier_start);
             }
             else
             {
@@ -309,7 +309,7 @@ void interactive_enter()
 
             if (specifier_start)
             {
-                user_input_history_fullname = string_deep_copy(specifier_start);
+                user_input_history_fullname = STRING_DEEP_COPY(specifier_start);
             }
             else
             {

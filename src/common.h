@@ -108,12 +108,15 @@
 #define ANSI_RESET_STDERR() ANSI_SET(stderr, ANSI_RESET)
 
 // Check that characters C1 and C2 match, regardless of capitalization
-#define ccasecmp(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
+#define CCASECOMP(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
 
 // Proper realloc without repeated code
-#define prealloc(PTR, LEN) PTR = realloc(PTR, sizeof(*(PTR)) * (LEN))
+#define PREALLOC(PTR, LEN) PTR = realloc(PTR, sizeof(*(PTR)) * (LEN))
 
 // Copy string `S` to heap
-#define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
+#define STRING_DEEP_COPY(S) strcpy(malloc(strlen(S) + 1), S)
+
+// Returns 1 if A > B, 0 if A == B, or -1 if A < B
+#define THREE_WAY_COMPARISON(A, B) (((A) >= (B)) ? ((A) > (B)) : -1)
 
 #endif // COMMON_H

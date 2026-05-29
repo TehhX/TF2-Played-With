@@ -68,7 +68,7 @@ HYPER_MACRO bool history_wizard()
 
     while (user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL) == NULL || user_input[0] == '\0');
 
-    char *proposed_tf2_filepath = string_deep_copy(user_input);
+    char *proposed_tf2_filepath = STRING_DEEP_COPY(user_input);
     if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath)) == NULL)
     {
         free(proposed_tf2_filepath);
@@ -80,7 +80,7 @@ HYPER_MACRO bool history_wizard()
 
     if (user_input_confirm("Append con_logfile to autoexec? (Y/N): ", NULL))
     {
-        char *autoexec_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v1.tf2_filepath), TF2PW_AUTOEXEC_SEMINAME);
+        char *autoexec_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_AUTOEXEC_SEMINAME);
         TF2_PLAYED_WITH_DEBUG_LOGF("Set autoexec_fullname to \"%s\".\n", autoexec_fullname);
 
         FILE *autoexec_handle = fopen(autoexec_fullname, "a");
@@ -114,7 +114,7 @@ HYPER_MACRO bool history_wizard()
         #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
         #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
 
-        char *config_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v1.tf2_filepath), TF2PW_CONFIG_SEMINAME);
+        char *config_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_CONFIG_SEMINAME);
 
         FILE *config_handle = fopen(config_fullname, "r");
         if (!config_handle)
@@ -133,7 +133,7 @@ HYPER_MACRO bool history_wizard()
             config_replacement[] = "bind \"w\" \"+forward ; status\""
         ;
 
-        char *temporary_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v1.tf2_filepath), TF2PW_TEMP_SEMINAME);
+        char *temporary_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_TEMP_SEMINAME);
         FILE *file_output = fopen(temporary_fullname, "w");
         if (!file_output)
         {
@@ -218,7 +218,7 @@ HYPER_MACRO bool history_wizard()
         free(config_fullname);
     }
 
-    history_main_data.data_v1.tf2_live_log_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v1.tf2_filepath), TF2PW_LOG_SEMINAME);
+    history_main_data.data_v1.tf2_live_log_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", history_main_data.data_v1.tf2_live_log_fullname);
 
     while (true)
@@ -456,7 +456,7 @@ char *history_set_tf2_filepath(char *new_tf2_filepath)
 
     if (!had_trailing_delim)
     {
-        prealloc(new_tf2_filepath, new_tf2_filepath_len + 2);
+        PREALLOC(new_tf2_filepath, new_tf2_filepath_len + 2);
         new_tf2_filepath[new_tf2_filepath_len] = CIDER_PATH_DELIM_C;
         new_tf2_filepath[new_tf2_filepath_len + 1] = '\0';
     }
@@ -497,12 +497,12 @@ void history_set_date(const uint16_t new_date)
 
 static int compare_sid3e_player_sid3e(const uint32_t *const current_sid3e, const struct player_record_0 *const player_record)
 {
-    return (player_record->sid3e >= *current_sid3e ? (player_record->sid3e > *current_sid3e) : -1);
+    return THREE_WAY_COMPARISON(*current_sid3e, player_record->sid3e);
 }
 
 static int compare_date_player_date(const uint64_t *const current_date, const struct date_record_0 *const date_record)
 {
-    return (date_record->date >= *current_date ? (date_record->date > *current_date) : -1);
+    return THREE_WAY_COMPARISON(*current_date, date_record->date);
 }
 
 // IMMED_TODO: A lot of repeated code, simplify once it's working
@@ -515,16 +515,19 @@ void history_add_record(const struct player_info *const pinfo)
     {
         break; case array_manip_find_status_found:
         {
+            fprintf(stderr, "PLAYER FOUND\n"); // REMOVE
             const struct array_manip_find_return date_find_return = array_manip_find(&history_main_data.data_v1.current_date, history_main_data.data_v1.player_records[player_find_return.index].date_records, sizeof(struct date_record_0), history_main_data.data_v1.player_records[player_find_return.index].date_records_len, (array_manip_find_compare_t) compare_date_player_date);
             switch (date_find_return.status)
             {
                 break; case array_manip_find_status_found:
                 {
+                    fprintf(stderr, LTAB "DATE FOUND\n"); // REMOVE
                     ++history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].encounter_count;
                 }
                 break; case array_manip_find_status_prospective:
                 {
-                    prealloc(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
+                    fprintf(stderr, LTAB "DATE PROSPECTIVE\n"); // REMOVE
+                    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
 
                     if (date_find_return.index + 1 < history_main_data.data_v1.player_records[player_find_return.index].date_records_len)
                     {
@@ -556,7 +559,8 @@ void history_add_record(const struct player_info *const pinfo)
                 }
                 break; case array_manip_find_status_start:
                 {
-                    prealloc(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
+                    fprintf(stderr, LTAB "DATE START\n"); // REMOVE
+                    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
 
                     memmove(history_main_data.data_v1.player_records[player_find_return.index].date_records + 1, history_main_data.data_v1.player_records[player_find_return.index].date_records, sizeof(struct date_record_0) * (history_main_data.data_v1.player_records[player_find_return.index].date_records_len - 1));
 
@@ -572,7 +576,7 @@ void history_add_record(const struct player_info *const pinfo)
                         sizeof(struct date_record_0)
                     );
 
-                    fprintf(stderr, "doohickey: %" PRIu32 "\n", history_main_data.data_v1.player_records[player_find_return.index].date_records_len); // REMOVE
+                    fprintf(stderr, "DR-LEN: %" PRIu32 "\n", history_main_data.data_v1.player_records[player_find_return.index].date_records_len); // REMOVE
                     if (history_main_data.data_v1.player_records[player_find_return.index].date_records_len == 1)
                     {
                         history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len = (uint8_t) strlen(pinfo->name);
@@ -589,7 +593,8 @@ void history_add_record(const struct player_info *const pinfo)
         }
         break; case array_manip_find_status_prospective:
         {
-            prealloc(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
+            fprintf(stderr, "PLAYER PROSPECTIVE: %zu/%" PRIu32 "\n", player_find_return.index, history_main_data.data_v1.player_records_len); // REMOVE
+            PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
 
             if (player_find_return.index + 1 < history_main_data.data_v1.player_records_len)
             {
@@ -627,7 +632,8 @@ void history_add_record(const struct player_info *const pinfo)
         }
         break; case array_manip_find_status_start:
         {
-            prealloc(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
+            fprintf(stderr, "PLAYER START: 0/%" PRIu32 "\n", history_main_data.data_v1.player_records_len); // REMOVE
+            PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
 
             memmove(history_main_data.data_v1.player_records + 1, history_main_data.data_v1.player_records, sizeof(struct player_record_0) * (history_main_data.data_v1.player_records_len - 1));
 
@@ -789,7 +795,7 @@ void history_edit_notes(uint32_t requested_sid3e)
     }
     else if (history_main_data.data_v1.player_records[find_return.index].notes[notes_len - 2] != '\n')
     {
-        prealloc(history_main_data.data_v1.player_records[find_return.index].notes, notes_len + 1);
+        PREALLOC(history_main_data.data_v1.player_records[find_return.index].notes, notes_len + 1);
         history_main_data.data_v1.player_records[find_return.index].notes[notes_len - 1] = '\n';
         history_main_data.data_v1.player_records[find_return.index].notes[notes_len] = '\0';
     }
@@ -840,7 +846,7 @@ void history_add_message(const uint32_t requested_sid3e, const char *const messa
 
     const size_t message_len = strlen(message) + 1;
 
-    prealloc(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages, ++history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len);
+    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages, ++history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len);
     history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages[history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len - 1] = malloc(sizeof(char) * message_len);
     memcpy(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages[history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len - 1], message, message_len);
 

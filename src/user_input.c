@@ -134,7 +134,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
             {
                 break; case '\n':
                 {
-                    prealloc(params->input, ++params->input_len);
+                    PREALLOC(params->input, ++params->input_len);
                     params->input[params->input_len - 1] = '\0';
 
                     cont = false;
@@ -145,7 +145,7 @@ static void *routine_user_input(struct routine_user_input_params *const params)
                 }
                 break; default:
                 {
-                    prealloc(params->input, params->input_len + 1);
+                    PREALLOC(params->input, params->input_len + 1);
                     params->input[params->input_len++] = (char) next;
                 }
             }
@@ -286,12 +286,12 @@ bool user_input_confirm(const char *prompt, const char *bad_input_message)
 
         if (input[0] != '\0' && input[1] == '\0')
         {
-            if (ccasecmp(input[0], 'Y'))
+            if (CCASECOMP(input[0], 'Y'))
             {
                 free(input);
                 return true;
             }
-            else if (ccasecmp(input[0], 'N'))
+            else if (CCASECOMP(input[0], 'N'))
             {
                 free(input);
                 return false;

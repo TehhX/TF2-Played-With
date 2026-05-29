@@ -12,7 +12,7 @@ size_t file_io_buffered_input(FILE *stream, char **const string, const char *con
 {
     for (size_t total_bytes = 0; 1; )
     {
-        prealloc(*string, total_bytes + READ_BYTES);
+        PREALLOC(*string, total_bytes + READ_BYTES);
 
         const size_t current_bytes = fread(*string + total_bytes, sizeof(char), READ_BYTES, stream);
 
@@ -31,7 +31,7 @@ size_t file_io_buffered_input(FILE *stream, char **const string, const char *con
                     // Reset back to newline
                     fseek(stream, last_offset - current_bytes + 1, SEEK_CUR);
 
-                    prealloc(*string, last_char_index + 1);
+                    PREALLOC(*string, last_char_index + 1);
 
                     (*string)[last_char_index] = '\0';
 
@@ -42,7 +42,7 @@ size_t file_io_buffered_input(FILE *stream, char **const string, const char *con
 
         if (current_bytes != READ_BYTES)
         {
-            prealloc(*string, total_bytes + 1);
+            PREALLOC(*string, total_bytes + 1);
 
             (*string)[total_bytes] = '\0';
 

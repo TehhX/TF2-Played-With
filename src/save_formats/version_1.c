@@ -169,17 +169,17 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
                     {
                         break; case '\0':
                         {
-                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
+                            PREALLOC(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
                             save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
                             goto STOP_READING_MESSAGES;
                         }
                         break; case '\n':
                         {
-                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
+                            PREALLOC(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], msg_len + 1);
                             save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len] = '\0';
 
-                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages, ++save_data->player_records[player_i].date_records[date_records_i].messages_len);
+                            PREALLOC(save_data->player_records[player_i].date_records[date_records_i].messages, ++save_data->player_records[player_i].date_records[date_records_i].messages_len);
                             save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1] = NULL;
                             msg_len = 0;
                         }
@@ -190,7 +190,7 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
                         }
                         break; default:
                         {
-                            prealloc(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], ++msg_len);
+                            PREALLOC(save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1], ++msg_len);
                             save_data->player_records[player_i].date_records[date_records_i].messages[save_data->player_records[player_i].date_records[date_records_i].messages_len - 1][msg_len - 1] = (char) messages_input;
                         }
                     }
