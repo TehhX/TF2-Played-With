@@ -84,20 +84,24 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
     fread_one(save_data->player_records_len);
 
-    uint_fast32_t last_sid3e = 0;
+    TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast32_t last_sid3e = 0;)
     save_data->player_records = malloc(save_data->player_records_len * sizeof(*save_data->player_records));
     for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++ player_i)
     {
         fread_one(save_data->player_records[player_i].sid3e);
-        if (save_data->player_records[player_i].sid3e < last_sid3e)
-        {
-            fprintf(stderr, ANSI_RED "Invalid history file: Improper SID3E order.\n" ANSI_RESET);
-            return true;
-        }
-        else
-        {
-            last_sid3e = save_data->player_records[player_i].sid3e;
-        }
+
+        TF2_PLAYED_WITH_DEBUG_INSERT
+        (
+            if (save_data->player_records[player_i].sid3e < last_sid3e)
+            {
+                TF2_PLAYED_WITH_DEBUG_LOGS(ANSI_RED "Invalid history file: Improper SID3E order.\n");
+                return true;
+            }
+            else
+            {
+                last_sid3e = save_data->player_records[player_i].sid3e;
+            }
+        )
 
         fread_one(save_data->player_records[player_i].record_messages);
 
@@ -110,21 +114,25 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_i].date_records_len);
 
-        uint_fast16_t last_date = 0;
+        TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast16_t last_date = 0;)
         char *last_real_name;
         save_data->player_records[player_i].date_records = malloc(sizeof(*save_data->player_records[player_i].date_records) * save_data->player_records[player_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
         {
             fread_one(save_data->player_records[player_i].date_records[date_records_i].date);
-            if (save_data->player_records[player_i].date_records[date_records_i].date < last_date)
-            {
-                fputs(ANSI_RED "Invalid history file: Improper date order.\n" ANSI_RESET, stderr);
-                return true;
-            }
-            else
-            {
-                last_date = save_data->player_records[player_i].date_records[date_records_i].date;
-            }
+
+            TF2_PLAYED_WITH_DEBUG_INSERT
+            (
+                if (save_data->player_records[player_i].date_records[date_records_i].date < last_date)
+                {
+                    TF2_PLAYED_WITH_DEBUG_LOGS(ANSI_RED "Invalid history file: Improper date order.\n");
+                    return true;
+                }
+                else
+                {
+                    last_date = save_data->player_records[player_i].date_records[date_records_i].date;
+                }
+            )
 
             fread_one(save_data->player_records[player_i].date_records[date_records_i].encounter_count);
             fread_one(save_data->player_records[player_i].date_records[date_records_i].name_len);

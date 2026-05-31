@@ -28,8 +28,8 @@
     #include "stdio.h"
     #include "stdlib.h"
 
-    // `ON`  Gets replaced with CONTENT
-    #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT) CONTENT
+    // `ON`  Gets replaced with whatever is placed within the parenthesis
+    #define TF2_PLAYED_WITH_DEBUG_INSERT(...) __VA_ARGS__
 
     // `ON`  Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION) if (CONDITION) abort()
@@ -50,10 +50,10 @@
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) DEB
 
     // `OFF` A function acting as a glorified macro
-    #define HYPER_MACRO
+    #define HYPER_MACRO static
 #else
-    // `OFF` Gets replaced with CONTENT
-    #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT)
+    // `OFF` Gets replaced with whatever is placed within the parenthesis
+    #define TF2_PLAYED_WITH_DEBUG_INSERT(...)
 
     // `OFF` Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION)
@@ -62,7 +62,7 @@
     #define TF2_PLAYED_WITH_DEBUG_LOGF(MSG, ...)
 
     // `OFF` When debugging, puts's MSG. Else, no-op
-    #define TF2_PLAYED_WITH_DEBUG_LOGS(MSG) (void)
+    #define TF2_PLAYED_WITH_DEBUG_LOGS(MSG)
 
     // `OFF` When debugging, abort. Else, exit EXIT_FAILURE. For when you want your debugger to stop here, but in regular operations for it to just exit with an error code
     #define TF2_PLAYED_WITH_DEBUG_ABEX() exit(EXIT_FAILURE)

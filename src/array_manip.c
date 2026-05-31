@@ -2,10 +2,8 @@
 
 #include "common.h"
 
-#include "stdint.h"
-
 // Evaluates to PTR, but all related pointer arithmetic will use intervals of one byte instead of the size of their original dereferenced types
-#define PTR_ARITH(PTR) ((uint8_t *) (PTR))
+#define PTR_ARITH(PTR) ((unsigned char *) (PTR))
 
 struct array_manip_find_return array_manip_find(const void *const needle, void *const haystack, const size_t size, const size_t count, array_manip_find_compare_t data_compare)
 {
@@ -23,17 +21,18 @@ struct array_manip_find_return array_manip_find(const void *const needle, void *
     {
         mid = low + (high - low) / 2;
 
-        const int difference = data_compare(PTR_ARITH(haystack) + size * mid, needle);
+        const int difference = data_compare(needle, PTR_ARITH(haystack) + size * mid);
 
         if (difference == 0)
         {
             return (struct array_manip_find_return){ .index = mid, .status = array_manip_find_status_found };
         }
-        else if (difference < 0)
+        else if (difference > 0)
         {
             low = mid + 1;
         }
-        else if (difference > 0)
+        // Implicitly "else if (difference > 0)"
+        else
         {
             high = mid - 1;
         }
