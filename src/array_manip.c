@@ -31,7 +31,7 @@ struct array_manip_find_return array_manip_find(const void *const needle, void *
         {
             low = mid + 1;
         }
-        // Implicitly "else if (difference > 0)"
+        // Implicitly "else if (difference < 0)"
         else
         {
             high = mid - 1;
