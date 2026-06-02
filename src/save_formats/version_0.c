@@ -167,7 +167,6 @@ bool save_format_0_modernize(void *const save_data)
     {
         qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
 
-        // IMMED_TODO: Uses a ton of extra space to set names straight, not smart at all. However, it works, and that'll do for now
         for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
         {
             if (new_data.player_records[player_i].date_records[date_i].name_len == 0)
