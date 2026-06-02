@@ -39,7 +39,7 @@
             |    Messages     | Will only exist if Record Messages in Player Record is 1. Contains messages sent from this player on this date |   Variable   | (char *) "Wow!\nCool!\nGood job!\0" |
 */
 
-#include "player_record_0.h"
+#include "record_0.h"
 
 #include "stdint.h"
 #include "stdlib.h"

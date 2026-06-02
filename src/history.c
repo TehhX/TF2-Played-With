@@ -6,7 +6,6 @@
 #include "user_input.h"
 #include "save_formats/main.h"
 #include "file_io.h"
-#include "array_manip.h"
 
 #include "cider.h"
 
@@ -495,31 +494,82 @@ void history_set_date(const uint16_t new_date)
     )
 }
 
+// IMMED_TODO: Check that initializing functions are required
+HYPER_MACRO void initialize_date_record(const struct player_record_0 *const player_record, const uint_fast32_t date_i, const char *const name)
+{
+    player_record->date_records[date_i].date            = history_main_data.data_v1.current_date;
+    player_record->date_records[date_i].encounter_count = 0;
+    player_record->date_records[date_i].messages        = NULL;
+    player_record->date_records[date_i].messages_len    = 0;
+
+    if (date_i > 0 && !strcmp(player_record->date_records[date_i - 1].name, name))
+    {
+        player_record->date_records[date_i].name = player_record->date_records[date_i - 1].name;
+        player_record->date_records[date_i].name_len = 0;
+    }
+    else
+    {
+        player_record->date_records[date_i].name_len = strlen(name);
+        player_record->date_records[date_i].name = memcpy(malloc(player_record->date_records[date_i].name_len + 1), name, player_record->date_records[date_i].name_len);
+        player_record->date_records[date_i].name[player_record->date_records[date_i].name_len] = '\0';
+    }
+}
+
+HYPER_MACRO void initialize_player_record(struct player_record_0 *const new_player_record, const struct player_info *const pinfo)
+{
+    new_player_record->date_records     = malloc(sizeof(struct date_record_0));
+    new_player_record->date_records_len = 1;
+    new_player_record->notes            = NULL;
+    new_player_record->record_messages  = history_main_data.data_v1.default_record_messages;
+    new_player_record->sid3e            = pinfo->sid3e;
+
+    initialize_date_record(new_player_record, 0, pinfo->name);
+}
+
+static int compare_player_sid3e_player_sid3e(const struct player_record_0 *const a, const struct player_record_0 *const b)
+{
+    return THREE_WAY_COMPARISON(a->sid3e, b->sid3e);
+}
+
 static int compare_sid3e_player_sid3e(const uint32_t *const current_sid3e, const struct player_record_0 *const player_record)
 {
     return THREE_WAY_COMPARISON(*current_sid3e, player_record->sid3e);
 }
 
-static int compare_date_player_date(const uint64_t *const current_date, const struct date_record_0 *const date_record)
+static int compare_date_record_date_date_record_date(const struct date_record_0 *const a, const struct date_record_0 *const b)
+{
+    return THREE_WAY_COMPARISON(a->date, b->date);
+}
+
+static int compare_date_date_record_date(const uint64_t *const current_date, const struct date_record_0 *const date_record)
 {
     return THREE_WAY_COMPARISON(*current_date, date_record->date);
 }
 
-// IMMED_TODO: A lot of repeated code, simplify once it's working. Also, simplify return of find to found/not-found bools to this end
 void history_add_record(const struct player_info *const pinfo)
 {
-    TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
+    // REMOVE START
+    // Print list
+    {
+        for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
+        {
+            fprintf(stderr, "PLAYER SID3E: %10" PRIu32 "\n", history_main_data.data_v1.player_records[player_i].sid3e);
 
-    // Check that records are in order at this point
-    TF2_PLAYED_WITH_DEBUG_INSERT
-    ({
+            for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
+            {
+                fprintf(stderr, LTAB "DATE DATE: %5" PRIu16 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date);
+            }
+        }
+    }
+
+    // Check that list is sorted
+    {
         uint_fast32_t last_sid3e = 0;
         for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
         {
-            if (last_sid3e > history_main_data.data_v1.player_records[player_i].sid3e)
+            if (history_main_data.data_v1.player_records[player_i].sid3e < last_sid3e)
             {
-                // IMMED_TODO: Aborts here due to bad order
-                TF2_PLAYED_WITH_DEBUG_LOGF("Bad SID3E order while adding record: %" PRIuFAST32 " > %" PRIu32 "\n", last_sid3e, history_main_data.data_v1.player_records[player_i].sid3e);
+                fprintf(stderr, "Bad SID3E Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].sid3e, last_sid3e);
                 abort();
             }
             else
@@ -530,9 +580,9 @@ void history_add_record(const struct player_info *const pinfo)
             uint_fast16_t last_date = 0;
             for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
             {
-                if (last_date > history_main_data.data_v1.player_records[player_i].date_records[date_i].date)
+                if (history_main_data.data_v1.player_records[player_i].date_records[date_i].date < last_date)
                 {
-                    TF2_PLAYED_WITH_DEBUG_LOGF("Bad date order while adding record: %" PRIuFAST16 " > %" PRIu16 "\n", last_date, history_main_data.data_v1.player_records[player_i].date_records[date_i].date);
+                    fprintf(stderr, "Bad Date Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date, last_date);
                     abort();
                 }
                 else
@@ -541,199 +591,68 @@ void history_add_record(const struct player_info *const pinfo)
                 }
             }
         }
-    })
+    }
+    // REMOVE END
 
-    const struct array_manip_find_return player_find_return = array_manip_find(&pinfo->sid3e, history_main_data.data_v1.player_records, sizeof(struct player_record_0), history_main_data.data_v1.player_records_len, (array_manip_find_compare_t) compare_sid3e_player_sid3e);
-    switch (player_find_return.status)
+    TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
+
+    struct player_record_0 *relevant_player = bsearch(&pinfo->sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    if (NULL == relevant_player)
     {
-        break; case array_manip_find_status_found:
+        PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
+        initialize_player_record(history_main_data.data_v1.player_records + history_main_data.data_v1.player_records_len - 1, pinfo);
+
+        qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_player_sid3e_player_sid3e);
+    }
+    else
+    {
+        struct date_record_0 *relevant_date = bsearch(&history_main_data.data_v1.current_date, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_date_record_date);
+        if (NULL == relevant_date)
         {
-            fprintf(stderr, "PLAYER FOUND\n"); // REMOVE
-            const struct array_manip_find_return date_find_return = array_manip_find(&history_main_data.data_v1.current_date, history_main_data.data_v1.player_records[player_find_return.index].date_records, sizeof(struct date_record_0), history_main_data.data_v1.player_records[player_find_return.index].date_records_len, (array_manip_find_compare_t) compare_date_player_date);
-            switch (date_find_return.status)
-            {
-                break; case array_manip_find_status_found:
-                {
-                    fprintf(stderr, LTAB "DATE FOUND; INCREMENTING ENCOUNTER\n"); // REMOVE
-                    ++history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].encounter_count;
-                }
-                break; case array_manip_find_status_prospective:
-                {
-                    fprintf(stderr, LTAB "DATE PROSPECTIVE\n"); // REMOVE
-                    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
+            PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
+            initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
 
-                    if (date_find_return.index + 1 < history_main_data.data_v1.player_records[player_find_return.index].date_records_len)
-                    {
-                        memmove(history_main_data.data_v1.player_records[player_find_return.index].date_records + date_find_return.index + 1, history_main_data.data_v1.player_records[player_find_return.index].date_records + date_find_return.index, sizeof(struct date_record_0) * (history_main_data.data_v1.player_records[player_find_return.index].date_records_len - date_find_return.index - 1));
-                    }
-
-                    memcpy(
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records + date_find_return.index,
-                        &(struct date_record_0)
-                        {
-                            .date = history_main_data.data_v1.current_date,
-                            .encounter_count = 0,
-                            .messages = NULL,
-                            .messages_len = 0,
-                        },
-                        sizeof(struct date_record_0)
-                    );
-
-                    if (!strcmp(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index - 1].name, pinfo->name))
-                    {
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].name = history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index - 1].name;
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].name_len = 0;
-                    }
-                    else
-                    {
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].name_len = (uint8_t) strlen(pinfo->name);
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].name = strcpy(malloc(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].name_len + 1), pinfo->name);
-                    }
-                }
-                break; case array_manip_find_status_start:
-                {
-                    fprintf(stderr, LTAB "DATE START\n"); // REMOVE
-                    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records, ++history_main_data.data_v1.player_records[player_find_return.index].date_records_len);
-
-                    memmove(history_main_data.data_v1.player_records[player_find_return.index].date_records + 1, history_main_data.data_v1.player_records[player_find_return.index].date_records, sizeof(struct date_record_0) * (history_main_data.data_v1.player_records[player_find_return.index].date_records_len - 1));
-
-                    memcpy(
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records,
-                        &(struct date_record_0)
-                        {
-                            .date = history_main_data.data_v1.current_date,
-                            .encounter_count = 0,
-                            .messages = NULL,
-                            .messages_len = 0,
-                        },
-                        sizeof(struct date_record_0)
-                    );
-
-                    fprintf(stderr, "DR-LEN: %" PRIu32 "\n", history_main_data.data_v1.player_records[player_find_return.index].date_records_len); // REMOVE
-                    if (history_main_data.data_v1.player_records[player_find_return.index].date_records_len == 1)
-                    {
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len = (uint8_t) strlen(pinfo->name);
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name = strcpy(malloc(history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len + 1), pinfo->name);
-                    }
-                    else if (!strcmp(pinfo->name, history_main_data.data_v1.player_records[player_find_return.index].date_records[1].name))
-                    {
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name = history_main_data.data_v1.player_records[player_find_return.index].date_records[1].name;
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len = history_main_data.data_v1.player_records[player_find_return.index].date_records[1].name_len;
-                        history_main_data.data_v1.player_records[player_find_return.index].date_records[1].name_len = 0;
-                    }
-                }
-            }
+            qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_record_date_date_record_date);
         }
-        break; case array_manip_find_status_prospective:
+        else
         {
-            fprintf(stderr, "PLAYER PROSPECTIVE: %zu/%" PRIu32 "\n", player_find_return.index, history_main_data.data_v1.player_records_len); // REMOVE
-            PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
-
-            if (player_find_return.index + 1 < history_main_data.data_v1.player_records_len)
-            {
-                memmove(history_main_data.data_v1.player_records + player_find_return.index + 1, history_main_data.data_v1.player_records + player_find_return.index, sizeof(struct player_record_0) * (history_main_data.data_v1.player_records_len - 1 - player_find_return.index));
-            }
-
-            memcpy(
-                history_main_data.data_v1.player_records + player_find_return.index,
-                &(struct player_record_0)
-                {
-                    .date_records = malloc(sizeof(struct date_record_0)),
-                    .date_records_len = 1,
-                    .notes = NULL,
-                    .record_messages = history_main_data.data_v1.default_record_messages,
-                    .sid3e = pinfo->sid3e
-                },
-                sizeof(struct player_record_0)
-            );
-
-            memcpy(
-                history_main_data.data_v1.player_records[player_find_return.index].date_records,
-                &(struct date_record_0)
-                {
-                    .date = history_main_data.data_v1.current_date,
-                    .encounter_count = 0,
-                    .messages = NULL,
-                    .messages_len = 0
-                },
-                sizeof(struct date_record_0)
-            );
-
-            history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len = (uint8_t) strlen(pinfo->name);
-            history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name = strcpy(malloc(history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len + 1), pinfo->name);
-        }
-        break; case array_manip_find_status_start:
-        {
-            fprintf(stderr, "PLAYER START: 0/%" PRIu32 "\n", history_main_data.data_v1.player_records_len); // REMOVE
-            PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
-
-            memmove(history_main_data.data_v1.player_records + 1, history_main_data.data_v1.player_records, sizeof(struct player_record_0) * (history_main_data.data_v1.player_records_len - 1));
-
-            memcpy(
-                history_main_data.data_v1.player_records,
-                &(struct player_record_0)
-                {
-                    .date_records = malloc(sizeof(struct date_record_0)),
-                    .date_records_len = 1,
-                    .notes = NULL,
-                    .record_messages = history_main_data.data_v1.default_record_messages,
-                    .sid3e = pinfo->sid3e
-                },
-                sizeof(struct player_record_0)
-            );
-
-            memcpy(
-                history_main_data.data_v1.player_records[0].date_records,
-                &(struct date_record_0)
-                {
-                    .date = history_main_data.data_v1.current_date,
-                    .encounter_count = 0,
-                    .messages = NULL,
-                    .messages_len = 0
-                },
-                sizeof(struct date_record_0)
-            );
-
-            history_main_data.data_v1.player_records[0].date_records[0].name_len = (uint8_t) strlen(pinfo->name);
-            history_main_data.data_v1.player_records[0].date_records[0].name = strcpy(malloc(history_main_data.data_v1.player_records[player_find_return.index].date_records[0].name_len + 1), pinfo->name);
+            ++relevant_date->encounter_count;
         }
     }
 }
 
 void history_print_record(const uint32_t requested_sid3e)
 {
-    const struct array_manip_find_return find_return = array_manip_find(&requested_sid3e, history_main_data.data_v1.player_records, sizeof(struct player_record_0), history_main_data.data_v1.player_records_len, (array_manip_find_compare_t) compare_sid3e_player_sid3e);
-    if (find_return.status == array_manip_find_status_found)
-    {
-        printf("Records for requested player [U:1:%" PRIu32 "]:\n", requested_sid3e);
-
-        if (history_main_data.data_v1.player_records[find_return.index].notes)
-        {
-            printf(LTAB "Notes:\n" LTAB LTAB "%s", history_main_data.data_v1.player_records[find_return.index].notes);
-        }
-
-        for (uint_fast32_t date_index = 0; date_index < history_main_data.data_v1.player_records[find_return.index].date_records_len; ++date_index)
-        {
-            printf(LTAB);
-            time_manip_print_ued(stdout, history_main_data.data_v1.player_records[find_return.index].date_records[date_index].date);
-            printf(":\n");
-
-            printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", history_main_data.data_v1.player_records[find_return.index].date_records[date_index].encounter_count + 1);
-            printf(LTAB LTAB "Name: \"%s\"\n", history_main_data.data_v1.player_records[find_return.index].date_records[date_index].name);
-
-            if (history_main_data.data_v1.player_records[find_return.index].record_messages && history_main_data.data_v1.player_records[find_return.index].date_records[date_index].messages)
-            {
-                printf(LTAB LTAB "Messages:\n");
-                for (size_t msg_i = 0; msg_i < history_main_data.data_v1.player_records[find_return.index].date_records[date_index].messages_len; ++msg_i)
-                {
-                    printf(LTAB LTAB LTAB "%s\n", history_main_data.data_v1.player_records[find_return.index].date_records[date_index].messages[msg_i]);
-                }
-            }
-        }
-    }
-    else
+    const struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    if (requested_player == NULL)
     {
         printf(ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
+    }
+
+    printf("Records for requested player [U:1:%" PRIu32 "]:\n", requested_sid3e);
+
+    if (requested_player->notes)
+    {
+        printf(LTAB "Notes:\n" LTAB LTAB "%s", requested_player->notes);
+    }
+
+    for (uint_fast32_t date_index = 0; date_index < requested_player->date_records_len; ++date_index)
+    {
+        printf(LTAB);
+        time_manip_print_ued(stdout, requested_player->date_records[date_index].date);
+        printf(":\n");
+
+        printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", requested_player->date_records[date_index].encounter_count + 1);
+        printf(LTAB LTAB "Name: \"%s\"\n", requested_player->date_records[date_index].name);
+
+        if (requested_player->record_messages && requested_player->date_records[date_index].messages)
+        {
+            printf(LTAB LTAB "Messages:\n");
+            for (size_t msg_i = 0; msg_i < requested_player->date_records[date_index].messages_len; ++msg_i)
+            {
+                printf(LTAB LTAB LTAB "%s\n", requested_player->date_records[date_index].messages[msg_i]);
+            }
+        }
     }
 }
 
@@ -750,7 +669,7 @@ void history_print_records(const char *const name)
             {
                 record_found = true;
                 history_print_record(history_main_data.data_v1.player_records[player_i].sid3e);
-                continue;
+                break;
             }
         }
     }
@@ -761,10 +680,10 @@ void history_print_records(const char *const name)
     }
 }
 
-void history_edit_notes(uint32_t requested_sid3e)
+void history_edit_notes(const uint32_t requested_sid3e)
 {
-    const struct array_manip_find_return find_return = array_manip_find(&requested_sid3e, history_main_data.data_v1.player_records, sizeof(struct player_record_0), history_main_data.data_v1.player_records_len, (array_manip_find_compare_t) compare_sid3e_player_sid3e);
-    if (find_return.status == array_manip_find_status_found)
+    struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    if (NULL == requested_player)
     {
         fprintf(stderr, ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
         return;
@@ -781,9 +700,9 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    if (history_main_data.data_v1.player_records[find_return.index].notes)
+    if (requested_player->notes)
     {
-        fputs(history_main_data.data_v1.player_records[find_return.index].notes, write);
+        fputs(requested_player->notes, write);
         fputc('\n', write);
     }
 
@@ -810,26 +729,19 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    // BUFF_TODO
-    int input;
-    size_t notes_len = 0;
-    while ((input = fgetc(read)) != EOF)
-    {
-        prealloc(history_main_data.data_v0.player_records[find_return.index].notes, notes_len + 1);
-        history_main_data.data_v0.player_records[find_return.index].notes[notes_len++] = (char) input;
-    }
+    const size_t notes_len = file_io_buffered_input(read, &requested_player->notes, NULL, 0);
 
     // If user entered nothing/deleted all notes, free and set to NULL
     if (notes_len == 0)
     {
-        free(history_main_data.data_v1.player_records[find_return.index].notes);
-        history_main_data.data_v1.player_records[find_return.index].notes = NULL;
+        free(requested_player->notes);
+        requested_player->notes = NULL;
     }
-    else if (history_main_data.data_v1.player_records[find_return.index].notes[notes_len - 2] != '\n')
+    else if (requested_player->notes[notes_len - 2] != '\n')
     {
-        PREALLOC(history_main_data.data_v1.player_records[find_return.index].notes, notes_len + 1);
-        history_main_data.data_v1.player_records[find_return.index].notes[notes_len - 1] = '\n';
-        history_main_data.data_v1.player_records[find_return.index].notes[notes_len] = '\0';
+        PREALLOC(requested_player->notes, notes_len + 1);
+        requested_player->notes[notes_len - 1] = '\n';
+        requested_player->notes[notes_len] = '\0';
     }
 
     if (fclose(read))
@@ -855,34 +767,34 @@ void history_add_message(const uint32_t requested_sid3e, const char *const messa
 {
     TF2_PLAYED_WITH_DEBUG_LOGF("Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, message);
 
-    const struct array_manip_find_return player_find_return = array_manip_find(&requested_sid3e, history_main_data.data_v1.player_records, sizeof(struct player_record_0), history_main_data.data_v1.player_records_len, (array_manip_find_compare_t) compare_sid3e_player_sid3e);
-    if (player_find_return.status != array_manip_find_status_found)
+    struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    if (NULL == requested_player)
     {
         TF2_PLAYED_WITH_DEBUG_LOGF("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
         return;
     }
-    else if (!history_main_data.data_v1.player_records[player_find_return.index].record_messages)
+    else if (!requested_player->record_messages)
     {
         return;
     }
 
-    const struct array_manip_find_return date_find_return = array_manip_find(&history_main_data.data_v1.current_date, history_main_data.data_v1.player_records[player_find_return.index].date_records, sizeof(struct date_record_0), history_main_data.data_v1.player_records[player_find_return.index].date_records_len, (array_manip_find_compare_t) compare_date_player_date);
-    if (date_find_return.status != array_manip_find_status_found)
+    struct date_record_0 *const requested_date = bsearch(&history_main_data.data_v1.current_date, requested_player->date_records, requested_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_date_record_date);
+    if (NULL == requested_date)
     {
-        TF2_PLAYED_WITH_DEBUG_INSERT
-        (
+        #ifdef TF2_PLAYED_WITH_DEBUG
             fputs(ANSI_RED "LOG: Current date ", stderr);
             time_manip_print_ued(stderr, history_main_data.data_v1.current_date);
             fprintf(stderr, " not found while adding message \"%s\".\n" ANSI_RESET, message);
-        )
+        #endif
+
         return;
     }
 
     const size_t message_len = strlen(message) + 1;
 
-    PREALLOC(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages, ++history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len);
-    history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages[history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len - 1] = malloc(sizeof(char) * message_len);
-    memcpy(history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages[history_main_data.data_v1.player_records[player_find_return.index].date_records[date_find_return.index].messages_len - 1], message, message_len);
+    PREALLOC(requested_date->messages, ++requested_date->messages_len);
+    requested_date->messages[requested_date->messages_len - 1] = malloc(sizeof(char) * message_len);
+    memcpy(requested_date->messages[requested_date->messages_len - 1], message, message_len);
 
     return;
 }

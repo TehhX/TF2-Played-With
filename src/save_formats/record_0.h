@@ -1,11 +1,11 @@
-#ifndef SAVE_FORMATS_PLAYER_RECORD_0_H
-#define SAVE_FORMATS_PLAYER_RECORD_0_H
+#ifndef SAVE_FORMATS_RECORD_0_H
+#define SAVE_FORMATS_RECORD_0_H
 
 /*
-    save_formats/player_record_0.h
-    -------------------------------
+    save_formats/record_0.h
+    -----------------------
 
-    Contains first struct versions of player and date records used in save versions 0, 1
+    Contains first struct versions of player and date records
 */
 
 #include "stdint.h"
@@ -37,4 +37,4 @@ struct player_record_0
     struct date_record_0 *date_records;
 };
 
-#endif // SAVE_FORMATS_PLAYER_RECORD_0_H
+#endif // SAVE_FORMATS_RECORD_0_H
