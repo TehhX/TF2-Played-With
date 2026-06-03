@@ -526,30 +526,22 @@ HYPER_MACRO void initialize_player_record(struct player_record_0 *const new_play
     initialize_date_record(new_player_record, 0, pinfo->name);
 }
 
-static int compare_player_sid3e_player_sid3e(const struct player_record_0 *const a, const struct player_record_0 *const b)
+static int _compare_player_records(const struct player_record_0 *const a, const struct player_record_0 *const b)
+#define compare_player_records ((__compar_fn_t) _compare_player_records)
 {
     return THREE_WAY_COMPARISON(a->sid3e, b->sid3e);
 }
 
-static int compare_sid3e_player_sid3e(const uint32_t *const current_sid3e, const struct player_record_0 *const player_record)
-{
-    return THREE_WAY_COMPARISON(*current_sid3e, player_record->sid3e);
-}
-
-static int compare_date_record_date_date_record_date(const struct date_record_0 *const a, const struct date_record_0 *const b)
+static int _compare_date_records(const struct date_record_0 *const a, const struct date_record_0 *const b)
+#define compare_date_records ((__compar_fn_t) _compare_date_records)
 {
     return THREE_WAY_COMPARISON(a->date, b->date);
-}
-
-static int compare_date_date_record_date(const uint64_t *const current_date, const struct date_record_0 *const date_record)
-{
-    return THREE_WAY_COMPARISON(*current_date, date_record->date);
 }
 
 void history_add_record(const struct player_info *const pinfo)
 {
     // REMOVE START
-    // Print list
+    Print list
     {
         for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
         {
@@ -596,23 +588,23 @@ void history_add_record(const struct player_info *const pinfo)
 
     TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
 
-    struct player_record_0 *relevant_player = bsearch(&pinfo->sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    struct player_record_0 *relevant_player = bsearch(&(struct player_record_0){ .sid3e = pinfo->sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
     if (NULL == relevant_player)
     {
         PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
         initialize_player_record(history_main_data.data_v1.player_records + history_main_data.data_v1.player_records_len - 1, pinfo);
 
-        qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_player_sid3e_player_sid3e);
+        qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
     }
     else
     {
-        struct date_record_0 *relevant_date = bsearch(&history_main_data.data_v1.current_date, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_date_record_date);
+        struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
         if (NULL == relevant_date)
         {
             PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
             initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
 
-            qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_record_date_date_record_date);
+            qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
         }
         else
         {
@@ -623,7 +615,7 @@ void history_add_record(const struct player_info *const pinfo)
 
 void history_print_record(const uint32_t requested_sid3e)
 {
-    const struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    const struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
     if (requested_player == NULL)
     {
         printf(ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
@@ -682,7 +674,7 @@ void history_print_records(const char *const name)
 
 void history_edit_notes(const uint32_t requested_sid3e)
 {
-    struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
     if (NULL == requested_player)
     {
         fprintf(stderr, ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
@@ -767,7 +759,7 @@ void history_add_message(const uint32_t requested_sid3e, const char *const messa
 {
     TF2_PLAYED_WITH_DEBUG_LOGF("Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, message);
 
-    struct player_record_0 *const requested_player = bsearch(&requested_sid3e, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) compare_sid3e_player_sid3e);
+    struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
     if (NULL == requested_player)
     {
         TF2_PLAYED_WITH_DEBUG_LOGF("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
@@ -778,7 +770,7 @@ void history_add_message(const uint32_t requested_sid3e, const char *const messa
         return;
     }
 
-    struct date_record_0 *const requested_date = bsearch(&history_main_data.data_v1.current_date, requested_player->date_records, requested_player->date_records_len, sizeof(struct date_record_0), (__compar_fn_t) compare_date_date_record_date);
+    struct date_record_0 *const requested_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, requested_player->date_records, requested_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
     if (NULL == requested_date)
     {
         #ifdef TF2_PLAYED_WITH_DEBUG
