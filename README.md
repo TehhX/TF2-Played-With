@@ -28,6 +28,10 @@ Steam has a `Recently Played With` tab under friends, making it seem like this i
 
 As TF2PW is a command-line-interface **only** application, make sure you're running it from a terminal, eg. command prompt on Windows, or any terminal emulator on Linux.
 
+### (Linux Only) Error while loading shared libraries: libcider.so
+
+Make sure the provided `libcider.so` file is in your PATH, eg. `/usr/lib/libcider.so`.
+
 ### Editing player record notes isn't working in some way
 
 **Handy flowchart:**
