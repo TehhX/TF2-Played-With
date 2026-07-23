@@ -541,7 +541,7 @@ static int _compare_date_records(const struct date_record_0 *const a, const stru
 void history_add_record(const struct player_info *const pinfo)
 {
     // REMOVE START
-    Print list
+    // Print list
     {
         for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
         {

@@ -37,8 +37,8 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_i].record_messages);
 
         // IMMED_TODO START: Reset back to buffering solution, seems to have had an error which impedes my current work
-        save_data->player_records[player_records_i].notes = NULL;
-        if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_records_i].notes, "", 1))
+        save_data->player_records[player_i].notes = NULL;
+        if (0 == file_io_buffered_input(input_file_ptr, &save_data->player_records[player_i].notes, "", 1))
         {
             free(save_data->player_records[player_i].notes);
             save_data->player_records[player_i].notes = NULL;
