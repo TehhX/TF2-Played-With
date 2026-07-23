@@ -59,7 +59,7 @@
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION)
 
     // `OFF` When debugging, printf's MSG. Else, no-op
-    #define TF2_PLAYED_WITH_DEBUG_LOGF(MSG, ...) (void)
+    #define TF2_PLAYED_WITH_DEBUG_LOGF(MSG, ...)
 
     // `OFF` When debugging, puts's MSG. Else, no-op
     #define TF2_PLAYED_WITH_DEBUG_LOGS(MSG) fputs(MSG "\n", stderr)

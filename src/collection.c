@@ -253,8 +253,6 @@ static void parse_log(FILE *file_stream, const bool collection_type, struct pars
     }
 
     free(line_buf);
-    names_free(parse_info);
-    free(parse_info->player_info_arr);
 }
 
 void *_collection_read_live_routine(struct collection_read_live_routine_params *params)
@@ -263,9 +261,10 @@ void *_collection_read_live_routine(struct collection_read_live_routine_params *
 
     params->running = true;
 
-    for (struct parse_info live_parse_info = { .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL }; params->running; )
+    struct parse_info parse_info = { .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL };
+    while (params->running)
     {
-        parse_log(params->input_file, COLLECTION_LIVE, &live_parse_info);
+        parse_log(params->input_file, COLLECTION_LIVE, &parse_info);
 
         // Will be EOF at this point, must be cleared
         clearerr(params->input_file);
@@ -274,6 +273,9 @@ void *_collection_read_live_routine(struct collection_read_live_routine_params *
     }
 
     params->running = false;
+
+    names_free(&parse_info);
+    free(parse_info.player_info_arr);
 
     return NULL;
 }
@@ -294,7 +296,11 @@ void collection_read_archived(const char *collection_fullname)
 
     history_set_date(time_manip_ues2ued(cider_modification_date_file(collection_fullname)));
 
-    parse_log(input_file_ptr, COLLECTION_ARCHIVE, &(struct parse_info){ .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL });
+    struct parse_info parse_info = { .len = 0, .treat_next_match_as_current = false, .player_info_arr = NULL };
+    parse_log(input_file_ptr, COLLECTION_ARCHIVE, &parse_info);
+
+    names_free(&parse_info);
+    free(parse_info.player_info_arr);
 
     if (fclose(input_file_ptr))
     {
