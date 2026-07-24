@@ -11,6 +11,7 @@ set(SRC
     history
     interactive
     main
+    sorted_find_insert
     steamid_manip
     user_input
 )

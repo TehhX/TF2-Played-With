@@ -4,6 +4,7 @@
 /*
     common.h
     --------
+
     Contains definitions to be used in *all* files contained within this project
 */
 
@@ -112,6 +113,9 @@
 
 // Proper realloc without repeated code
 #define PREALLOC(PTR, LEN) PTR = realloc(PTR, sizeof(*(PTR)) * (LEN))
+
+// Proper realloc without repeated code, asks for element size instead of assuming *(PTR)
+#define PREALLOCS(PTR, LEN, SIZE) PTR = realloc(PTR, (SIZE) * (LEN))
 
 // Copy string `S` to heap
 #define STRING_DEEP_COPY(S) strcpy(malloc(strlen(S) + 1), S)

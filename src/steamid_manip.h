@@ -4,6 +4,7 @@
 /*
     steamid_manip.h
     ---------------
+
     Contains utilities for manipulating different forms of STEAMID and player names
 */
 

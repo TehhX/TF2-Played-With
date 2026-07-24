@@ -541,19 +541,6 @@ static int _compare_date_records(const struct date_record_0 *const a, const stru
 void history_add_record(const struct player_info *const pinfo)
 {
     // REMOVE START
-    // Print list
-    {
-        for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
-        {
-            fprintf(stderr, "PLAYER SID3E: %10" PRIu32 "\n", history_main_data.data_v1.player_records[player_i].sid3e);
-
-            for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
-            {
-                fprintf(stderr, LTAB "DATE DATE: %5" PRIu16 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date);
-            }
-        }
-    }
-
     // Check that list is sorted
     {
         uint_fast32_t last_sid3e = 0;

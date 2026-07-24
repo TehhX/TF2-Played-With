@@ -1,0 +1,59 @@
+#include "common.h"
+#include "sorted_find_insert.h"
+
+#include "string.h"
+
+void sorted_find_insert(void **const array, size_t *const array_len, const size_t element_size, const void *const value, sorted_find_insert_action_t on_find, sorted_find_insert_action_t on_insert, const __compar_fn_t compare)
+{
+    if (*array_len == 0)
+    {
+        memcpy(*array = malloc(element_size), value, element_size);
+        on_insert(*array, element_size, value);
+        ++*array_len;
+        return;
+    }
+    else if (compare(*array, value) > 0)
+    {
+        PREALLOCS(*array, ++*array_len, element_size);
+        memmove(*array + element_size, *array, element_size * (*array_len - 1));
+        on_insert(*array, element_size, value);
+        return;
+    }
+    else if (compare(*array + element_size * (*array_len - 1), value) < 0)
+    {
+        PREALLOCS(*array, ++*array_len, element_size);
+        on_insert(*array + element_size * (*array_len - 1), element_size, value);
+        return;
+    }
+
+    size_t low = 0, high = *array_len - 1;
+    while (low < high)
+    {
+        const size_t mid = low + (high - low) / 2;
+        if (compare(*array + element_size * mid, value) == 0)
+        {
+            on_find(*array + element_size * mid, element_size, value);
+            return;
+        }
+        else if (compare(*array + element_size * mid, value) < 0)
+        {
+            low = mid + 1;
+        }
+        else // Implicitly compare(*array + element_size * mid, value) > 0
+        {
+            high = mid - 1;
+        }
+    }
+
+    if (compare(*array + element_size * low, value) == 0)
+    {
+        on_find(*array + element_size * low, element_size, value);
+        return;
+    }
+    else
+    {
+        PREALLOCS(*array, ++*array_len, element_size);
+        memmove(*array + element_size * (low + 1), *array + element_size * low, element_size * (*array_len - low - 1));
+        on_insert(*array + element_size * low, element_size, value);
+    }
+}

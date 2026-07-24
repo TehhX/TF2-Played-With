@@ -4,6 +4,7 @@
 /*
 	history.h
 	---------
+
 	Contains functionality for saving and loading local history file, as well as input/output for history.
 */
 

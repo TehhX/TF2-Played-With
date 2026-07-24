@@ -3,7 +3,8 @@
 
 /*
 	collection.h
-	-------------
+	------------
+
 	Contains functionality for collecting data into history memory from log files.
 */
 
