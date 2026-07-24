@@ -1,11 +1,14 @@
 #include "history.h"
 
 #include "common.h"
+#include "player_info.h"
+#include "save_formats/record_0.h"
 #include "time_manip.h"
 #include "steamid_manip.h"
 #include "user_input.h"
 #include "save_formats/main.h"
 #include "file_io.h"
+#include "sorted_find_insert.h"
 
 #include "cider.h"
 
@@ -495,23 +498,23 @@ void history_set_date(const uint16_t new_date)
 }
 
 // IMMED_TODO: Check that initializing functions are required
-HYPER_MACRO void initialize_date_record(const struct player_record_0 *const player_record, const uint_fast32_t date_i, const char *const name)
+HYPER_MACRO void initialize_date_record(struct date_record_0 *const relevant_date, const char *const name, const bool is_first_date_record)
 {
-    player_record->date_records[date_i].date            = history_main_data.data_v1.current_date;
-    player_record->date_records[date_i].encounter_count = 0;
-    player_record->date_records[date_i].messages        = NULL;
-    player_record->date_records[date_i].messages_len    = 0;
+    relevant_date->date            = history_main_data.data_v1.current_date;
+    relevant_date->encounter_count = 0;
+    relevant_date->messages        = NULL;
+    relevant_date->messages_len    = 0;
 
-    if (date_i > 0 && !strcmp(player_record->date_records[date_i - 1].name, name))
+    if (!is_first_date_record && !strcmp((relevant_date - 1)->name, name))
     {
-        player_record->date_records[date_i].name = player_record->date_records[date_i - 1].name;
-        player_record->date_records[date_i].name_len = 0;
+        relevant_date->name = (relevant_date - 1)->name;
+        relevant_date->name_len = 0;
     }
     else
     {
-        player_record->date_records[date_i].name_len = strlen(name);
-        player_record->date_records[date_i].name = memcpy(malloc(player_record->date_records[date_i].name_len + 1), name, player_record->date_records[date_i].name_len);
-        player_record->date_records[date_i].name[player_record->date_records[date_i].name_len] = '\0';
+        relevant_date->name_len = strlen(name);
+        relevant_date->name = memcpy(malloc(relevant_date->name_len + 1), name, relevant_date->name_len);
+        relevant_date->name[relevant_date->name_len] = '\0';
     }
 }
 
@@ -523,7 +526,7 @@ HYPER_MACRO void initialize_player_record(struct player_record_0 *const new_play
     new_player_record->record_messages  = history_main_data.data_v1.default_record_messages;
     new_player_record->sid3e            = pinfo->sid3e;
 
-    initialize_date_record(new_player_record, 0, pinfo->name);
+    initialize_date_record(new_player_record->date_records, pinfo->name, true);
 }
 
 static int _compare_player_records(const struct player_record_0 *const a, const struct player_record_0 *const b)
@@ -536,6 +539,64 @@ static int _compare_date_records(const struct date_record_0 *const a, const stru
 #define compare_date_records ((__compar_fn_t) _compare_date_records)
 {
     return THREE_WAY_COMPARISON(a->date, b->date);
+}
+
+struct date_records_find_insert_params
+{
+    const struct player_record_0 *const relevant_player;
+    const char *const player_name;
+};
+
+static void _date_records_insert(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
+#define date_records_insert ((sorted_find_insert_action_t) _date_records_insert)
+{
+    // IMPL_TODO
+        // PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
+        // initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
+        // qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+
+    initialize_date_record(array_element, params->player_name, array_element == params->relevant_player->date_records);
+}
+
+static void _date_records_find(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
+#define date_records_find ((sorted_find_insert_action_t) _date_records_find)
+{
+    // IMPL_TODO
+        // ++relevant_date->encounter_count;
+
+    ++array_element->encounter_count;
+}
+
+struct player_records_find_insert_params
+{
+    const struct player_info *const pinfo;
+};
+
+static void _player_records_insert(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
+#define player_records_insert ((sorted_find_insert_action_t) _player_records_insert)
+{
+    initialize_player_record(array_element, params->pinfo);
+}
+
+static void _player_records_find(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
+#define player_records_find ((sorted_find_insert_action_t) _player_records_find)
+{
+    // IMPL_TODO
+        // struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+        // if (NULL == relevant_date)
+        // {
+        //     PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
+        //     initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
+        //     qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+        // }
+        // else
+        // {
+        //     ++relevant_date->encounter_count;
+        // }
+
+    size_t date_records_len_temp = array_element->date_records_len;
+    sorted_find_insert(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, (void *) array_element->date_records, &date_records_len_temp, sizeof(struct date_record_0), date_records_find, date_records_insert, &(struct date_records_find_insert_params){ .relevant_player = array_element, .player_name = params->pinfo->name }, compare_date_records);
+    array_element->date_records_len = date_records_len_temp;
 }
 
 void history_add_record(const struct player_info *const pinfo)
@@ -572,32 +633,34 @@ void history_add_record(const struct player_info *const pinfo)
         }
     }
     // REMOVE END
-
     TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
 
-    struct player_record_0 *relevant_player = bsearch(&(struct player_record_0){ .sid3e = pinfo->sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
-    if (NULL == relevant_player)
-    {
-        PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
-        initialize_player_record(history_main_data.data_v1.player_records + history_main_data.data_v1.player_records_len - 1, pinfo);
+    // SORTED_INSERT_TODO
+    size_t player_records_len_temp = history_main_data.data_v1.player_records_len;
+    sorted_find_insert(&(struct player_record_0){ .sid3e = pinfo->sid3e }, (void *) &history_main_data.data_v1.player_records, &player_records_len_temp, sizeof(struct player_record_0), player_records_find, player_records_insert, &(struct player_records_find_insert_params){ .pinfo = pinfo }, compare_player_records);
+    history_main_data.data_v1.player_records_len = player_records_len_temp;
 
-        qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
-    }
-    else
-    {
-        struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-        if (NULL == relevant_date)
-        {
-            PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
-            initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
-
-            qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-        }
-        else
-        {
-            ++relevant_date->encounter_count;
-        }
-    }
+    // struct player_record_0 *relevant_player = bsearch(&(struct player_record_0){ .sid3e = pinfo->sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
+    // if (NULL == relevant_player)
+    // {
+    //     PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
+    //     initialize_player_record(history_main_data.data_v1.player_records + history_main_data.data_v1.player_records_len - 1, pinfo);
+    //     qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
+    // }
+    // else
+    // {
+    //     struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+    //     if (NULL == relevant_date)
+    //     {
+    //         PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
+    //         initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
+    //         qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+    //     }
+    //     else
+    //     {
+    //         ++relevant_date->encounter_count;
+    //     }
+    // }
 }
 
 void history_print_record(const uint32_t requested_sid3e)
