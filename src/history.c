@@ -582,7 +582,7 @@ void history_add_record(const struct player_info *const pinfo)
 {
     TF2_PLAYED_WITH_DEBUG_INSERT
     (
-        // Check that list is sorted, print list
+        // Check that list is sorted
         {
             uint_fast32_t last_sid3e = 0;
             for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
