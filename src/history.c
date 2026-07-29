@@ -556,6 +556,7 @@ static void _date_records_insert(struct date_record_0 *const array_element, stru
         // qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
 
     initialize_date_record(array_element, params->player_name, array_element == params->relevant_player->date_records);
+    fprintf(stderr, "Inserted date.\n");
 }
 
 static void _date_records_find(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
@@ -565,6 +566,7 @@ static void _date_records_find(struct date_record_0 *const array_element, struct
         // ++relevant_date->encounter_count;
 
     ++array_element->encounter_count;
+    fprintf(stderr, "Found date.\n");
 }
 
 struct player_records_find_insert_params
@@ -576,6 +578,7 @@ static void _player_records_insert(struct player_record_0 *const array_element, 
 #define player_records_insert ((sorted_find_insert_action_t) _player_records_insert)
 {
     initialize_player_record(array_element, params->pinfo);
+    fprintf(stderr, "Inserted player.\n");
 }
 
 static void _player_records_find(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
@@ -597,16 +600,19 @@ static void _player_records_find(struct player_record_0 *const array_element, st
     size_t date_records_len_temp = array_element->date_records_len;
     sorted_find_insert(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, (void *) array_element->date_records, &date_records_len_temp, sizeof(struct date_record_0), date_records_find, date_records_insert, &(struct date_records_find_insert_params){ .relevant_player = array_element, .player_name = params->pinfo->name }, compare_date_records);
     array_element->date_records_len = date_records_len_temp;
+    fprintf(stderr, "Found player.\n");
 }
 
 void history_add_record(const struct player_info *const pinfo)
 {
     // REMOVE START
-    // Check that list is sorted
+    // Check that list is sorted, print list
     {
         uint_fast32_t last_sid3e = 0;
         for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
         {
+            fprintf(stderr, "%" PRIu32 ":\n", history_main_data.data_v1.player_records[player_i].sid3e);
+
             if (history_main_data.data_v1.player_records[player_i].sid3e < last_sid3e)
             {
                 fprintf(stderr, "Bad SID3E Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].sid3e, last_sid3e);
@@ -620,6 +626,8 @@ void history_add_record(const struct player_info *const pinfo)
             uint_fast16_t last_date = 0;
             for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
             {
+                // fprintf(stderr, LTAB "%" PRIu32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date);
+
                 if (history_main_data.data_v1.player_records[player_i].date_records[date_i].date < last_date)
                 {
                     fprintf(stderr, "Bad Date Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date, last_date);
