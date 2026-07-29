@@ -550,20 +550,12 @@ struct date_records_find_insert_params
 static void _date_records_insert(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
 #define date_records_insert ((sorted_find_insert_action_t) _date_records_insert)
 {
-    // IMPL_TODO
-        // PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
-        // initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
-        // qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-
     initialize_date_record(array_element, params->player_name, array_element == params->relevant_player->date_records);
 }
 
 static void _date_records_find(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
 #define date_records_find ((sorted_find_insert_action_t) _date_records_find)
 {
-    // IMPL_TODO
-        // ++relevant_date->encounter_count;
-
     ++array_element->encounter_count;
 }
 
@@ -581,19 +573,6 @@ static void _player_records_insert(struct player_record_0 *const array_element, 
 static void _player_records_find(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
 #define player_records_find ((sorted_find_insert_action_t) _player_records_find)
 {
-    // IMPL_TODO
-        // struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-        // if (NULL == relevant_date)
-        // {
-        //     PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
-        //     initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
-        //     qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-        // }
-        // else
-        // {
-        //     ++relevant_date->encounter_count;
-        // }
-
     size_t date_records_len_temp = array_element->date_records_len;
     sorted_find_insert(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, (void *) &array_element->date_records, &date_records_len_temp, sizeof(struct date_record_0), date_records_find, date_records_insert, &(struct date_records_find_insert_params){ .relevant_player = array_element, .player_name = params->pinfo->name }, compare_date_records);
     array_element->date_records_len = date_records_len_temp;
@@ -601,70 +580,45 @@ static void _player_records_find(struct player_record_0 *const array_element, st
 
 void history_add_record(const struct player_info *const pinfo)
 {
-    // REMOVE START
-    // Check that list is sorted, print list
-    {
-        uint_fast32_t last_sid3e = 0;
-        for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        // Check that list is sorted, print list
         {
-            // fprintf(stderr, "%" PRIu32 ":\n", history_main_data.data_v1.player_records[player_i].sid3e);
-
-            if (history_main_data.data_v1.player_records[player_i].sid3e < last_sid3e)
+            uint_fast32_t last_sid3e = 0;
+            for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
             {
-                fprintf(stderr, "Bad SID3E Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].sid3e, last_sid3e);
-                abort();
-            }
-            else
-            {
-                last_sid3e = history_main_data.data_v1.player_records[player_i].sid3e;
-            }
-
-            uint_fast16_t last_date = 0;
-            for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
-            {
-                // fprintf(stderr, LTAB "%" PRIu32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date);
-
-                if (history_main_data.data_v1.player_records[player_i].date_records[date_i].date < last_date)
+                if (history_main_data.data_v1.player_records[player_i].sid3e < last_sid3e)
                 {
-                    fprintf(stderr, "Bad Date Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date, last_date);
+                    fprintf(stderr, "Bad SID3E Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].sid3e, last_sid3e);
                     abort();
                 }
                 else
                 {
-                    last_date = history_main_data.data_v1.player_records[player_i].date_records[date_i].date;
+                    last_sid3e = history_main_data.data_v1.player_records[player_i].sid3e;
+                }
+
+                uint_fast16_t last_date = 0;
+                for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
+                {
+                    if (history_main_data.data_v1.player_records[player_i].date_records[date_i].date < last_date)
+                    {
+                        fprintf(stderr, "Bad Date Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date, last_date);
+                        abort();
+                    }
+                    else
+                    {
+                        last_date = history_main_data.data_v1.player_records[player_i].date_records[date_i].date;
+                    }
                 }
             }
         }
-    }
-    // REMOVE END
+    )
+
     TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
 
-    // SORTED_INSERT_TODO
     size_t player_records_len_temp = history_main_data.data_v1.player_records_len;
     sorted_find_insert(&(struct player_record_0){ .sid3e = pinfo->sid3e }, (void *) &history_main_data.data_v1.player_records, &player_records_len_temp, sizeof(struct player_record_0), player_records_find, player_records_insert, &(struct player_records_find_insert_params){ .pinfo = pinfo }, compare_player_records);
     history_main_data.data_v1.player_records_len = player_records_len_temp;
-
-    // struct player_record_0 *relevant_player = bsearch(&(struct player_record_0){ .sid3e = pinfo->sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
-    // if (NULL == relevant_player)
-    // {
-    //     PREALLOC(history_main_data.data_v1.player_records, ++history_main_data.data_v1.player_records_len);
-    //     initialize_player_record(history_main_data.data_v1.player_records + history_main_data.data_v1.player_records_len - 1, pinfo);
-    //     qsort(history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
-    // }
-    // else
-    // {
-    //     struct date_record_0 *relevant_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-    //     if (NULL == relevant_date)
-    //     {
-    //         PREALLOC(relevant_player->date_records, ++relevant_player->date_records_len);
-    //         initialize_date_record(relevant_player, relevant_player->date_records_len - 1, pinfo->name);
-    //         qsort(relevant_player->date_records, relevant_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
-    //     }
-    //     else
-    //     {
-    //         ++relevant_date->encounter_count;
-    //     }
-    // }
 }
 
 void history_print_record(const uint32_t requested_sid3e)
