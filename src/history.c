@@ -65,6 +65,7 @@ HYPER_MACRO bool history_wizard()
     }
 
     history_main_data.save_version = SAVE_FORMAT_VERSION_LATEST;
+    history_free();
 
     char *user_input = NULL;
 
@@ -295,9 +296,6 @@ bool history_load(const char *const passed_history_fullname)
                 return true;
             }
 
-            // IMMED_TODO: Shouldn't this go inside wizard function, after setting save version to latest?
-            history_free();
-
             return history_save(history_fullname);
         }
         else
@@ -497,7 +495,6 @@ void history_set_date(const uint16_t new_date)
     )
 }
 
-// IMMED_TODO: Check that initializing functions are required
 HYPER_MACRO void initialize_date_record(struct date_record_0 *const relevant_date, const char *const name, const bool is_first_date_record)
 {
     relevant_date->date            = history_main_data.data_v1.current_date;

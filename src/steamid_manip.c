@@ -97,7 +97,6 @@ uint32_t sidm_parse_sid3e(const char *const string_input, const enum Esteamid_ty
         {
             return parse_exp_sid64(string_input);
         }
-        // TODO: Stress test unknown capabilities
         break; case Esteamid_type_unknown:
         {
             // STEAMID3
