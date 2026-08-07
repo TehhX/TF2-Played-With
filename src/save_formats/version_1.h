@@ -42,7 +42,6 @@
 #include "record_0.h"
 
 #include "stdint.h"
-#include "stdlib.h"
 #include "stdbool.h"
 #include "stdio.h"
 
@@ -55,8 +54,9 @@ struct save_format_1
 
     uint8_t default_record_messages;
 
-    uint8_t  tf2_filepath_len;
-       char *tf2_filepath;
+    // May contain more than 256 characters, though save files will only accept 256 character long paths sans /Team Fortress 2/ ('/' may be replaced by relevant delim)
+    int  tf2_filepath_len;
+    char *tf2_filepath;
 
     uint32_t player_records_len;
     struct player_record_0 *player_records;

@@ -13,8 +13,9 @@ bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file
     fwrite_one((uint8_t){ 1 });
     fwrite_one(save_data->user_sid3e);
     fwrite_one(save_data->default_record_messages);
-    fwrite_one(save_data->tf2_filepath_len);
-    fwrite_arr(save_data->tf2_filepath);
+
+    // IMMED_TODO: Write TF2 filepath and len
+
     fwrite_one(save_data->player_records_len);
 
     for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++player_i)
@@ -71,13 +72,8 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 {
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
-    fread_one(save_data->tf2_filepath_len);
 
-    save_data->tf2_filepath = malloc(save_data->tf2_filepath_len + 2);
-    fread_arr(save_data->tf2_filepath);
-    save_data->tf2_filepath[save_data->tf2_filepath_len] = CIDER_PATH_DELIM_C;
-    save_data->tf2_filepath[save_data->tf2_filepath_len + 1] = '\0';
-    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_filepath to \"%s\".\n", save_data->tf2_filepath);
+    // IMMED_TODO: Write TF2 filepath and len
 
     save_data->tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(save_data->tf2_filepath_len + 2), save_data->tf2_filepath, save_data->tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);
@@ -115,7 +111,7 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_i].date_records_len);
 
         TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast16_t last_date = 0;)
-        char *last_real_name;
+        TF2_PLAYED_WITH_DEBUG_INSERT(char *last_real_name);
         save_data->player_records[player_i].date_records = malloc(sizeof(*save_data->player_records[player_i].date_records) * save_data->player_records[player_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
         {

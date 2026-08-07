@@ -161,6 +161,8 @@ bool save_format_0_modernize(void *const save_data)
         return true;
     }
 
+    // IMMED_TODO: Modernize TF2 filepath
+
     qsort(new_data.player_records, new_data.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) player_record_0_compare);
     for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
     {

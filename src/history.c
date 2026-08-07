@@ -71,8 +71,9 @@ HYPER_MACRO bool history_wizard()
 
     while (user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL) == NULL || user_input[0] == '\0');
 
-    char *proposed_tf2_filepath = STRING_DEEP_COPY(user_input);
-    if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath)) == NULL)
+    const size_t proposed_tf2_filepath_len = strlen(user_input);
+    char *proposed_tf2_filepath = memcpy(malloc(proposed_tf2_filepath_len), user_input, proposed_tf2_filepath_len);
+    if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath, proposed_tf2_filepath_len)) == NULL)
     {
         free(proposed_tf2_filepath);
         free(user_input);
@@ -435,40 +436,58 @@ bool history_save(const char *const passed_history_fullname)
     return retval;
 }
 
-char *history_set_tf2_filepath(char *new_tf2_filepath)
+char *history_set_tf2_filepath(char *new_tf2_filepath, size_t new_tf2_filepath_len)
 {
-    // Length of tf2_filepath without trailing slash and/or null-terminator
-    size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
-
-    const bool had_trailing_delim = (new_tf2_filepath[new_tf2_filepath_len - 1] == CIDER_PATH_DELIM_C);
-
-    // Append trailing slash if doesn't exist
-    if (had_trailing_delim)
+    // Check if ends in trailing slash, if not, append
+    if (new_tf2_filepath[new_tf2_filepath_len - 1] != CIDER_PATH_DELIM_C)
     {
-        --new_tf2_filepath_len;
+        ++new_tf2_filepath_len;
+        PREALLOC(new_tf2_filepath, new_tf2_filepath_len + 1);
+        new_tf2_filepath[new_tf2_filepath_len - 1] = CIDER_PATH_DELIM_C;
+        new_tf2_filepath[new_tf2_filepath_len] = '\0';
     }
 
-    if (new_tf2_filepath_len > UINT8_MAX)
+    #define TF2_SEMINAME "Team Fortress 2" CIDER_PATH_DELIM_S
+    #define TF2_SEMINAME_LEN (sizeof(TF2_SEMINAME) - 1)
+
+    // Check if long enough to contain /Team Fortress 2/ ('/' replaced by relevant delim)
+    if (new_tf2_filepath_len < TF2_SEMINAME_LEN)
     {
-        fprintf(stderr, ANSI_RED "New TF2 filepath length is too long, is %zu, should be at most %zu.\n" ANSI_RESET, new_tf2_filepath_len, (size_t) UINT8_MAX);
-        return NULL;
-    }
+        // Not long enough, should append TF2 seminame
+        PREALLOC(new_tf2_filepath, (new_tf2_filepath_len += TF2_SEMINAME_LEN) + 1);
+        memcpy(new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME, TF2_SEMINAME_LEN);
+        new_tf2_filepath[new_tf2_filepath_len] = '\0';
 
-    if (!had_trailing_delim)
+        history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+        free(history_main_data.data_v1.tf2_filepath);
+        history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+        return new_tf2_filepath;
+    }
+    else
     {
-        PREALLOC(new_tf2_filepath, new_tf2_filepath_len + 2);
-        new_tf2_filepath[new_tf2_filepath_len] = CIDER_PATH_DELIM_C;
-        new_tf2_filepath[new_tf2_filepath_len + 1] = '\0';
+        // Long enough, check that it ends with TF2_SEMINAME
+        if (strncmp(TF2_SEMINAME, new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME_LEN))
+        {
+            // Doesn't end with it, append
+            PREALLOC(new_tf2_filepath, (new_tf2_filepath_len += TF2_SEMINAME_LEN) + 1);
+            memcpy(new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME, TF2_SEMINAME_LEN);
+            new_tf2_filepath[new_tf2_filepath_len] = '\0';
+
+            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+            free(history_main_data.data_v1.tf2_filepath);
+            history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+            return new_tf2_filepath;
+        }
+        else
+        {
+            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+
+            free(history_main_data.data_v1.tf2_filepath);
+            return (history_main_data.data_v1.tf2_filepath = new_tf2_filepath);
+        }
     }
-
-    free(history_main_data.data_v1.tf2_filepath);
-    history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
-
-    history_main_data.data_v1.tf2_filepath_len = (uint8_t) new_tf2_filepath_len;
-
-    TF2_PLAYED_WITH_DEBUG_LOGF("Setting tf2_filepath to \"%s\".\n", history_main_data.data_v1.tf2_filepath);
-
-    return history_main_data.data_v1.tf2_filepath;
 }
 
 const char *history_get_live_log_fullname()

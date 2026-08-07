@@ -6,11 +6,9 @@
 #include "collection.h"
 #include "user_input.h"
 
-#include "cider.h"
-
 #include "stdio.h"
 #include "string.h"
-#include "ctype.h"
+#include "stdlib.h"
 #include "pthread.h"
 
 // Change definition of strncasecmp if on Windows
@@ -179,7 +177,7 @@ void interactive_enter()
             {
                 char *specifier_start_heap = STRING_DEEP_COPY(specifier_start);
 
-                if ((specifier_start_heap = history_set_tf2_filepath(specifier_start_heap)) == NULL)
+                if ((specifier_start_heap = history_set_tf2_filepath(specifier_start_heap, strlen(specifier_start_heap))) == NULL)
                 {
                     fprintf(stderr, ANSI_RED "Failed to set TF2 filepath to \"%s\".\n" ANSI_RESET, specifier_start_heap);
                     free(specifier_start_heap);
