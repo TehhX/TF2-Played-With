@@ -4,6 +4,7 @@
 /*
     common.h
     --------
+
     Contains definitions to be used in *all* files contained within this project
 */
 
@@ -28,8 +29,8 @@
     #include "stdio.h"
     #include "stdlib.h"
 
-    // `ON`  Gets replaced with CONTENT
-    #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT) CONTENT
+    // `ON`  Gets replaced with whatever is placed within the parenthesis
+    #define TF2_PLAYED_WITH_DEBUG_INSERT(...) __VA_ARGS__
 
     // `ON`  Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION) if (CONDITION) abort()
@@ -50,10 +51,10 @@
     #define TF2_PLAYED_WITH_DEBUG_CHOOSE(DEB, REL) DEB
 
     // `OFF` A function acting as a glorified macro
-    #define HYPER_MACRO
+    #define HYPER_MACRO static
 #else
-    // `OFF` Gets replaced with CONTENT
-    #define TF2_PLAYED_WITH_DEBUG_INSERT(CONTENT)
+    // `OFF` Gets replaced with whatever is placed within the parenthesis
+    #define TF2_PLAYED_WITH_DEBUG_INSERT(...)
 
     // `OFF` Aborts the program if CONDITION
     #define TF2_PLAYED_WITH_DEBUG_ABORT_IF(CONDITION)
@@ -108,12 +109,18 @@
 #define ANSI_RESET_STDERR() ANSI_SET(stderr, ANSI_RESET)
 
 // Check that characters C1 and C2 match, regardless of capitalization
-#define ccasecmp(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
+#define CCASECOMP(C1, C2) (((C1) | 0x20) == ((C2) | 0x20))
 
 // Proper realloc without repeated code
-#define prealloc(PTR, LEN) PTR = realloc(PTR, (sizeof(*(PTR))) * (LEN))
+#define PREALLOC(PTR, LEN) PTR = realloc(PTR, sizeof(*(PTR)) * (LEN))
+
+// Proper realloc without repeated code, asks for element size instead of assuming *(PTR)
+#define PREALLOCS(PTR, LEN, SIZE) PTR = realloc(PTR, (SIZE) * (LEN))
 
 // Copy string `S` to heap
-#define string_deep_copy(S) strcpy(malloc(strlen(S) + 1), S)
+#define STRING_DEEP_COPY(S) strcpy(malloc(strlen(S) + 1), S)
+
+// Returns 1 if A > B, 0 if A == B, or -1 if A < B
+#define THREE_WAY_COMPARISON(A, B) (((A) >= (B)) ? ((A) > (B)) : -1)
 
 #endif // COMMON_H

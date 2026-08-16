@@ -6,7 +6,6 @@
     ---------------------
 
     Contains main definitions of all save format files, along with various definitions
-    ------------------------------------------------------------------------------------
 
     All save file formats will need to be convertible to the latest version by converting through each version individually, however the ability for a later format to be convertible to an earlier version is not required. A save function will only exist for the latest version, but load functions will exist for all versions. All versions which are *not* the latest will have a function to convert their data to the latest version. To illustrate this, an example:
         * Version 0
@@ -27,16 +26,22 @@
         * Update SAVE_FORMAT_VERSION_LATEST
         * Comment out save function from previously latest version
         * Add new .[hc] files for the new version, add load and save functions
+        * Change ../history.c::history_save(...) to use new save format saving function
+        * Change ../history.c::history_wizard(...) to populate new format
+        * Add new version struct to the union in struct save_format_data
 
     Example prototypes for each functionality:
         * Load: bool load(struct save_format_<V> *save_data, FILE *load_stream);
-            Accepts a save data pointer to write to, a file stream to load from, returns pointer to save_data if succeeded, else NULL
+            Loads the file from load_stream into save_data. Accepts a save data pointer to write to, a file stream to load from, returns pointer to save_data if succeeded, else NULL
 
         * Save: bool save(const struct save_format_<V> *save_data, FILE *save_stream);
-            Accepts a save data pointer to read from, a file stream to save to, returns true if failure occurred
+            Saves save_data to save_stream. Accepts a save data pointer to read from, a file stream to save to, returns true if failure occurred
 
-        * Conversion: bool modernize(struct save_format_<V> *data_input_output)
-            Accepts a save data pointer to both read the current data from and write new data to, returns true if failure occurred
+        * Conversion: bool modernize(void *data_input_output)
+            Converts save_format_<N> to save_format_<N + 1> in place. Obviously, will invalidate any save_format_<N> pointers to data_input_output, therefore best used with a union accepting all save format versions. Accepts a save data pointer to both read the current data from and write new data to, returns true if failure occurred
+
+        * Free: bool free(struct save_format_<V> *save_data)
+            Frees memory associated with save_data.
 
     The current format structure only allows for 256 [0, 255] unique format versions because it is only one unsigned byte. While it's likely the total amount of formats will not even come close to 256, it should be kept in mind if it does. Likely, another byte will be allocated, with a save format first byte value of 255 signifying a second byte should be checked eg. version 255 == 0xFF00, version 256 == 0xFF01, and so on
 
@@ -51,12 +56,13 @@
 #include "../common.h"
 #include "../history.h"
 #include "version_0.h"
+#include "version_1.h"
 
 // The header of every valid TF2PW file
 #define HEADER "TF2PW"
 
-// The latest available save format version and save function
-#define SAVE_FORMAT_VERSION_LATEST ((uint8_t) 0)
+// The latest available save format version
+#define SAVE_FORMAT_VERSION_LATEST ((uint8_t) 1)
 
 // Reads a single variable from input_file_ptr of size BYTES, places in VAR
 #define fread_one(VAR) fread(&VAR, sizeof(VAR), 1, input_file_ptr)
@@ -77,6 +83,7 @@ struct save_format_data
     union
     {
         struct save_format_0 data_v0;
+        struct save_format_1 data_v1;
     };
 };
 

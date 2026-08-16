@@ -4,6 +4,7 @@
 /*
     player_info.h
     -------------
+
     Contains definitions for relating a player's SID3E to their name. Has no accompanying .c file
 */
 

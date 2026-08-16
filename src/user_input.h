@@ -4,6 +4,7 @@
 /*
     user_input.h
     ------------
+
     Contains functionality for user input via the CLI
 */
 

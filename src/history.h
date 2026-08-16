@@ -4,14 +4,16 @@
 /*
 	history.h
 	---------
+
 	Contains functionality for saving and loading local history file, as well as input/output for history.
 */
 
 #include "player_info.h"
 
 #include "stdint.h"
-#include "stdlib.h"
 #include "stdbool.h"
+#include "stdint.h"
+#include "stdlib.h"
 
 // Various defs
 #define TF2PW_AUTOEXEC_SEMINAME TF2PW_CFG_SEMINAME "autoexec.cfg"
@@ -64,13 +66,17 @@ extern bool history_save(const char *history_fullname);
 extern void history_set_date(uint16_t new_date);
 
 /*
-	@brief Sets the live_log_location to a new fullname
+	@brief Sets the live_log_location to a new fullname. Will be standardized to the form `{...}/Team Fortress 2/`
 
-		@param new_tf2_filepath The new filepath. Should be free-able ie. on the heap. Its length should be at most UINT8_MAX without the trailing slash. If no trailing slash is present, will append one. Should not be used after calling this function unless repointed to return value as with `realloc(...)`
+		@param new_tf2_filepath The new filepath. Should be free-able ie. on the heap. Its length minus the trailing `/Team Fortress 2/` should be at most UINT8_MAX. If no trailing slash is present, will append one
+		@param new_tf2_filepath_len The length of the new filepath (excluding nullterm)
 
 		@returns NULL if failed, else potentially realloc'd pointer to `new_tf2_filepath`
+
+		@warning `new_tf2_filepath` should not be used after calling this function unless repointed to return value as with `realloc(...)`
+		@warning `new_tf2_filepath` will now belong to history, do not write to it after calling this function
 */
-extern char *history_set_tf2_filepath(char *new_tf2_filepath);
+extern char *history_set_tf2_filepath(char *new_tf2_filepath, const size_t new_tf2_filepath_len);
 
 /*
 	@brief Retrieves the live_log_location fullname

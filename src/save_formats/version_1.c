@@ -1,39 +1,112 @@
-#include "version_0.h"
+#include "version_1.h"
 
-#include "../common.h"
 #include "main.h"
 #include "../file_io.h"
-#include "version_1.h"
 
 #include "cider.h"
 
 #include "string.h"
+#include "inttypes.h"
 
-#ifdef TF2_PLAYED_WITH_DEBUG
-    #include "inttypes.h"
-#endif
+bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file_ptr)
+{
+    fwrite_one((uint8_t){ 1 });
+    fwrite_one(save_data->user_sid3e);
+    fwrite_one(save_data->default_record_messages);
 
-bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
+    const uint8_t shortened_tf2_filepath_len = save_data->tf2_filepath_len - (sizeof("Team Fortress 2") + 2 - 1); // Directory name + Delims - Null
+    fwrite(&shortened_tf2_filepath_len, sizeof(uint8_t), 1, output_file_ptr);
+    fwrite(save_data->tf2_filepath, sizeof(char), shortened_tf2_filepath_len, output_file_ptr);
+
+    fwrite_one(save_data->player_records_len);
+
+    for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++player_i)
+    {
+        fwrite_one(save_data->player_records[player_i].sid3e);
+        fwrite_one(save_data->player_records[player_i].record_messages);
+
+        if (save_data->player_records[player_i].notes)
+        {
+            fputs(save_data->player_records[player_i].notes, output_file_ptr);
+        }
+        fputc('\0', output_file_ptr);
+
+        fwrite_one(save_data->player_records[player_i].date_records_len);
+        for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
+        {
+            fwrite_one(save_data->player_records[player_i].date_records[date_records_i].date);
+            fwrite_one(save_data->player_records[player_i].date_records[date_records_i].encounter_count);
+            fwrite_one(save_data->player_records[player_i].date_records[date_records_i].name_len);
+
+            // Only write real names
+            if (save_data->player_records[player_i].date_records[date_records_i].name_len)
+            {
+                fwrite_arr(save_data->player_records[player_i].date_records[date_records_i].name);
+            }
+
+            // Only write messages if flag set
+            if (save_data->player_records[player_i].record_messages)
+            {
+                // Only write messages if they are there to be written
+                if (save_data->player_records[player_i].date_records[date_records_i].messages)
+                {
+                    for (size_t message_i = 0; message_i < save_data->player_records[player_i].date_records[date_records_i].messages_len; ++message_i)
+                    {
+                        fputs(save_data->player_records[player_i].date_records[date_records_i].messages[message_i], output_file_ptr);
+
+                        if (message_i != save_data->player_records[player_i].date_records[date_records_i].messages_len - 1)
+                        {
+                            fputc('\n', output_file_ptr);
+                        }
+                    }
+                }
+
+                // Should write after messages, or by itself if there are no messages but flag is set
+                fputc('\0', output_file_ptr);
+            }
+        }
+    }
+
+    return false;
+}
+
+bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
 {
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
-    fread_one(save_data->player_records_len);
-    fread_one(save_data->tf2_filepath_len);
 
-    save_data->tf2_filepath = malloc(save_data->tf2_filepath_len + 2);
-    fread_arr(save_data->tf2_filepath);
-    save_data->tf2_filepath[save_data->tf2_filepath_len] = CIDER_PATH_DELIM_C;
-    save_data->tf2_filepath[save_data->tf2_filepath_len + 1] = '\0';
+    uint8_t shortened_tf2_filepath_len;
+    fread_one(shortened_tf2_filepath_len);
 
-    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_filepath to \"%s\".\n", save_data->tf2_filepath);
+    char *shortened_tf2_filepath = malloc(shortened_tf2_filepath_len + 1);
+    fread_arr(shortened_tf2_filepath);
+    shortened_tf2_filepath[shortened_tf2_filepath_len] = '\0';
+    history_set_tf2_filepath(shortened_tf2_filepath, shortened_tf2_filepath_len);
 
     save_data->tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(save_data->tf2_filepath_len + 2), save_data->tf2_filepath, save_data->tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);
 
+    fread_one(save_data->player_records_len);
+
+    TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast32_t last_sid3e = 0;)
     save_data->player_records = malloc(save_data->player_records_len * sizeof(*save_data->player_records));
     for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++ player_i)
     {
         fread_one(save_data->player_records[player_i].sid3e);
+
+        TF2_PLAYED_WITH_DEBUG_INSERT
+        (
+            if (save_data->player_records[player_i].sid3e < last_sid3e)
+            {
+                TF2_PLAYED_WITH_DEBUG_LOGS(ANSI_RED "Invalid history file: Improper SID3E order.\n");
+                return true;
+            }
+            else
+            {
+                last_sid3e = save_data->player_records[player_i].sid3e;
+            }
+        )
+
         fread_one(save_data->player_records[player_i].record_messages);
 
         save_data->player_records[player_i].notes = NULL;
@@ -45,11 +118,26 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
 
         fread_one(save_data->player_records[player_i].date_records_len);
 
+        TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast16_t last_date = 0;)
         char *last_real_name;
         save_data->player_records[player_i].date_records = malloc(sizeof(*save_data->player_records[player_i].date_records) * save_data->player_records[player_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
         {
             fread_one(save_data->player_records[player_i].date_records[date_records_i].date);
+
+            TF2_PLAYED_WITH_DEBUG_INSERT
+            (
+                if (save_data->player_records[player_i].date_records[date_records_i].date < last_date)
+                {
+                    TF2_PLAYED_WITH_DEBUG_LOGS(ANSI_RED "Invalid history file: Improper date order.\n");
+                    return true;
+                }
+                else
+                {
+                    last_date = save_data->player_records[player_i].date_records[date_records_i].date;
+                }
+            )
+
             fread_one(save_data->player_records[player_i].date_records[date_records_i].encounter_count);
             fread_one(save_data->player_records[player_i].date_records[date_records_i].name_len);
 
@@ -129,82 +217,17 @@ bool save_format_0_load(struct save_format_0 *save_data, FILE *input_file_ptr)
     return false;
 }
 
-static int date_record_0_compare(const struct date_record_0 *date_record_a, const struct date_record_0 *date_record_b)
-{
-    return (date_record_a->date - date_record_b->date);
-}
-
-static int player_record_0_compare(const struct player_record_0 *player_record_a, const struct player_record_0 *player_record_b)
-{
-    return (player_record_a->sid3e - player_record_b->sid3e);
-}
-
-bool save_format_0_modernize(void *const save_data)
-{
-    const struct save_format_0 *const old_data = save_data;
-
-    struct save_format_1 new_data =
-    {
-        .current_date = old_data->current_date,
-        .default_record_messages = old_data->default_record_messages,
-        .player_records = old_data->player_records,
-        .player_records_len = old_data->player_records_len,
-        .tf2_filepath = old_data->tf2_filepath,
-        .tf2_filepath_len = old_data->tf2_filepath_len,
-        .tf2_live_log_fullname = old_data->tf2_live_log_fullname,
-        .user_sid3e = old_data->user_sid3e
-    };
-
-    if (save_data != memcpy(save_data, &new_data, sizeof(struct save_format_1)))
-    {
-        fputs(ANSI_RED "Failed to modernize save data v0 -> v1.\n" ANSI_RESET, stderr);
-        return true;
-    }
-
-    qsort(new_data.player_records, new_data.player_records_len, sizeof(struct player_record_0), (__compar_fn_t) player_record_0_compare);
-    for (uint_fast32_t player_i = 0; player_i < new_data.player_records_len; ++player_i)
-    {
-        qsort(new_data.player_records[player_i].date_records, new_data.player_records[player_i].date_records_len, sizeof(struct date_record_0), (__compar_fn_t) date_record_0_compare);
-
-        for (uint_fast32_t date_i = 0; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
-        {
-            if (new_data.player_records[player_i].date_records[date_i].name_len == 0)
-            {
-                new_data.player_records[player_i].date_records[date_i].name_len = (uint_fast8_t) strlen(new_data.player_records[player_i].date_records[date_i].name);
-                new_data.player_records[player_i].date_records[date_i].name = strcpy(malloc(new_data.player_records[player_i].date_records[date_i].name_len + 1), new_data.player_records[player_i].date_records[date_i].name);
-            }
-        }
-
-        char *last_real_name = new_data.player_records[player_i].date_records[0].name;
-        for (uint_fast32_t date_i = 1; date_i < new_data.player_records[player_i].date_records_len; ++date_i)
-        {
-            if (!strcmp(last_real_name, new_data.player_records[player_i].date_records[date_i].name))
-            {
-                free(new_data.player_records[player_i].date_records[date_i].name);
-                new_data.player_records[player_i].date_records[date_i].name_len = 0;
-                new_data.player_records[player_i].date_records[date_i].name = last_real_name;
-            }
-            else
-            {
-                last_real_name = new_data.player_records[player_i].date_records[date_i].name;
-            }
-        }
-    }
-
-    return false;
-}
-
-bool save_format_0_free(struct save_format_0 *save_data)
+bool save_format_1_free(struct save_format_1 *save_data)
 {
     if (!save_data->player_records_len)
     {
-        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted save_format_0_free(...) while player_records_len == 0, ignoring.\n");
+        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted save_format_1_free(...) while player_records_len == 0, ignoring.\n");
         return false;
     }
 
-    for (uint32_t player_i = 0; player_i < save_data->player_records_len; ++player_i)
+    for (uint_fast32_t player_i = 0; player_i < save_data->player_records_len; ++player_i)
     {
-        for (uint32_t date_i = 0; date_i < save_data->player_records[player_i].date_records_len; ++date_i)
+        for (uint_fast32_t date_i = 0; date_i < save_data->player_records[player_i].date_records_len; ++date_i)
         {
             if (save_data->player_records[player_i].date_records[date_i].name_len > 0)
             {

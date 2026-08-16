@@ -1,11 +1,14 @@
 #include "history.h"
 
 #include "common.h"
+#include "player_info.h"
+#include "save_formats/record_0.h"
 #include "time_manip.h"
 #include "steamid_manip.h"
 #include "user_input.h"
 #include "save_formats/main.h"
 #include "file_io.h"
+#include "sorted_find_insert.h"
 
 #include "cider.h"
 
@@ -21,52 +24,35 @@ static struct save_format_data history_main_data;
 
 void history_set_user_sid3e(const uint32_t new_user_sid3e)
 {
-    history_main_data.data_v0.user_sid3e = new_user_sid3e;
+    history_main_data.data_v1.user_sid3e = new_user_sid3e;
 
     TF2_PLAYED_WITH_DEBUG_LOGF("Set user_sid3e to %" PRIu32 ".\n", new_user_sid3e);
 }
 
 uint32_t history_get_user_sid3e()
 {
-    return history_main_data.data_v0.user_sid3e;
+    return history_main_data.data_v1.user_sid3e;
 }
 
-// Frees memory associated with history, sets `player_records_len` to 0
 void history_free()
 {
-    if (!history_main_data.data_v0.player_records_len)
+    switch (history_main_data.save_version)
     {
-        TF2_PLAYED_WITH_DEBUG_LOGS("Attempted history_free(...) while player_records_len == 0, ignoring.\n");
-        return;
-    }
-
-    for (uint32_t player_i = 0; player_i < history_main_data.data_v0.player_records_len; ++player_i)
-    {
-        for (uint32_t date_i = 0; date_i < history_main_data.data_v0.player_records[player_i].date_records_len; ++date_i)
+        break; case 0:
         {
-            if (history_main_data.data_v0.player_records[player_i].date_records[date_i].name_len)
+            if (save_format_0_free(&history_main_data.data_v0))
             {
-                free(history_main_data.data_v0.player_records[player_i].date_records[date_i].name);
-            }
-
-            if (history_main_data.data_v0.player_records[player_i].record_messages && history_main_data.data_v0.player_records[player_i].date_records[date_i].messages)
-            {
-                for (size_t msg_i = 0; msg_i < history_main_data.data_v0.player_records[player_i].date_records[date_i].messages_len; ++msg_i)
-                {
-                    free(history_main_data.data_v0.player_records[player_i].date_records[date_i].messages[msg_i]);
-                }
-
-                free(history_main_data.data_v0.player_records[player_i].date_records[date_i].messages);
+                fprintf(stderr, ANSI_RED "Failed to free v0 data.\n" ANSI_RESET);
             }
         }
-
-        free(history_main_data.data_v0.player_records[player_i].date_records);
-        free(history_main_data.data_v0.player_records[player_i].notes);
+        break; case 1:
+        {
+            if (save_format_1_free(&history_main_data.data_v1))
+            {
+                fprintf(stderr, ANSI_RED "Failed to free v1 data.\n" ANSI_RESET);
+            }
+        }
     }
-
-    free(history_main_data.data_v0.player_records);
-    free(history_main_data.data_v0.tf2_filepath);
-    free(history_main_data.data_v0.tf2_live_log_fullname);
 }
 
 // @returns 1 for fail, 0 for success
@@ -79,13 +65,16 @@ HYPER_MACRO bool history_wizard()
     }
 
     history_main_data.save_version = SAVE_FORMAT_VERSION_LATEST;
+    history_free();
 
     char *user_input = NULL;
 
     while (user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL) == NULL || user_input[0] == '\0');
 
-    char *proposed_tf2_filepath = string_deep_copy(user_input);
-    if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath)) == NULL)
+    const size_t proposed_tf2_filepath_len = strlen(user_input);
+    char *proposed_tf2_filepath = memcpy(malloc(proposed_tf2_filepath_len + 1), user_input, proposed_tf2_filepath_len);
+    proposed_tf2_filepath[proposed_tf2_filepath_len] = '\0';
+    if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath, proposed_tf2_filepath_len)) == NULL)
     {
         free(proposed_tf2_filepath);
         free(user_input);
@@ -96,7 +85,7 @@ HYPER_MACRO bool history_wizard()
 
     if (user_input_confirm("Append con_logfile to autoexec? (Y/N): ", NULL))
     {
-        char *autoexec_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v0.tf2_filepath), TF2PW_AUTOEXEC_SEMINAME);
+        char *autoexec_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_AUTOEXEC_SEMINAME);
         TF2_PLAYED_WITH_DEBUG_LOGF("Set autoexec_fullname to \"%s\".\n", autoexec_fullname);
 
         FILE *autoexec_handle = fopen(autoexec_fullname, "a");
@@ -130,7 +119,7 @@ HYPER_MACRO bool history_wizard()
         #define TF2PW_CONFIG_SEMINAME TF2PW_CFG_SEMINAME "config.cfg"
         #define TF2PW_TEMP_SEMINAME TF2PW_CFG_SEMINAME "tf2pw.cfg.tmp"
 
-        char *config_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v0.tf2_filepath), TF2PW_CONFIG_SEMINAME);
+        char *config_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_CONFIG_SEMINAME);
 
         FILE *config_handle = fopen(config_fullname, "r");
         if (!config_handle)
@@ -149,7 +138,7 @@ HYPER_MACRO bool history_wizard()
             config_replacement[] = "bind \"w\" \"+forward ; status\""
         ;
 
-        char *temporary_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v0.tf2_filepath), TF2PW_TEMP_SEMINAME);
+        char *temporary_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_TEMP_SEMINAME);
         FILE *file_output = fopen(temporary_fullname, "w");
         if (!file_output)
         {
@@ -234,8 +223,8 @@ HYPER_MACRO bool history_wizard()
         free(config_fullname);
     }
 
-    history_main_data.data_v0.tf2_live_log_fullname = cider_construct_fullname(string_deep_copy(history_main_data.data_v0.tf2_filepath), TF2PW_LOG_SEMINAME);
-    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", history_main_data.data_v0.tf2_live_log_fullname);
+    history_main_data.data_v1.tf2_live_log_fullname = cider_construct_fullname(STRING_DEEP_COPY(history_main_data.data_v1.tf2_filepath), TF2PW_LOG_SEMINAME);
+    TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", history_main_data.data_v1.tf2_live_log_fullname);
 
     while (true)
     {
@@ -253,12 +242,12 @@ HYPER_MACRO bool history_wizard()
         else
         {
             TF2_PLAYED_WITH_DEBUG_LOGF("Set user-sid3e to %" PRIu32 ".\n", new_user_sid3e);
-            history_main_data.data_v0.user_sid3e = new_user_sid3e;
+            history_main_data.data_v1.user_sid3e = new_user_sid3e;
             break;
         }
     }
 
-    history_main_data.data_v0.default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ", NULL);
+    history_main_data.data_v1.default_record_messages = user_input_confirm("Record chat messages by default (Y/N): ", NULL);
 
     free(user_input);
 
@@ -293,6 +282,8 @@ bool history_load(const char *const passed_history_fullname)
 {
     const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
+    TF2_PLAYED_WITH_DEBUG_LOGF("Loading history file \"%s\"\n", history_fullname);
+
     FILE *const input_file_ptr = fopen(history_fullname, "r");
     if (input_file_ptr == NULL)
     {
@@ -307,8 +298,6 @@ bool history_load(const char *const passed_history_fullname)
                 return true;
             }
 
-            history_free();
-
             return history_save(history_fullname);
         }
         else
@@ -320,8 +309,6 @@ bool history_load(const char *const passed_history_fullname)
             return true;
         }
     }
-
-    history_free();
 
     bool retval = false;
 
@@ -336,23 +323,60 @@ bool history_load(const char *const passed_history_fullname)
     }
 
     fread_one(history_main_data.save_version);
-    switch (history_main_data.save_version)
-    {
-        break;  default:
-        {
-            fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
 
-            retval = true;
-            goto CLOSE_HISTORY_FILE;
-        }
-        break;   case 0:
+    history_free();
+
+    for (bool continue_modernizing = true, loaded = false; continue_modernizing; )
+    {
+        switch (history_main_data.save_version)
         {
-            if (save_format_0_load(&history_main_data.data_v0, input_file_ptr))
+            break; default:
             {
-                fprintf(stderr, ANSI_RED "Failed to load file \"%s\".\n", history_fullname);
+                fprintf(stderr, ANSI_RED "Version of history file \"%s\" is not supported by this version of TF2PW, get a newer version at " TF2PW_HOMEPAGE_URL ".\n" ANSI_RESET, history_fullname);
 
                 retval = true;
                 goto CLOSE_HISTORY_FILE;
+            }
+            break; case 0:
+            {
+                if (!loaded && save_format_0_load(&history_main_data.data_v0, input_file_ptr))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to load file v0: \"%s\".\n" ANSI_RESET, history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+                else if (save_format_0_modernize(&history_main_data.data_v0))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to modernize file v0: \"%s\".\n" ANSI_RESET, history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+
+                if (!retval)
+                {
+                    loaded = true;
+
+                    TF2_PLAYED_WITH_DEBUG_LOGS("Successfully modernized v0 -> v1.\n");
+                }
+            }
+            // Fallthrough
+            case 1:
+            {
+                if (!loaded && save_format_1_load(&history_main_data.data_v1, input_file_ptr))
+                {
+                    fprintf(stderr, ANSI_RED "Failed to load file v1: \"%s\".\n" ANSI_RESET, history_fullname);
+
+                    retval = true;
+                    goto CLOSE_HISTORY_FILE;
+                }
+                else
+                {
+                    history_main_data.save_version = 1;
+                }
+
+                continue_modernizing = false;
             }
         }
     }
@@ -381,6 +405,8 @@ bool history_save(const char *const passed_history_fullname)
 {
     const char *const history_fullname = (passed_history_fullname ? passed_history_fullname : history_get_default_fullname());
 
+    TF2_PLAYED_WITH_DEBUG_LOGF("Saving history file \"%s\"\n", history_fullname);
+
     FILE *const output_file_ptr = fopen(history_fullname, "w");
     if (!output_file_ptr)
     {
@@ -393,7 +419,7 @@ bool history_save(const char *const passed_history_fullname)
 
     fwrite(HEADER, sizeof(char), sizeof(HEADER) - 1, output_file_ptr);
 
-    const bool retval = save_format_0_save(&history_main_data.data_v0, output_file_ptr);
+    const bool retval = save_format_1_save(&history_main_data.data_v1, output_file_ptr);
     if (retval)
     {
         fprintf(stderr, ANSI_RED "Failed to save file \"%s\".\n", history_fullname);
@@ -411,216 +437,259 @@ bool history_save(const char *const passed_history_fullname)
     return retval;
 }
 
-char *history_set_tf2_filepath(char *new_tf2_filepath)
+char *history_set_tf2_filepath(char *new_tf2_filepath, size_t new_tf2_filepath_len)
 {
-    // Length of tf2_filepath without trailing slash and/or null-terminator
-    size_t new_tf2_filepath_len = strlen(new_tf2_filepath);
-
-    const bool had_trailing_delim = (new_tf2_filepath[new_tf2_filepath_len - 1] == CIDER_PATH_DELIM_C);
-
-    // Append trailing slash if doesn't exist
-    if (had_trailing_delim)
+    // Check if ends in trailing slash, if not, append
+    if (new_tf2_filepath[new_tf2_filepath_len - 1] != CIDER_PATH_DELIM_C)
     {
-        --new_tf2_filepath_len;
+        ++new_tf2_filepath_len;
+        PREALLOC(new_tf2_filepath, new_tf2_filepath_len + 1);
+        new_tf2_filepath[new_tf2_filepath_len - 1] = CIDER_PATH_DELIM_C;
+        new_tf2_filepath[new_tf2_filepath_len] = '\0';
     }
 
-    if (new_tf2_filepath_len > UINT8_MAX)
+    #define TF2_SEMINAME "Team Fortress 2" CIDER_PATH_DELIM_S
+    #define TF2_SEMINAME_LEN (sizeof(TF2_SEMINAME) - 1)
+
+    // Check if long enough to contain /Team Fortress 2/ ('/' replaced by relevant delim)
+    if (new_tf2_filepath_len < TF2_SEMINAME_LEN)
     {
-        fprintf(stderr, ANSI_RED "New TF2 filepath length is too long, is %zu, should be at most %zu.\n" ANSI_RESET, new_tf2_filepath_len, (size_t) UINT8_MAX);
-        return NULL;
-    }
+        // Not long enough, should append TF2 seminame
+        PREALLOC(new_tf2_filepath, (new_tf2_filepath_len += TF2_SEMINAME_LEN) + 1);
+        memcpy(new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME, TF2_SEMINAME_LEN);
+        new_tf2_filepath[new_tf2_filepath_len] = '\0';
 
-    if (!had_trailing_delim)
+        history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+        free(history_main_data.data_v1.tf2_filepath);
+        history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+        return new_tf2_filepath;
+    }
+    else
     {
-        prealloc(new_tf2_filepath, new_tf2_filepath_len + 2);
-        new_tf2_filepath[new_tf2_filepath_len] = CIDER_PATH_DELIM_C;
-        new_tf2_filepath[new_tf2_filepath_len + 1] = '\0';
+        // Long enough, check that it ends with TF2_SEMINAME
+        if (strncmp(TF2_SEMINAME, new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME_LEN))
+        {
+            // Doesn't end with it, append
+            PREALLOC(new_tf2_filepath, (new_tf2_filepath_len += TF2_SEMINAME_LEN) + 1);
+            memcpy(new_tf2_filepath + new_tf2_filepath_len - TF2_SEMINAME_LEN, TF2_SEMINAME, TF2_SEMINAME_LEN);
+            new_tf2_filepath[new_tf2_filepath_len] = '\0';
+
+            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+            free(history_main_data.data_v1.tf2_filepath);
+            history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+            return new_tf2_filepath;
+        }
+        else
+        {
+            // Ends with it, use
+            free(history_main_data.data_v1.tf2_filepath);
+
+            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+            history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+            return history_main_data.data_v1.tf2_filepath;
+        }
     }
-
-    free(history_main_data.data_v0.tf2_filepath);
-    history_main_data.data_v0.tf2_filepath = new_tf2_filepath;
-
-    history_main_data.data_v0.tf2_filepath_len = (uint8_t) new_tf2_filepath_len;
-
-    TF2_PLAYED_WITH_DEBUG_LOGF("Setting tf2_filepath to \"%s\".\n", history_main_data.data_v0.tf2_filepath);
-
-    return history_main_data.data_v0.tf2_filepath;
 }
 
 const char *history_get_live_log_fullname()
 {
-    return (const char *) history_main_data.data_v0.tf2_live_log_fullname;
+    return history_main_data.data_v1.tf2_live_log_fullname;
 }
 
 void history_set_date(const uint16_t new_date)
 {
     if (new_date == HISTORY_SET_DATE_TODAY)
     {
-        history_main_data.data_v0.current_date = time_manip_current_ued();
+        history_main_data.data_v1.current_date = time_manip_current_ued();
     }
     else
     {
-        history_main_data.data_v0.current_date = new_date;
+        history_main_data.data_v1.current_date = new_date;
     }
 
     TF2_PLAYED_WITH_DEBUG_INSERT
     (
         TF2_PLAYED_WITH_DEBUG_LOGS("Set current date to ");
-        time_manip_print_ued(stderr, history_main_data.data_v0.current_date);
+        time_manip_print_ued(stderr, history_main_data.data_v1.current_date);
         fputs("\n" ANSI_RESET, stderr);
     )
 }
 
-HYPER_MACRO void history_add_date_record(const uint32_t player_records_i, const char *name)
+HYPER_MACRO void initialize_date_record(struct date_record_0 *const relevant_date, const char *const name, const bool is_first_date_record)
 {
-    const uint_fast32_t date_records_i = history_main_data.data_v0.player_records[player_records_i].date_records_len;
-    #define current_date_record history_main_data.data_v0.player_records[player_records_i].date_records[date_records_i]
+    relevant_date->date            = history_main_data.data_v1.current_date;
+    relevant_date->encounter_count = 0;
+    relevant_date->messages        = NULL;
+    relevant_date->messages_len    = 0;
 
-    prealloc(history_main_data.data_v0.player_records[player_records_i].date_records, ++history_main_data.data_v0.player_records[player_records_i].date_records_len);
-
-    current_date_record.date = history_main_data.data_v0.current_date;
-    current_date_record.messages_len = 0;
-    current_date_record.messages = NULL;
-    current_date_record.encounter_count = 0;
-
-    // This player record has date records aka. is not new
-    if (date_records_i)
+    if (!is_first_date_record && !strcmp((relevant_date - 1)->name, name))
     {
-        // Search backwards for same name
-        for (uint_fast32_t date_name_search_i = date_records_i - 1; date_records_i != UINT_FAST32_MAX; --date_name_search_i)
-        {
-            // Previous date record is real
-            if (history_main_data.data_v0.player_records[player_records_i].date_records[date_name_search_i].name_len)
-            {
-                // If are the same, point this name to same place as last name
-                if (!strcmp(history_main_data.data_v0.player_records[player_records_i].date_records[date_name_search_i].name, name))
-                {
-                    current_date_record.name = history_main_data.data_v0.player_records[player_records_i].date_records[date_name_search_i].name;
-                    current_date_record.name_len = 0;
-
-                    return;
-                }
-                // If not, create new name for this record
-                else
-                {
-                    goto ALLOCATE_NAME;
-                }
-            }
-        }
+        relevant_date->name = (relevant_date - 1)->name;
+        relevant_date->name_len = 0;
     }
-
-    ALLOCATE_NAME:;
-    const uint_fast8_t current_name_len = current_date_record.name_len = (uint8_t) strlen(name);
-    current_date_record.name = malloc(sizeof(char) * current_name_len + 1);
-    memcpy(current_date_record.name, name, current_name_len + 1);
-
-    #undef current_date_record
+    else
+    {
+        relevant_date->name_len = strlen(name);
+        relevant_date->name = memcpy(malloc(relevant_date->name_len + 1), name, relevant_date->name_len);
+        relevant_date->name[relevant_date->name_len] = '\0';
+    }
 }
 
-// Sentinel value for if player index doesn't exist
-#define PLAYER_INDEX_ENOENT UINT_FAST32_MAX
-
-// BSEARCH_TODO
-// Returns index of `requested_sid3e`
-HYPER_MACRO uint_fast32_t get_player_index(const uint32_t requested_sid3e)
+HYPER_MACRO void initialize_player_record(struct player_record_0 *const new_player_record, const struct player_info *const pinfo)
 {
-    for (uint_fast32_t player_records_i = 0; player_records_i < history_main_data.data_v0.player_records_len; ++player_records_i)
-    {
-        if (history_main_data.data_v0.player_records[player_records_i].sid3e == requested_sid3e)
-        {
-            return player_records_i;
-        }
-    }
+    new_player_record->date_records     = malloc(sizeof(struct date_record_0));
+    new_player_record->date_records_len = 1;
+    new_player_record->notes            = NULL;
+    new_player_record->record_messages  = history_main_data.data_v1.default_record_messages;
+    new_player_record->sid3e            = pinfo->sid3e;
 
-    // Couldn't find
-    return PLAYER_INDEX_ENOENT;
+    initialize_date_record(new_player_record->date_records, pinfo->name, true);
+}
+
+static int _compare_player_records(const struct player_record_0 *const a, const struct player_record_0 *const b)
+#define compare_player_records ((__compar_fn_t) _compare_player_records)
+{
+    return THREE_WAY_COMPARISON(a->sid3e, b->sid3e);
+}
+
+static int _compare_date_records(const struct date_record_0 *const a, const struct date_record_0 *const b)
+#define compare_date_records ((__compar_fn_t) _compare_date_records)
+{
+    return THREE_WAY_COMPARISON(a->date, b->date);
+}
+
+struct date_records_find_insert_params
+{
+    const struct player_record_0 *const relevant_player;
+    const char *const player_name;
+};
+
+static void _date_records_insert(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
+#define date_records_insert ((sorted_find_insert_action_t) _date_records_insert)
+{
+    initialize_date_record(array_element, params->player_name, array_element == params->relevant_player->date_records);
+}
+
+static void _date_records_find(struct date_record_0 *const array_element, struct date_records_find_insert_params *const params)
+#define date_records_find ((sorted_find_insert_action_t) _date_records_find)
+{
+    ++array_element->encounter_count;
+}
+
+struct player_records_find_insert_params
+{
+    const struct player_info *const pinfo;
+};
+
+static void _player_records_insert(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
+#define player_records_insert ((sorted_find_insert_action_t) _player_records_insert)
+{
+    initialize_player_record(array_element, params->pinfo);
+}
+
+static void _player_records_find(struct player_record_0 *const array_element, struct player_records_find_insert_params *const params)
+#define player_records_find ((sorted_find_insert_action_t) _player_records_find)
+{
+    size_t date_records_len_temp = array_element->date_records_len;
+    sorted_find_insert(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, (void *) &array_element->date_records, &date_records_len_temp, sizeof(struct date_record_0), date_records_find, date_records_insert, &(struct date_records_find_insert_params){ .relevant_player = array_element, .player_name = params->pinfo->name }, compare_date_records);
+    array_element->date_records_len = date_records_len_temp;
 }
 
 void history_add_record(const struct player_info *const pinfo)
 {
+    TF2_PLAYED_WITH_DEBUG_INSERT
+    (
+        // Check that list is sorted
+        {
+            uint_fast32_t last_sid3e = 0;
+            for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
+            {
+                if (history_main_data.data_v1.player_records[player_i].sid3e < last_sid3e)
+                {
+                    fprintf(stderr, "Bad SID3E Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].sid3e, last_sid3e);
+                    abort();
+                }
+                else
+                {
+                    last_sid3e = history_main_data.data_v1.player_records[player_i].sid3e;
+                }
+
+                uint_fast16_t last_date = 0;
+                for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
+                {
+                    if (history_main_data.data_v1.player_records[player_i].date_records[date_i].date < last_date)
+                    {
+                        fprintf(stderr, "Bad Date Order: %" PRIu32 " < %" PRIuFAST32 "\n", history_main_data.data_v1.player_records[player_i].date_records[date_i].date, last_date);
+                        abort();
+                    }
+                    else
+                    {
+                        last_date = history_main_data.data_v1.player_records[player_i].date_records[date_i].date;
+                    }
+                }
+            }
+        }
+    )
+
     TF2_PLAYED_WITH_DEBUG_LOGF("Record add requested for (%s, %" PRIu32 ").\n", pinfo->name, pinfo->sid3e);
 
-    const uint_fast32_t player_index = get_player_index(pinfo->sid3e);
-    if (player_index != PLAYER_INDEX_ENOENT)
-    {
-        for (uint_fast32_t date_records_i = 0; date_records_i < history_main_data.data_v0.player_records[player_index].date_records_len; ++date_records_i)
-        {
-            if (history_main_data.data_v0.player_records[player_index].date_records[date_records_i].date != history_main_data.data_v0.current_date)
-            {
-                continue;
-            }
-
-            ++history_main_data.data_v0.player_records[player_index].date_records[date_records_i].encounter_count;
-
-            return;
-        }
-        history_add_date_record(player_index, pinfo->name);
-
-        return;
-    }
-    else
-    {
-        prealloc(history_main_data.data_v0.player_records, ++history_main_data.data_v0.player_records_len);
-        history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].sid3e = pinfo->sid3e;
-        history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].record_messages = history_main_data.data_v0.default_record_messages;
-        history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].notes = NULL;
-        history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].date_records_len = 0;
-        history_main_data.data_v0.player_records[history_main_data.data_v0.player_records_len - 1].date_records = NULL;
-
-        history_add_date_record(history_main_data.data_v0.player_records_len - 1, pinfo->name);
-    }
+    size_t player_records_len_temp = history_main_data.data_v1.player_records_len;
+    sorted_find_insert(&(struct player_record_0){ .sid3e = pinfo->sid3e }, (void *) &history_main_data.data_v1.player_records, &player_records_len_temp, sizeof(struct player_record_0), player_records_find, player_records_insert, &(struct player_records_find_insert_params){ .pinfo = pinfo }, compare_player_records);
+    history_main_data.data_v1.player_records_len = player_records_len_temp;
 }
 
 void history_print_record(const uint32_t requested_sid3e)
 {
-    const uint_fast32_t player_index = get_player_index(requested_sid3e);
-    if (player_index != PLAYER_INDEX_ENOENT)
-    {
-        printf("Records for requested player [U:1:%" PRIu32 "]:\n", requested_sid3e);
-
-        if (history_main_data.data_v0.player_records[player_index].notes)
-        {
-            printf(LTAB "Notes:\n" LTAB LTAB "%s", history_main_data.data_v0.player_records[player_index].notes);
-        }
-
-        for (uint_fast32_t date_index = 0; date_index < history_main_data.data_v0.player_records[player_index].date_records_len; ++date_index)
-        {
-            printf(LTAB);
-            time_manip_print_ued(stdout, history_main_data.data_v0.player_records[player_index].date_records[date_index].date);
-            printf(":\n");
-
-            printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", history_main_data.data_v0.player_records[player_index].date_records[date_index].encounter_count + 1);
-            printf(LTAB LTAB "Name: \"%s\"\n", history_main_data.data_v0.player_records[player_index].date_records[date_index].name);
-
-            if (history_main_data.data_v0.player_records[player_index].record_messages && history_main_data.data_v0.player_records[player_index].date_records[date_index].messages)
-            {
-                printf(LTAB LTAB "Messages:\n");
-                for (size_t msg_i = 0; msg_i < history_main_data.data_v0.player_records[player_index].date_records[date_index].messages_len; ++msg_i)
-                {
-                    printf(LTAB LTAB LTAB "%s\n", history_main_data.data_v0.player_records[player_index].date_records[date_index].messages[msg_i]);
-                }
-            }
-        }
-    }
-    else
+    const struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
+    if (requested_player == NULL)
     {
         printf(ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
+    }
+
+    printf("Records for requested player [U:1:%" PRIu32 "]:\n", requested_sid3e);
+
+    if (requested_player->notes)
+    {
+        printf(LTAB "Notes:\n" LTAB LTAB "%s", requested_player->notes);
+    }
+
+    for (uint_fast32_t date_index = 0; date_index < requested_player->date_records_len; ++date_index)
+    {
+        printf(LTAB);
+        time_manip_print_ued(stdout, requested_player->date_records[date_index].date);
+        printf(":\n");
+
+        printf(LTAB LTAB "Times encountered: %" PRIu8 "\n", requested_player->date_records[date_index].encounter_count + 1);
+        printf(LTAB LTAB "Name: \"%s\"\n", requested_player->date_records[date_index].name);
+
+        if (requested_player->record_messages && requested_player->date_records[date_index].messages)
+        {
+            printf(LTAB LTAB "Messages:\n");
+            for (size_t msg_i = 0; msg_i < requested_player->date_records[date_index].messages_len; ++msg_i)
+            {
+                printf(LTAB LTAB LTAB "%s\n", requested_player->date_records[date_index].messages[msg_i]);
+            }
+        }
     }
 }
 
 void history_print_records(const char *const name)
 {
     bool record_found = false;
-    for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v0.player_records_len; ++player_i)
+
+    for (uint_fast32_t player_i = 0; player_i < history_main_data.data_v1.player_records_len; ++player_i)
     {
-        for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v0.player_records[player_i].date_records_len; ++date_i)
+        for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v1.player_records[player_i].date_records_len; ++date_i)
         {
             // If name is not pointer to previous copycat name, and matches requested name, print record of that player, continue to next player_i
-            if (history_main_data.data_v0.player_records[player_i].date_records[date_i].name_len && !strcmp(history_main_data.data_v0.player_records[player_i].date_records[date_i].name, name))
+            if (history_main_data.data_v1.player_records[player_i].date_records[date_i].name_len && !strcmp(history_main_data.data_v1.player_records[player_i].date_records[date_i].name, name))
             {
                 record_found = true;
-                history_print_record(history_main_data.data_v0.player_records[player_i].sid3e);
-                continue;
+                history_print_record(history_main_data.data_v1.player_records[player_i].sid3e);
+                break;
             }
         }
     }
@@ -631,10 +700,10 @@ void history_print_records(const char *const name)
     }
 }
 
-void history_edit_notes(uint32_t requested_sid3e)
+void history_edit_notes(const uint32_t requested_sid3e)
 {
-    const uint_fast32_t player_index = get_player_index(requested_sid3e);
-    if (player_index == PLAYER_INDEX_ENOENT)
+    struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
+    if (NULL == requested_player)
     {
         fprintf(stderr, ANSI_RED "Requested player SID3E(%" PRIu32 ") not found.\n" ANSI_RESET, requested_sid3e);
         return;
@@ -651,9 +720,9 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    if (history_main_data.data_v0.player_records[player_index].notes)
+    if (requested_player->notes)
     {
-        fputs(history_main_data.data_v0.player_records[player_index].notes, write);
+        fputs(requested_player->notes, write);
         fputc('\n', write);
     }
 
@@ -680,19 +749,19 @@ void history_edit_notes(uint32_t requested_sid3e)
         return;
     }
 
-    const size_t notes_len = file_io_buffered_input(read, &history_main_data.data_v0.player_records[player_index].notes, NULL, 0);
+    const size_t notes_len = file_io_buffered_input(read, &requested_player->notes, NULL, 0);
 
     // If user entered nothing/deleted all notes, free and set to NULL
     if (notes_len == 0)
     {
-        free(history_main_data.data_v0.player_records[player_index].notes);
-        history_main_data.data_v0.player_records[player_index].notes = NULL;
+        free(requested_player->notes);
+        requested_player->notes = NULL;
     }
-    else if (history_main_data.data_v0.player_records[player_index].notes[notes_len - 2] != '\n')
+    else if (requested_player->notes[notes_len - 2] != '\n')
     {
-        prealloc(history_main_data.data_v0.player_records[player_index].notes, notes_len + 1);
-        history_main_data.data_v0.player_records[player_index].notes[notes_len - 1] = '\n';
-        history_main_data.data_v0.player_records[player_index].notes[notes_len] = '\0';
+        PREALLOC(requested_player->notes, notes_len + 1);
+        requested_player->notes[notes_len - 1] = '\n';
+        requested_player->notes[notes_len] = '\0';
     }
 
     if (fclose(read))
@@ -716,28 +785,36 @@ void history_edit_notes(uint32_t requested_sid3e)
 
 void history_add_message(const uint32_t requested_sid3e, const char *const message)
 {
-    // WARNING: Below assumes player has record and record on this date. Should always be true, however
-    const uint_fast32_t player_i = get_player_index(requested_sid3e);
-    if (history_main_data.data_v0.player_records[player_i].record_messages)
+    TF2_PLAYED_WITH_DEBUG_LOGF("Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, message);
+
+    struct player_record_0 *const requested_player = bsearch(&(struct player_record_0){ .sid3e = requested_sid3e }, history_main_data.data_v1.player_records, history_main_data.data_v1.player_records_len, sizeof(struct player_record_0), compare_player_records);
+    if (NULL == requested_player)
     {
-        // BSEARCH_TODO
-        for (uint_fast32_t date_i = 0; date_i < history_main_data.data_v0.player_records[player_i].date_records_len; ++date_i)
-        {
-            if (history_main_data.data_v0.player_records[player_i].date_records[date_i].date == history_main_data.data_v0.current_date)
-            {
-                const size_t message_len = strlen(message) + 1;
-
-                prealloc(history_main_data.data_v0.player_records[player_i].date_records[date_i].messages, ++history_main_data.data_v0.player_records[player_i].date_records[date_i].messages_len);
-                history_main_data.data_v0.player_records[player_i].date_records[date_i].messages[history_main_data.data_v0.player_records[player_i].date_records[date_i].messages_len - 1] = malloc(sizeof(char) * message_len);
-                memcpy(history_main_data.data_v0.player_records[player_i].date_records[date_i].messages[history_main_data.data_v0.player_records[player_i].date_records[date_i].messages_len - 1], message, message_len);
-
-                TF2_PLAYED_WITH_DEBUG_LOGF("Message add requested: (%" PRIu32 ", \"%s\").\n", requested_sid3e, history_main_data.data_v0.player_records[player_i].date_records[date_i].messages[history_main_data.data_v0.player_records[player_i].date_records[date_i].messages_len - 1]);
-                return;
-            }
-        }
-
-        // Should have returned above. Getting here means there was no applicable record
-        fprintf(stderr, "No applicable record in history_add_message(...) for SID3E=%" PRIu32 ".\n", requested_sid3e);
-        abort();
+        TF2_PLAYED_WITH_DEBUG_LOGF("Requested player SID3E(%" PRIu32 ") not found.\n", requested_sid3e);
+        return;
     }
+    else if (!requested_player->record_messages)
+    {
+        return;
+    }
+
+    struct date_record_0 *const requested_date = bsearch(&(struct date_record_0){ .date = history_main_data.data_v1.current_date }, requested_player->date_records, requested_player->date_records_len, sizeof(struct date_record_0), compare_date_records);
+    if (NULL == requested_date)
+    {
+        #ifdef TF2_PLAYED_WITH_DEBUG
+            fputs(ANSI_RED "LOG: Current date ", stderr);
+            time_manip_print_ued(stderr, history_main_data.data_v1.current_date);
+            fprintf(stderr, " not found while adding message \"%s\".\n" ANSI_RESET, message);
+        #endif
+
+        return;
+    }
+
+    const size_t message_len = strlen(message) + 1;
+
+    PREALLOC(requested_date->messages, ++requested_date->messages_len);
+    requested_date->messages[requested_date->messages_len - 1] = malloc(sizeof(char) * message_len);
+    memcpy(requested_date->messages[requested_date->messages_len - 1], message, message_len);
+
+    return;
 }

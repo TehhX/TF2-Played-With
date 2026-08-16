@@ -93,7 +93,6 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
         return true;
     }
 
-    // BSEARCH_TODO
     // Skip if found in array, else add new
     for (int i = 0; i < parse_info->len; ++i)
     {
@@ -105,7 +104,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     }
 
     // Player not in status array, add them
-    prealloc(parse_info->player_info_arr, ++parse_info->len);
+    PREALLOC(parse_info->player_info_arr, ++parse_info->len);
 
     // Get player name end index
     while (line[--line_i] != '"');
@@ -115,7 +114,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     memcpy(parse_info->player_info_arr[parse_info->len - 1].name, line + player_name_begin, player_name_len);
     parse_info->player_info_arr[parse_info->len - 1].name[player_name_len] = '\0';
 
-    parse_info->player_info_arr[parse_info->len - 1].sid3e                 = current_sid3e;
+    parse_info->player_info_arr[parse_info->len - 1].sid3e = current_sid3e;
 
     // Add new player to records
     history_add_record((parse_info->player_info_arr) + parse_info->len - 1);
