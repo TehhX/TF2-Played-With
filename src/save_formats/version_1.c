@@ -14,7 +14,9 @@ bool save_format_1_save(const struct save_format_1 *save_data, FILE *output_file
     fwrite_one(save_data->user_sid3e);
     fwrite_one(save_data->default_record_messages);
 
-    // IMMED_TODO: Write TF2 filepath and len
+    const uint8_t shortened_tf2_filepath_len = save_data->tf2_filepath_len - (sizeof("Team Fortress 2") + 2 - 1); // Directory name + Delims - Null
+    fwrite(&shortened_tf2_filepath_len, sizeof(uint8_t), 1, output_file_ptr);
+    fwrite(save_data->tf2_filepath, sizeof(char), shortened_tf2_filepath_len, output_file_ptr);
 
     fwrite_one(save_data->player_records_len);
 
@@ -73,7 +75,13 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
     fread_one(save_data->user_sid3e);
     fread_one(save_data->default_record_messages);
 
-    // IMMED_TODO: Write TF2 filepath and len
+    uint8_t shortened_tf2_filepath_len;
+    fread_one(shortened_tf2_filepath_len);
+
+    char *shortened_tf2_filepath = malloc(shortened_tf2_filepath_len + 1);
+    fread_arr(shortened_tf2_filepath);
+    shortened_tf2_filepath[shortened_tf2_filepath_len] = '\0';
+    history_set_tf2_filepath(shortened_tf2_filepath, shortened_tf2_filepath_len);
 
     save_data->tf2_live_log_fullname = cider_construct_fullname(strncpy(malloc(save_data->tf2_filepath_len + 2), save_data->tf2_filepath, save_data->tf2_filepath_len + 2), TF2PW_LOG_SEMINAME);
     TF2_PLAYED_WITH_DEBUG_LOGF("Set tf2_live_log_fullname to \"%s\".\n", save_data->tf2_live_log_fullname);

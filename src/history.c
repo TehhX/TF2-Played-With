@@ -72,7 +72,8 @@ HYPER_MACRO bool history_wizard()
     while (user_input_getline(&user_input, "Enter path to TF2 eg. (..." CIDER_PATH_DELIM_S "Team Fortress 2" CIDER_PATH_DELIM_S "): ", NULL) == NULL || user_input[0] == '\0');
 
     const size_t proposed_tf2_filepath_len = strlen(user_input);
-    char *proposed_tf2_filepath = memcpy(malloc(proposed_tf2_filepath_len), user_input, proposed_tf2_filepath_len);
+    char *proposed_tf2_filepath = memcpy(malloc(proposed_tf2_filepath_len + 1), user_input, proposed_tf2_filepath_len);
+    proposed_tf2_filepath[proposed_tf2_filepath_len] = '\0';
     if ((proposed_tf2_filepath = history_set_tf2_filepath(proposed_tf2_filepath, proposed_tf2_filepath_len)) == NULL)
     {
         free(proposed_tf2_filepath);
@@ -482,10 +483,13 @@ char *history_set_tf2_filepath(char *new_tf2_filepath, size_t new_tf2_filepath_l
         }
         else
         {
-            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
-
+            // Ends with it, use
             free(history_main_data.data_v1.tf2_filepath);
-            return (history_main_data.data_v1.tf2_filepath = new_tf2_filepath);
+
+            history_main_data.data_v1.tf2_filepath_len = new_tf2_filepath_len;
+            history_main_data.data_v1.tf2_filepath = new_tf2_filepath;
+
+            return history_main_data.data_v1.tf2_filepath;
         }
     }
 }
