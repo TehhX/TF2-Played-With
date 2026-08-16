@@ -72,7 +72,7 @@ static bool scan_status(const char *line, const size_t line_len, struct parse_in
     // This is a bot, skip
     if (last_bot_str_i >= last_close_bracket_i)
     {
-        // TF2_PLAYED_WITH_DEBUG_LOGS("Bot found, skipping.\n");
+        TF2_PLAYED_WITH_DEBUG_LOGS("Bot found, skipping.\n");
         return true;
     }
 

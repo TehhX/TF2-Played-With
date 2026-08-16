@@ -2,7 +2,6 @@
 
 #include "string.h"
 
-// TODO: Optimize
 void sorted_find_insert(const void *const value, void **const array, size_t *const array_len, const size_t element_size, sorted_find_insert_action_t on_find, sorted_find_insert_action_t on_insert, void *const params, const __compar_fn_t compare)
 {
     if (*array_len == 0)

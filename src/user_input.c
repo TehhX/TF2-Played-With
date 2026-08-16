@@ -128,7 +128,6 @@ static void *routine_user_input(struct routine_user_input_params *const params)
 
         for (bool cont = true; cont; )
         {
-            // BUFF_TODO
             const int next = fgetc(stdin);
             switch (next)
             {
