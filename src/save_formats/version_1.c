@@ -111,7 +111,7 @@ bool save_format_1_load(struct save_format_1 *save_data, FILE *input_file_ptr)
         fread_one(save_data->player_records[player_i].date_records_len);
 
         TF2_PLAYED_WITH_DEBUG_INSERT(uint_fast16_t last_date = 0;)
-        TF2_PLAYED_WITH_DEBUG_INSERT(char *last_real_name);
+        char *last_real_name;
         save_data->player_records[player_i].date_records = malloc(sizeof(*save_data->player_records[player_i].date_records) * save_data->player_records[player_i].date_records_len);
         for (uint_fast32_t date_records_i = 0; date_records_i < save_data->player_records[player_i].date_records_len; ++date_records_i)
         {
