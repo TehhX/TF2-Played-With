@@ -8,6 +8,8 @@
     Contains functionality for inserting elements in ordered lists
 */
 
+#include "common.h"
+
 #include "stdlib.h"
 
 /*

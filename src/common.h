@@ -8,6 +8,11 @@
     Contains definitions to be used in *all* files contained within this project
 */
 
+// May require defining when cross compiling Linux -> Win64
+#ifndef __COMPAR_FN_T
+    typedef int (*__compar_fn_t) (const void *, const void *);
+#endif
+
 // Check that OS is supported
 #if !defined(_WIN32) && !defined(__linux__)
     #error "Unknown OS."
