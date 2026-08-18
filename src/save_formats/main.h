@@ -11,14 +11,17 @@
         * Version 0
             * Load
             * Convert to version 1
+            * Free
 
         * Version 1
             * Load
             * Convert to version 2
+            * Free
 
         * Version 2 (Latest)
             * Load
             * Save
+            * Free
 
     In this example, if a version 3 is added, version 2 will lose the save function, while the new v3 will have load and save functions.
 

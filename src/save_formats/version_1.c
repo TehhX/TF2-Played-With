@@ -249,8 +249,12 @@ bool save_format_1_free(struct save_format_1 *save_data)
         free(save_data->player_records[player_i].notes);
     }
 
+    save_data->player_records_len = 0;
     free(save_data->player_records);
+
     free(save_data->tf2_filepath);
+    save_data->tf2_filepath = NULL;
+
     free(save_data->tf2_live_log_fullname);
 
     return false;
